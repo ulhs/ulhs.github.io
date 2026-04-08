@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     loadBeadworkPage(dataPath);
                     break;
                 case 'contact.html':
-                    // Handled by updateGlobalUI via loadDynamicContent
+                    setupContactForm();
                     break;
             }
         }
@@ -329,6 +329,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 themeBtn.textContent = isDark ? '☀️' : '🌙';
             });
         }
+    }
+
+    function setupContactForm() {
+        const contactForm = document.querySelector('.main-form');
+        if (!contactForm) return;
+
+        contactForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const data = new FormData(form);
+            const button = form.querySelector('button[type="submit"]');
+            const originalText = button.textContent;
+
+            try {
+                button.disabled = true;
+                button.textContent = 'Sending...';
+
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: data,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    // Success! Redirect to our custom thanks.html
+                    window.location.href = 'thanks.html';
+                } else {
+                    const result = await response.json();
+                    if (result.errors) {
+                        alert(result.errors.map(error => error.message).join(", "));
+                    } else {
+                        alert("Oops! There was a problem submitting your form. Please try again.");
+                    }
+                }
+            } catch (error) {
+                alert("Oops! There was a problem submitting your form. Please check your connection and try again.");
+            } finally {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        });
     }
 
     function updateGlobalUI(config) {
