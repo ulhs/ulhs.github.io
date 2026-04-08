@@ -1,0 +1,6 @@
+{
+    "google_calendar_src": "https://calendar.google.com/calendar/embed?src=upperlabay.nhs%40deped.gov.ph&ctz=Asia%2FManila&src=dXBwZXJsYWJheS5uaHNAZGVwZWQuZ292LnBo&src=ZW4ucGhpbGlwcGluZXMjaG9saWRheUBncm91cC52LmNhbGVuZGFyLmdvb2dsZS5jb20&color=%23829f82&color=%23de3163",
+    "official_calendar_image": "../assets/documents/school-calendar.webp",
+    "overview_text": "Stay updated with our school events, holidays, and important academic dates.",
+    "footer_tip": "Click on events to see more details. You can also click the \"+ Google Calendar\" or \"Add to Google Calendar\" button above to sync this to your phone."
+}

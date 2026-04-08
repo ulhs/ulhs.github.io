@@ -1,0 +1,27 @@
+{
+    "banner": {
+        "title": "Junior High School (Grades 7-10)",
+        "subtitle": "Building a strong foundation through cultural integration and academic excellence."
+    },
+    "intro": {
+        "title": "JHS Educational Approach",
+        "description": "Our Junior High School program follows the <strong>MATATAG Curriculum</strong>, specifically localized for our Blaan learners. We focus on core competencies while ensuring students remain connected to their roots."
+    },
+    "cards": [
+        {
+            "title": "Core Subjects & Programs",
+            "description": "Comprehensive education including English, Math, Science, Filipino, Araling Panlipunan, and Values Education, MAPEH, & TLE with beadwork and jewelry craftsmanship.",
+            "icon": "📚"
+        },
+        {
+            "title": "Bridging Programs",
+            "description": "Specialized \"Catch-Up\" support focusing on <strong>literacy, numeracy, and reading</strong>. We ensure no student is left behind through personalized academic interventions.",
+            "icon": "🚀"
+        },
+        {
+            "title": "Student Clubs & Interests",
+            "description": "Beyond academics, we offer various clubs and extracurricular activities to help students discover their passions, build leadership skills, and find their unique interests.",
+            "icon": "🤝"
+        }
+    ]
+}

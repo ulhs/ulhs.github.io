@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dumu (About Us) | Upper Labay High School</title>
+    <meta name="description" content="Learn about the history, mission, and vision of Upper Labay High School. Rooted in Blaan Heritage.">
+    
+    <link rel="icon" type="image/webp" href="../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <!-- Link to the main CSS (Note the ../ to go back one folder) -->
+    <link rel="stylesheet" href="../assets/css/typography.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+    <header>
+        <!-- Loaded dynamically from header.html -->
+    </header>
+
+    <div class="beadwork-strip"></div>
+
+    <main>
+        <!-- Page Header -->
+        <section class="page-banner">
+            <h1>Dumu: Our Story</h1>
+            <p>Honoring the Past, Empowering the Future of the Blaan Tribe.</p>
+        </section>
+
+        <!-- History & Mission Section -->
+        <section class="content-section reveal reveal-bottom">
+            <div class="about-grid">
+                <div class="text-block reveal reveal-left delay-1">
+                    <h2 class="accent-title">Kasfala (Our History)</h2>
+                    <p>Upper Labay High School is a public secondary institution under the <strong>Department of Education (DepEd) - Division of General Santos City</strong>. While we provide standard Junior High (Grades 7-10) and Senior High (Grades 11-12) programs, we are uniquely situated on Blaan ancestral land.</p> <br>
+                    <p>We are currently strengthening our identity by developing a <strong>Cultural Heritage Learning Center</strong>, where we integrate traditional Blaan-inspired beadwork and jewelry designs into our students' learning journey.</p>
+                </div>
+                <div class="image-block reveal reveal-right delay-2">
+                    <!-- Placeholder for a school or community photo -->
+                    <img src="../assets/images/school-community.webp" alt="Blaan Community" class="featured-img">
+                </div>
+            </div>
+        </section>
+
+                <!-- DEPED COMPLIANCE SECTION: 3-COLUMN LAYOUT -->
+        <section class="compliance-section reveal reveal-bottom">
+            
+            <!-- COLUMN 1: MANDATE -->
+            <div class="compliance-card mandate-col reveal reveal-left delay-1">
+                <h3>The DepEd Mandate</h3>
+                <div class="scroll-content">
+                    <p>The Department of Education was established through the Education Decree of 1863 as the Superior Commission of Primary Instruction under a Chairman. The Education agency underwent many reorganization efforts in the 20th century in order to better define its purpose vis a vis the changing administrations and charters. The present day Department of Education was eventually mandated through Republic Act 9155, otherwise known as the Governance of Basic Education act of 2001 which establishes the mandate of this agency.</p>
+                    <p>The Department of Education (DepEd) formulates, implements, and coordinates policies, plans, programs and projects in the areas of formal and non-formal basic education. It supervises all elementary and secondary education institutions, including alternative learning systems, both public and private; and provides for the establishment and maintenance of a complete, adequate, and integrated system of basic education relevant to the goals of national development.</p>
+                </div>
+            </div>
+
+            <!-- COLUMN 2: CORE VALUES (TOP) & VISION (BOTTOM) -->
+            <div class="compliance-middle-col reveal reveal-bottom delay-2">
+                <!-- Core Values -->
+                <div class="compliance-card values-box">
+                    <h3>The DepEd Core Values</h3>
+                    <ul class="values-list">
+                        <li>Maka-Diyos</li>
+                        <li>Maka-tao</li>
+                        <li>Makakalikasan</li>
+                        <li>Makabansa</li>
+                    </ul>
+                </div>
+                <!-- Vision -->
+                <div class="compliance-card vision-box">
+                    <h3>The DepEd Vision</h3>
+                    <p>We dream of Filipinos who passionately love their country and whose values and competencies enable them to realize their full potential and contribute meaningfully to building the nation.</p>
+                    <p>As a learner-centered public institution, the Department of Education continuously improves itself to better serve its stakeholders.</p>
+                </div>
+            </div>
+
+            <!-- COLUMN 3: MISSION -->
+            <div class="compliance-card mission-col reveal reveal-right delay-3">
+                <h3>The DepEd Mission</h3>
+                <p>To protect and promote the right of every Filipino to quality, equitable, culture-based, and complete basic education where:</p>
+                <ul class="mission-list">
+                    <li><strong>Students</strong> learn in a child-friendly, gender-sensitive, safe, and motivating environment.</li>
+                    <li><strong>Teachers</strong> facilitate learning and constantly nurture every learner.</li>
+                    <li><strong>Administrators </strong>and <strong>staff</strong> as stewards of the institution, ensure an enabling and supportive environment for effective learning to happen.</li>
+                    <li><strong>Family, community </strong>and <strong>other stakeholders</strong> are actively engaged and share responsibility for developing life-long learners.</li>
+                </ul>
+            </div>
+
+        </section>
+        <section class="section-container no-gap-bottom">
+            <div class="faculty-intro">
+                <h2 class="section-title">Meet the Faculty</h2>
+                <p class="section-subtitle">Get to know the school leaders, advisers, and mentors who guide our learners with professionalism, compassion, and pride in Blaan heritage.</p>
+            </div>
+        </section>
+
+        <section class="section-container no-gap-bottom no-gap-top">
+            <h2 class="section-title">Administrative Leadership</h2>
+            <p class="section-subtitle">The stewards ensuring a supportive environment for effective learning.</p>
+            
+            <div class="grid admin-grid" id="admin-grid">
+                <!-- Content loaded dynamically from about.json -->
+                <p class="loading-text">Loading administration...</p>
+            </div>
+        </section>
+
+        <section class="section-container no-gap-bottom no-gap-top">
+            <h2 class="section-title">Junior High School Faculty</h2>
+            <p class="section-subtitle">Dedicated educators for Grades 7 to 10.</p>
+            <div class="grid" id="jhs-grid">
+                <!-- Content loaded dynamically from about.json -->
+                <p class="loading-text">Loading JHS faculty...</p>
+            </div>
+        </section>
+
+        <section class="section-container no-gap-top">
+            <h2 class="section-title">Senior High School Faculty</h2>
+            <p class="section-subtitle">Subject specialists for Grades 11 and 12.</p>
+            <div class="grid" id="shs-grid">
+                <!-- Content loaded dynamically from about.json -->
+                <p class="loading-text">Loading SHS faculty...</p>
+            </div>
+        </section>
+
+                <!-- CULTURAL HERITAGE LEARNING CENTER PROMO -->
+        <section class="promo-section">
+            <div class="promo-container">
+                <div class="promo-content">
+                    <span class="badge">Coming Soon...</span>
+                    <h2>Our Cultural Heritage Learning Center</h2>
+                    <p>We are currently building our collection of authentic Blaan beadwork patterns. As we transform Upper Labay High School into a hub for indigenous craftsmanship, click the button below.</p>
+                    <a href="community-tlogan.html" class="btn btn-gold">Follow Our Journey</a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+    <!-- DYNAMIC FOOTER (Corrected for sub-pages) -->
+    <footer>
+        <!-- Loaded dynamically from footer.html -->
+    </footer>
+    <script src="../assets/js/main.js"></script>
+</body>
+</html>
+
+
+
+

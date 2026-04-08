@@ -1,0 +1,26 @@
+{
+    "reports": [
+        {
+            "title": "School Report Card",
+            "description": "Interactive PDF of our school's performance, enrollment, and graduation data for SY 2025-2026.",
+            "link": "../assets/documents/SRC 2025-2026.pdf",
+            "icon": "📊"
+        },
+        {
+            "title": "Annual Implementation Plan",
+            "description": "Interactive PDF of our roadmap for school improvement and projects for SY 2026-2027.",
+            "link": "../assets/documents/AIP 2026-2027.pdf",
+            "icon": "📋"
+        },
+        {
+            "title": "Citizen's Charter",
+            "description": "Interactive PDF of standard operating procedures for front-line school services and turnaround times.",
+            "link": "../assets/documents/Citizen's Charter.pdf",
+            "icon": "📜"
+        }
+    ],
+    "financial_notice": {
+        "title": "Financial Accountability",
+        "description": "We strictly adhere to DepEd's policies on the utilization of MOOE (Maintenance and Other Operating Expenses). Physical copies of our monthly reports are also available at the School Administration Office in Upper Labay High School."
+    }
+}

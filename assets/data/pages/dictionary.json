@@ -1,0 +1,20 @@
+{
+    "terms": [
+        { "word": "Flehew", "pronunciation": "[fle-hew]", "meaning": "Welcome / Joyful. A warm greeting used to welcome visitors.", "audio": "../assets/audio/dictionary/flehew.mp3" },
+        { "word": "Bong sàlamàt", "pronunciation": "[bong sa-la-mat]", "meaning": "Thank you very much. Expressing deep gratitude.", "audio": "../assets/audio/dictionary/bong-salamat.mp3" },
+        { "word": "Gumnè Fgalad", "pronunciation": "[gum-ne fga-lad]", "meaning": "Home of the Future / School. Literally \"a place of learning/fencing.\"", "audio": "../assets/audio/dictionary/gumne-fgalad.mp3" },
+        { "word": "Dumu", "pronunciation": "[du-mu]", "meaning": "Companion / About. Representing our shared journey.", "audio": "../assets/audio/dictionary/dumu.mp3" },
+        { "word": "Gnarè", "pronunciation": "[gna-re]", "meaning": "Knowledge / Academics. The pursuit of learning.", "audio": "../assets/audio/dictionary/gnare.mp3" },
+        { "word": "T'logan", "pronunciation": "[tlo-gan]", "meaning": "Community / Village. Our digital and physical gathering place.", "audio": "../assets/audio/dictionary/tlogan.mp3" },
+        { "word": "Kmasut", "pronunciation": "[kma-sut]", "meaning": "Enrollment / To Enter. The beginning of the student journey.", "audio": "../assets/audio/dictionary/kmasut.mp3" },
+        { "word": "Kasfala", "pronunciation": "[kas-fa-la]", "meaning": "History / Story. Honoring our past narratives.", "audio": "../assets/audio/dictionary/kasfala.mp3" },
+        { "word": "Malwe", "pronunciation": "[mal-we]", "meaning": "Respect. A core value in Blaan culture and our school community.", "audio": "../assets/audio/dictionary/malwe.mp3" },
+        { "word": "Katamanan", "pronunciation": "[ka-ta-ma-nan]", "meaning": "Perseverance / Endurance. The spirit of our learners in pursuing their dreams.", "audio": "../assets/audio/dictionary/katamanan.mp3" },
+        { "word": "Blaan", "pronunciation": "[bla-an]", "meaning": "The indigenous people of the region. Our school is proud to be on Blaan ancestral land.", "audio": "../assets/audio/dictionary/blaan.mp3" },
+        { "word": "Salfewe", "pronunciation": "[sal-fe-we]", "meaning": "To help each other / Cooperation. Reflecting the spirit of community (Bayanihan).", "audio": "../assets/audio/dictionary/salfewe.mp3" }
+    ],
+    "search_config": {
+        "placeholder": "Try Flehew, Kmasut, welcome, or enrollment",
+        "label": "Search by word, pronunciation, or meaning"
+    }
+}

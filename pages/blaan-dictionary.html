@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blaan Mini-Dictionary | Upper Labay High School</title>
+    <meta name="description" content="Learn common Blaan terms and phrases used at Upper Labay High School. Celebrating our cultural heritage.">
+    <link rel="icon" type="image/webp" href="../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/typography.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+    <header>
+        <!-- Loaded dynamically from header.html -->
+    </header>
+
+    <div class="beadwork-strip"></div>
+
+    <main>
+        <section class="page-banner">
+            <h1>Blaan Mini-Dictionary</h1>
+            <p>A guide to the common terms and phrases used in our school community.</p>
+        </section>
+
+        <section class="section-container reveal reveal-bottom">
+            <div class="dictionary-search-panel reveal reveal-bottom delay-1">
+                <label for="dictionary-search" class="dictionary-search-label">Search by word, pronunciation, or meaning</label>
+                <div class="dictionary-search-row">
+                    <input type="search" id="dictionary-search" class="dictionary-search-input" placeholder="Try Flehew, Kmasut, welcome, or enrollment">
+                    <span id="dictionary-results-count" class="dictionary-results-count">12 terms available</span>
+                </div>
+            </div>
+            <h2 class="section-title reveal reveal-bottom delay-2">Common Phrases</h2>
+            <div class="dictionary-grid" id="dictionary-grid">
+                <!-- Content loaded dynamically from dictionary.json -->
+                <p class="loading-text">Loading dictionary terms...</p>
+            </div>
+            <p id="dictionary-empty-state" class="dictionary-empty-state">No terms match your search yet. Try a word, translation, or school topic.</p>
+        </section>
+    </main>
+
+    <footer>
+        <!-- Loaded dynamically from footer.html -->
+    </footer>
+    <script src="../assets/js/main.js"></script>
+
+    <!-- AI FAQ BOT STRUCTURE -->
+    <div class="faq-bot-container">
+        <div class="faq-bot-toggle" id="faq-bot-toggle">
+            <span class="bot-icon">💬</span>
+        </div>
+        <div class="faq-bot-window" id="faq-bot-window">
+            <div class="faq-bot-header">
+                <h4>ULHS Assistant</h4>
+                <span class="faq-bot-close" id="faq-bot-close">&times;</span>
+            </div>
+            <div class="faq-bot-messages" id="faq-bot-messages"></div>
+            <div class="faq-suggestions">
+                <span class="suggestion-chip">Enrollment</span>
+                <span class="suggestion-chip">Scholarships</span>
+                <span class="suggestion-chip">SHS Tracks</span>
+            </div>
+            <div class="faq-bot-input-area">
+                <input type="text" class="faq-bot-input" id="faq-bot-input" placeholder="Ask a question...">
+                <button class="faq-bot-send" id="faq-bot-send">➤</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+
+
+

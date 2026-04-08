@@ -1,0 +1,39 @@
+{
+    "hero": {
+        "title": "Flehew!",
+        "subtitle": "Welcome to Upper Labay High School. Home of the future Cultural Heritage Learning Center, where we strengthen Blaan identity through traditional beadwork and jewelry craftsmanship."
+    },
+    "stats_cards": [
+        {
+            "icon": "🎓",
+            "title": "Gumnè Fgalad",
+            "description": "Academic Excellence: A curriculum that blends DepEd standards with deep Indigenous Knowledge (IKSP).",
+            "link": "pages/academics-gnare.html",
+            "link_text": "Our Programs →"
+        },
+        {
+            "icon": "📿",
+            "title": "Cultural Identity",
+            "description": "Blaan Heritage: Strengthening our learners' identity through the School of Living Traditions (SLT) and traditional arts.",
+            "link": "pages/slt-beadwork.html",
+            "link_text": "Explore SLT →"
+        },
+        {
+            "icon": "🪘",
+            "title": "Kaye Dad Tagu",
+            "description": "Elders' Wisdom: Preserving our Flalok (oral stories) to ensure our ancestral voice guides the next generation.",
+            "link": "pages/blaan-dictionary.html",
+            "link_text": "Learn Blaan Terms →"
+        }
+    ],
+    "vision": {
+        "title": "Rooted in Heritage, Growing for the Future",
+        "description": "Upper Labay High School is more than just an educational institution; it is a sanctuary for the Blaan soul. Our vision is to empower students who are globally competitive yet deeply anchored in their cultural roots."
+    },
+    "promo": {
+        "title": "Ready to join Gumnè Fgalad?",
+        "description": "Start your enrollment journey today and be part of a community that values both tradition and excellence.",
+        "btn_text": "Start Kmasut (Enrollment)",
+        "btn_link": "pages/enrollment.html"
+    }
+}

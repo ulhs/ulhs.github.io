@@ -1,0 +1,25 @@
+{
+    "video": {
+        "title": "A Day in the Life",
+        "description": "Experience the culture, community, and learning through our students' eyes.",
+        "src": "https://www.youtube.com/embed/S26fKxH0Q4c",
+        "caption": "Video: Student Council Activities & Cultural Celebration Highlights."
+    },
+    "photos": [
+        {
+            "image": "../assets/images/student.webp",
+            "title": "Cultural Arts Club",
+            "description": "Students practicing traditional Blaan dance movements."
+        },
+        {
+            "image": "../assets/images/school-community.webp",
+            "title": "Annual Intramurals",
+            "description": "Fostering teamwork and sportsmanship through friendly competition."
+        },
+        {
+            "image": "../assets/images/slt-beadwork.webp",
+            "title": "SLT Workshops",
+            "description": "Preserving our heritage through hands-on beadwork craftsmanship."
+        }
+    ]
+}

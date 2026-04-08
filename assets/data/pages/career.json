@@ -1,0 +1,52 @@
+{
+    "institutions": [
+        { "name": "Mindanao State University (MSU-GenSan)", "type": "Public", "link": "https://web.facebook.com/TheMSUGensan", "icon": "🏛️" },
+        { "name": "Notre Dame of Dadiangas University (NDDU)", "type": "Private", "link": "https://web.facebook.com/NDDUOfficial", "icon": "🏛️" },
+        { "name": "University of Santo Tomas (UST-GenSan)", "type": "Private", "link": "https://web.facebook.com/ustgeneralsantos", "icon": "🏛️" },
+        { "name": "Ramon Magsaysay Memorial Colleges (RMMC)", "type": "Private", "link": "https://web.facebook.com/rmmcgensanofficial", "icon": "🏛️" },
+        { "name": "Holy Trinity College (HTC)", "type": "Private", "link": "https://web.facebook.com/holytrinitycollegegsc", "icon": "🏛️" },
+        { "name": "General Santos Doctors' Medical School Foundation (GSDMSF)", "type": "Medical", "link": "https://web.facebook.com/GensanDoc", "icon": "🏥" },
+        { "name": "Gensantos Foundation College, Inc. (GFI)", "type": "Private", "link": "https://web.facebook.com/gficollegeOFFICIAL", "icon": "🏛️" },
+        { "name": "STI College General Santos", "type": "Private", "link": "https://web.facebook.com/gensan.sti.edu", "icon": "🏛️" },
+        { "name": "Mindanao Polytechnic College (MPC)", "type": "Private", "link": "https://web.facebook.com/profile.php?id=100091733241868", "icon": "🏛️" },
+        { "name": "Goldenstate College", "type": "Private", "link": "https://web.facebook.com/goldenstatecollegeofficial", "icon": "🏛️" },
+        { "name": "Cronasia Foundation College, Inc.", "type": "Private", "link": "https://web.facebook.com/CFCOFFICIALPAGEGENSAN", "icon": "🏛️" },
+        { "name": "Southpoint College of Arts and Technology", "type": "Private", "link": "https://web.facebook.com/SouthpointCollegeGensan", "icon": "🏛️" },
+        { "name": "MMG College of General Santos City, Inc.", "type": "Medical", "link": "https://web.facebook.com/mmgschoolgensan", "icon": "🏥" },
+        { "name": "Stratford International School", "type": "Private", "link": "https://web.facebook.com/stratfordian", "icon": "🏛️" },
+        { "name": "Brokenshire College SOCSKSARGEN, Inc.", "type": "Private", "link": "https://web.facebook.com/profile.php?id=100057253368367", "icon": "🏛️" },
+        { "name": "TESDA Region XII", "type": "Tech-Voc", "link": "https://web.facebook.com/tesdaregionxii", "icon": "🛠️" }
+    ],
+    "scholarships": {
+        "government": {
+            "title": "1. Government-Funded Scholarships",
+            "description": "These programs are widely accepted across most higher education institutions (HEIs) in GenSan, including MSU-Gensan, NDDU, and MMG College.",
+            "items": [
+                { "name": "CHED Merit Scholarship", "description": "For students with high academic performance.", "link": "https://ched.gov.ph/", "icon": "🎓" },
+                { "name": "EduKAR GenSan (LGU)", "description": "Local government support for GSC residents.", "link": "https://web.facebook.com/EduKARGenSan", "icon": "🏛️" },
+                { "name": "TESDA (UniFAST)", "description": "Financial assistance for tertiary education.", "link": "https://unifast.gov.ph/", "icon": "🛠️" },
+                { "name": "GSC Water District (GSCWD)", "description": "Scholarship program for qualified dependents.", "link": "https://www.gensanwater.gov.ph/", "icon": "💧" }
+            ]
+        },
+        "institutional": {
+            "title": "2. Institutional (School-Specific) Scholarships",
+            "description": "Most private schools in GenSan offer their own entrance and academic scholarships based on Senior High School (SHS) performance.",
+            "items": [
+                { "name": "MSU-Gensan", "description": "Universal Access to Quality Tertiary Education & Special Muslim Grantees (SMG).", "link": "https://web.facebook.com/TheMSUGensan", "icon": "🏛️" },
+                { "name": "NDDU", "description": "Marist Scholarship for academic achievers.", "link": "https://web.facebook.com/NDDUOfficial", "icon": "⛪" },
+                { "name": "HTC", "description": "Holy Trinity College Scholarship programs.", "link": "https://web.facebook.com/holytrinitycollegegsc", "icon": "🕊️" },
+                { "name": "GSDMSF", "description": "Medical School Foundation Scholarship.", "link": "https://web.facebook.com/GensanDoc", "icon": "🏥" },
+                { "name": "SM Foundation", "description": "College scholarship for underprivileged youth.", "link": "https://www.sm-foundation.org/", "icon": "🏢" }
+            ]
+        }
+    },
+    "alumni": {
+        "title": "Alumni Success Stories",
+        "description": "Inspiration from our graduates who are making their mark in the world.",
+        "stories": [
+            { "name": "Imee C.", "batch": "Batch 2020", "image": "../assets/images/teachers/imee.webp", "quote": "ULHS gave me the foundation to pursue my dreams in Education. Now, I am back serving the community as a licensed professional." },
+            { "name": "Arvin L.", "batch": "Batch 2021", "image": "../assets/images/teachers/arvin.webp", "quote": "The cultural heritage we learned at ULHS helped me stay rooted while studying Engineering in the city. Never forget where you come from." },
+            { "name": "Christian S.", "batch": "Batch 2019", "image": "../assets/images/teachers/christian.webp", "quote": "Being part of the first SHS batch was challenging, but the teachers pushed us to excel. Now I'm working in the tech industry." }
+        ]
+    }
+}

@@ -1,0 +1,34 @@
+{
+    "slt_items": [
+        {
+            "title": "Beadwork & Jewelry",
+            "description": "Our students master the craftsmanship of traditional jewelry using black, white, red, yellow, and blue seed beads to mirror ancestral Blaan designs.",
+            "image": "../assets/images/slt-beadwork.webp",
+            "link": "slt-beadwork.html",
+            "icon": "📿",
+            "audio": "../assets/audio/community/beadwork-jewelry.mp3"
+        },
+        {
+            "title": "Dad Dwata Music",
+            "description": "Mastering the Faglong (two-stringed lute) and Agong (brass gongs) to echo the heartbeat of our tribe.",
+            "image": "../assets/images/slt-music.webp",
+            "link": "#",
+            "icon": "🎵",
+            "audio": "../assets/audio/community/dad-dwata-music.mp3"
+        },
+        {
+            "title": "Maral Dance",
+            "description": "Grace and storytelling through movement. Our students perform traditional dances for community rituals.",
+            "image": "../assets/images/slt-dance.webp",
+            "link": "#",
+            "icon": "💃",
+            "audio": "../assets/audio/community/maral-dance.mp3"
+        }
+    ],
+    "elders_wisdom": {
+        "description": "Knowledge in the Blaan tribe is a gift passed from the Fulong (elders) to the youth. We document oral histories to ensure no story is forgotten.",
+        "quote": "We do not inherit the land from our ancestors; we borrow it from our children.",
+        "author": "Blaan Proverb",
+        "audio": "../assets/audio/community/elders-wisdom.mp3"
+    }
+}

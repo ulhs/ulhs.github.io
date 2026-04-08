@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Career & College Portal | Upper Labay High School</title>
+    <meta name="description" content="Resources for Grade 11-12 students: university timelines, scholarships, and alumni success stories.">
+    <link rel="icon" type="image/webp" href="../assets/images/school-logo.webp">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/typography.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body class="theme-career">
+
+    <header>
+        <!-- Loaded dynamically from header.html -->
+    </header>
+
+    <div class="beadwork-strip"></div>
+
+    <main>
+        <!-- Page Banner -->
+        <section class="page-banner banner-shs">
+            <h1>Career & College Portal</h1>
+            <p>Empowering Grade 11 & 12 students to navigate their future with confidence.</p>
+        </section>
+
+        <!-- Tertiary Institutions in General Santos City -->
+        <section class="section-container reveal reveal-bottom">
+            <h2 class="section-title reveal reveal-bottom delay-1">Tertiary Institutions in General Santos City</h2>
+            <p class="section-subtitle reveal reveal-bottom delay-2">Explore public and private higher education options in the city.</p>
+            
+            <div class="institution-grid" id="institution-grid">
+                <!-- Content loaded dynamically from career.json -->
+                <p class="loading-text">Loading institutions...</p>
+            </div>
+        </section>
+
+        <div class="beadwork-strip"></div>
+
+        <!-- Scholarship Opportunities -->
+        <section class="section-container bg-light reveal reveal-bottom" id="scholarships">
+            <h2 class="section-title reveal reveal-bottom delay-1">Scholarship Opportunities</h2>
+            <p class="section-subtitle reveal reveal-bottom delay-2">Financial support is available for dedicated students. Explore these programs.</p>
+            
+            <div id="scholarships-container">
+                <!-- Content loaded dynamically from career.json -->
+                <p class="loading-text">Loading scholarships...</p>
+            </div>
+        </section>
+
+        <!-- Success Stories Section (Social Proof) -->
+        <section class="section-container bg-light reveal reveal-bottom" id="alumni-section">
+            <div id="alumni-intro">
+                <!-- Content loaded dynamically from career.json -->
+            </div>
+            
+            <div class="grid" id="alumni-grid">
+                <!-- Content loaded dynamically from career.json -->
+                <p class="loading-text">Loading alumni stories...</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <!-- Loaded dynamically from footer.html -->
+    </footer>
+    <script src="../assets/js/main.js"></script>
+
+    <!-- AI FAQ BOT STRUCTURE -->
+    <div class="faq-bot-container">
+        <div class="faq-bot-toggle" id="faq-bot-toggle">
+            <span class="bot-icon">💬</span>
+        </div>
+        <div class="faq-bot-window" id="faq-bot-window">
+            <div class="faq-bot-header">
+                <h4>ULHS Assistant</h4>
+                <span class="faq-bot-close" id="faq-bot-close">&times;</span>
+            </div>
+            <div class="faq-bot-messages" id="faq-bot-messages"></div>
+            <div class="faq-suggestions">
+                <span class="suggestion-chip">Enrollment</span>
+                <span class="suggestion-chip">Scholarships</span>
+                <span class="suggestion-chip">SHS Tracks</span>
+            </div>
+            <div class="faq-bot-input-area">
+                <input type="text" class="faq-bot-input" id="faq-bot-input" placeholder="Ask a question...">
+                <button class="faq-bot-send" id="faq-bot-send">➤</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+
+

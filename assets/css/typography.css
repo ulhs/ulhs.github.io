@@ -1,0 +1,129 @@
+/* --- TYPOGRAPHY SYSTEM --- */
+
+/* 1. Root Typography Variables */
+:root {
+    --font-main: 'Open Sans', sans-serif;
+    --font-heading: 'Montserrat', sans-serif;
+    
+    /* Standardized Font Sizes */
+    --fs-xxs: 0.65rem;
+    --fs-xs: 0.75rem;
+    --fs-sm: 0.85rem;
+    --fs-base: 1rem;
+    --fs-md: 1.1rem;
+    --fs-lg: 1.2rem;
+    --fs-xl: 1.4rem;
+    --fs-2xl: 1.5rem;
+    --fs-3xl: 2.5rem;
+    --fs-hero: 4.5rem;
+    
+    /* Line Heights */
+    --lh-tight: 1.2;
+    --lh-base: 1.6;
+    --lh-loose: 1.8;
+}
+
+/* 2. Global Text Defaults */
+body {
+    font-family: var(--font-main);
+    line-height: var(--lh-base);
+}
+
+h1, h2, h3, h4, .school-name {
+    font-family: var(--font-heading);
+    text-transform: uppercase;
+}
+
+/* 3. Heading Specifics */
+h1 { font-size: var(--fs-3xl); }
+h2 { font-size: var(--fs-2xl); }
+h3 { font-size: var(--fs-lg); }
+
+/* 4. Branding Typography */
+.school-name {
+    font-size: var(--fs-lg);
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.school-sub {
+    font-size: var(--fs-sm);
+    letter-spacing: 2px;
+}
+
+/* 5. Navigation Typography */
+.nav-links a {
+    font-size: var(--fs-sm);
+    font-weight: 600;
+}
+
+/* 6. Hero Typography */
+.hero h1 { 
+    font-size: var(--fs-hero); 
+    text-shadow: 3px 3px 10px rgba(0,0,0,0.5);
+}
+
+.hero p {
+    font-size: 1.3rem;
+    text-shadow: 1px 1px 5px rgba(0,0,0,0.8);
+}
+
+/* 7. Section Typography */
+.section-title, .accent-title { 
+    font-size: var(--fs-3xl); 
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.section-subtitle { 
+    font-style: italic; 
+    font-size: var(--fs-md); 
+}
+
+/* 8. Component Specific Typography */
+.teacher-item h3 {
+    font-size: var(--fs-md);
+}
+
+.message-title {
+    font-size: var(--fs-xl);
+    letter-spacing: 1px;
+}
+
+.message-content p {
+    font-size: var(--fs-md);
+    line-height: var(--lh-loose);
+}
+
+.signature {
+    font-family: var(--font-heading);
+    font-style: italic;
+    font-weight: 600;
+}
+
+.dict-word {
+    font-family: var(--font-heading);
+    font-size: var(--fs-xl);
+}
+
+.dict-pronunciation {
+    font-style: italic;
+    font-size: var(--fs-sm);
+}
+
+.download-meta {
+    font-size: var(--fs-xs);
+    font-weight: 700;
+}
+
+.theme-toggle::after {
+    font-size: var(--fs-xxs);
+    text-transform: none; /* Keep tooltip case as is */
+}
+
+/* 9. Utility Classes */
+.text-uppercase { text-transform: uppercase; }
+.text-italic { font-style: italic; }
+.text-bold { font-weight: 700; }
+.text-center { text-align: center; }
+.text-justify { text-align: justify; }

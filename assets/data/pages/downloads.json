@@ -1,0 +1,54 @@
+{
+    "banner": {
+        "title": "Downloads Center",
+        "subtitle": "Find the most-requested forms, school references, and official files in one organized hub."
+    },
+    "intro": {
+        "title": "Quick Access for Families and Learners",
+        "description": "Use this page to open, save, or print the files most commonly requested by parents, students, and stakeholders. For best results on mobile, open the file first and use your browser's share or download option."
+    },
+    "files": [
+        {
+            "category": "Enrollment Form",
+            "title": "Basic Education Enrollment Form",
+            "description": "Official PDF form for learner registration and document preparation.",
+            "link": "../assets/documents/Basic-Education-Enrollment-Form.pdf",
+            "icon": "📝"
+        },
+        {
+            "category": "School Reference",
+            "title": "School Calendar Image",
+            "description": "Printable school year overview for families who want a quick reference at home.",
+            "link": "../assets/documents/school-calendar.webp",
+            "icon": "🗓️"
+        },
+        {
+            "category": "Student Guide",
+            "title": "Student Handbook",
+            "description": "Official student code of conduct, academic policies, and school expectations.",
+            "link": "../assets/documents/Student-Handbook.pdf",
+            "icon": "📕"
+        },
+        {
+            "category": "School Guide",
+            "title": "Citizen's Charter",
+            "description": "School service guide with processing steps, front-line services, and basic timelines.",
+            "link": "../assets/documents/Citizen's Charter.pdf",
+            "icon": "📘"
+        },
+        {
+            "category": "Transparency",
+            "title": "School Report Card",
+            "description": "Performance, enrollment, and school data report for stakeholders and the wider community.",
+            "link": "../assets/documents/SRC 2025-2026.pdf",
+            "icon": "📊"
+        },
+        {
+            "category": "Planning Document",
+            "title": "Annual Implementation Plan",
+            "description": "School improvement roadmap and project priorities for the current implementation cycle.",
+            "link": "../assets/documents/AIP 2026-2027.pdf",
+            "icon": "📋"
+        }
+    ]
+}

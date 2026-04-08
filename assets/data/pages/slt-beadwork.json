@@ -1,0 +1,40 @@
+{
+    "banner": {
+        "title": "Blaan Beadwork",
+        "subtitle": "Crafting Heritage through Traditional Jewelry & Adornments"
+    },
+    "process": {
+        "title": "The Art of Adornment",
+        "subtitle": "Our students master the intricate patterns inspired by Blaan Tabih designs.",
+        "steps": [
+            {
+                "id": "01",
+                "title": "Selection of Kasì (Beads)",
+                "description": "We use vibrant seed beads in the five traditional colors: <strong>Black, White, Red, Yellow, and Blue</strong>. These form the foundation of all Blaan-inspired jewelry.",
+                "audio": "../assets/audio/beadwork/step-01-kasi.mp3"
+            },
+            {
+                "id": "02",
+                "title": "Pattern Mastery",
+                "description": "Students study ancestral Tabih weaving motifs, translating those geometric symbols into beadwork patterns for necklaces, bracelets, and earrings.",
+                "audio": "../assets/audio/beadwork/step-02-patterns.mp3"
+            },
+            {
+                "id": "03",
+                "title": "Assembly & Jewelry Craft",
+                "description": "Combining beadwork with brass-linked accents and <em>Takmon</em> (shell) sequins to create modern jewelry that carries the soul of the Blaan tribe.",
+                "audio": "../assets/audio/beadwork/step-03-craft.mp3"
+            }
+        ]
+    },
+    "gallery": {
+        "title": "Student Beadwork Gallery",
+        "subtitle": "Initial projects from our Cultural Heritage Learning Center.",
+        "photos": [
+            { "src": "../assets/images/gallery/beadwork-1.webp", "alt": "Black and White Pattern" },
+            { "src": "../assets/images/gallery/beadwork-2.webp", "alt": "Red and Yellow Jewelry" },
+            { "src": "../assets/images/gallery/beadwork-3.webp", "alt": "Blue Accent Beadwork" },
+            { "src": "../assets/images/gallery/beadwork-4.webp", "alt": "Traditional Blaan Necklace" }
+        ]
+    }
+}

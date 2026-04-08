@@ -1,0 +1,30 @@
+{
+    "banner": {
+        "title": "Kmasut: Enrollment Hub",
+        "subtitle": "Ready to join our community? Select your department to begin the enrollment process."
+    },
+    "paths": [
+        {
+            "type": "jhs",
+            "title": "Junior High School",
+            "grades": "Grades 7 to 10 Enrollment",
+            "description": "Start your JHS journey with our localized Blaan curriculum.",
+            "link": "enrollment-jhs.html",
+            "btn_text": "Start JHS Kmasut",
+            "icon": "🎒"
+        },
+        {
+            "type": "shs",
+            "title": "Senior High School",
+            "grades": "Grades 11 to 12 Enrollment",
+            "description": "Enroll in Academic or TVL tracks with specialized SLT training.",
+            "link": "enrollment-shs.html",
+            "btn_text": "Start SHS Kmasut",
+            "icon": "🎓"
+        }
+    ],
+    "schedule": {
+        "title": "Enrollment Schedule",
+        "description": "Our physical enrollment desk is open <strong>Monday to Friday, 8:00 AM to 4:00 PM</strong>. Please ensure you have all required documents scanned for online forms or photocopied for campus visits."
+    }
+}

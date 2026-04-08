@@ -1,0 +1,30 @@
+{
+    "banner": {
+        "title": "SHS Enrollment (Kmasut)",
+        "subtitle": "Ready for your future? Enroll in our specialized SHS tracks for SY 2026-2027."
+    },
+    "options": [
+        {
+            "title": "Online SHS Form",
+            "description": "Select your track and strand through our digital enrollment system.",
+            "link": "https://forms.gle/bJZ2LDtyCP2e1U5QA",
+            "btn_text": "Start SHS Form",
+            "icon": "💻"
+        },
+        {
+            "title": "Physical Enrollment",
+            "description": "Visit the SHS Coordinator's office for personalized track counseling.",
+            "note": "<strong>Hours:</strong> Mon-Fri | 8AM - 4PM",
+            "icon": "🏫"
+        }
+    ],
+    "requirements": {
+        "title": "SHS Requirements",
+        "subtitle": "Please prepare the following documents for Senior High School enrollment:",
+        "items": [
+            { "title": "SF10 (Permanent Record)", "description": "Required for incoming Grade 11 students." },
+            { "title": "NCAE Results", "description": "Helpful for track and strand placement." },
+            { "title": "Completion Certificate", "description": "From Junior High School (Grade 10)." }
+        ]
+    }
+}

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Life Gallery | Upper Labay High School</title>
+    <meta name="description" content="View our campus highlights, sports events, and cultural extracurricular activities.">
+    <link rel="icon" type="image/webp" href="../assets/images/school-logo.webp">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/typography.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body class="theme-student-life">
+
+    <header>
+        <!-- Loaded dynamically from header.html -->
+    </header>
+
+    <div class="beadwork-strip"></div>
+
+    <main>
+        <!-- Page Banner -->
+        <section class="page-banner banner-community">
+            <h1>Student Life Gallery</h1>
+            <p>A glimpse into the vibrant experiences of our students at Upper Labay High School.</p>
+        </section>
+
+        <!-- Video Gallery (Day in the Life) -->
+        <section class="section-container reveal reveal-bottom">
+            <h2 class="section-title reveal reveal-bottom delay-1">A Day in the Life</h2>
+            <p class="section-subtitle reveal reveal-bottom delay-2">Experience the culture, community, and learning through our students' eyes.</p>
+            
+            <div class="video-container reveal reveal-bottom delay-3">
+                <iframe src="about:blank" title="Day in the Life at ULHS" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            
+            <p class="italic-gray reveal reveal-bottom delay-4">Loading video info...</p>
+        </section>
+
+        <div class="beadwork-strip"></div>
+
+        <!-- Photo Gallery (Extracurriculars & Sports) -->
+        <section class="section-container bg-light reveal reveal-bottom" id="photos">
+            <h2 class="section-title reveal reveal-bottom delay-1">Campus Life in Photos</h2>
+            <p class="section-subtitle reveal reveal-bottom delay-2">Moments of joy, achievement, and cultural pride captured on campus.</p>
+            
+            <div class="gallery-grid-enhanced" id="gallery-grid">
+                <!-- Content loaded dynamically from student-life.json -->
+                <p class="loading-text">Loading gallery photos...</p>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="section-container reveal reveal-bottom">
+            <h2 class="section-title">Be Part of our Story</h2>
+            <p>Ready to join the Upper Labay High School community? Start your journey today.</p>
+            <div class="mt-2">
+                <a href="enrollment.html" class="btn">Start Enrollment (Kmasut)</a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <!-- Loaded dynamically from footer.html -->
+    </footer>
+    <script src="../assets/js/main.js"></script>
+
+    <!-- AI FAQ BOT STRUCTURE -->
+    <div class="faq-bot-container">
+        <div class="faq-bot-toggle" id="faq-bot-toggle">
+            <span class="bot-icon">💬</span>
+        </div>
+        <div class="faq-bot-window" id="faq-bot-window">
+            <div class="faq-bot-header">
+                <h4>ULHS Assistant</h4>
+                <span class="faq-bot-close" id="faq-bot-close">&times;</span>
+            </div>
+            <div class="faq-bot-messages" id="faq-bot-messages"></div>
+            <div class="faq-suggestions">
+                <span class="suggestion-chip">Enrollment</span>
+                <span class="suggestion-chip">Scholarships</span>
+                <span class="suggestion-chip">SHS Tracks</span>
+            </div>
+            <div class="faq-bot-input-area">
+                <input type="text" class="faq-bot-input" id="faq-bot-input" placeholder="Ask a question...">
+                <button class="faq-bot-send" id="faq-bot-send">➤</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+
+

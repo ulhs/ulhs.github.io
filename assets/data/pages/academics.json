@@ -1,0 +1,31 @@
+{
+    "paths": [
+        {
+            "type": "jhs",
+            "title": "Junior High School",
+            "grades": "Grades 7 to 10",
+            "description": "Localized MATATAG Curriculum focused on Blaan heritage integration.",
+            "link": "academics-jhs.html",
+            "btn_text": "Explore JHS",
+            "icon": "📖"
+        },
+        {
+            "type": "shs",
+            "title": "Senior High School",
+            "grades": "Grades 11 to 12",
+            "description": "Specialized tracks including Academic and TVL Track.",
+            "link": "academics-shs.html",
+            "btn_text": "Explore SHS",
+            "icon": "🎓"
+        }
+    ],
+    "virtual_tour": {
+        "title": "Explore Our Unified Campus",
+        "description": "Upper Labay High School offers a single, vibrant campus environment for all students from Grades 7 through 12. Experience our specialized learning facilities and cultural heritage centers through this video walkthrough.",
+        "src": "https://www.youtube.com/embed/S26fKxH0Q4c"
+    },
+    "vision": {
+        "title": "Our Unified Vision",
+        "description": "Whether in JHS or SHS, our students are immersed in Indigenous Knowledge Systems and Practices (IKSP). We bridge modern academic standards with Blaan ancestral wisdom to produce culturally-rooted leaders."
+    }
+}

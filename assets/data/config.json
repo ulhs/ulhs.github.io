@@ -1,0 +1,21 @@
+{
+    "school_name": "UPPER LABAY HIGH SCHOOL",
+    "school_name_main": "UPPER LABAY",
+    "school_name_sub": "HIGH SCHOOL",
+    "address": "Purok 1, Brgy. Upper Labay, General Santos City, 9500",
+    "phone": "(+63) 915-539-0731",
+    "email": ["upperlabay.nhs@deped.gov.ph", "304652@deped.gov.ph"],
+    "office_hours": "Monday - Friday | 8:00 AM - 4:00 PM",
+    "social": {
+        "facebook": "https://www.facebook.com/ulhsofficial",
+        "youtube": "https://www.youtube.com/@upperlabaynhs"
+    },
+    "footer_links": [
+        { "text": "Downloads Center", "url": "downloads-center.html" },
+        { "text": "Student Life Gallery", "url": "student-life.html" },
+        { "text": "Blaan Dictionary", "url": "blaan-dictionary.html" },
+        { "text": "Career & College Portal", "url": "career-portal.html" },
+        { "text": "Transparency Board", "url": "transparency.html" },
+        { "text": "Enrollment Hub", "url": "enrollment.html" }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "banner": {
+        "title": "Senior High School (Grades 11-12)",
+        "subtitle": "Preparing future leaders and skilled professionals for the community and beyond."
+    },
+    "intro": {
+        "title": "SHS Educational Transition<br>(SY 2026-2027)",
+        "description": "Starting SY 2026-2027, Upper Labay High School is implementing the <strong>Strengthened Senior High School Curriculum</strong> for incoming Grade 11 students, while Grade 12 students will conclude their journey under the traditional K-12 program."
+    },
+    "tiers": [
+        {
+            "title": "Grade 11: Strengthened SHS Curriculum",
+            "description": "A modernized approach with reduced core subjects and specialized electives focused on two main pathways.",
+            "cards": [
+                { "title": "Academic Pathway", "description": "Designed for students pursuing higher education, focusing on foundational academic excellence and college readiness.", "icon": "📖" },
+                { "title": "Tech-Pro Pathway", "description": "Focuses on technical-professional skills, preparing students for immediate industry entry or specialized technical careers.", "icon": "⚙️" }
+            ]
+        },
+        {
+            "title": "Core Learning Tracks",
+            "description": "Standard DepEd Senior High School curriculum with a localized lens.",
+            "cards": [
+                { "title": "HUMSS Strand", "description": "Humanities and Social Sciences. Preparing students for careers in law, journalism, and community development.", "icon": "🏛️" },
+                { "title": "TVL-FCS", "description": "Technical Vocational Livelihood - Family and Consumer Sciences. Specializing in cookery and hospitality.", "icon": "🍳" }
+            ]
+        }
+    ]
+}

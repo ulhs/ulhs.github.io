@@ -1,0 +1,33 @@
+{
+    "banner": {
+        "title": "JHS Enrollment (Kmasut)",
+        "subtitle": "Welcome to our Junior High School. Start your journey from Grade 7 to 10 here."
+    },
+    "options": [
+        {
+            "title": "Online JHS Form",
+            "description": "Fill out the digital enrollment form for JHS learners.",
+            "note": "You need to attach the SF9 (JHS Report Card) and PSA Birth Certificate. If the documents are ready, click the button below to start the enrollment process.",
+            "link": "https://forms.gle/bJZ2LDtyCP2e1U5QA",
+            "btn_text": "Start JHS Form",
+            "icon": "💻"
+        },
+        {
+            "title": "Physical Forms",
+            "description": "Prefer to fill out a paper form? Visit us at the school office for the official DepEd Enrollment Form. Or You can download the official DepEd Enrollment Form by clicking the button below.",
+            "link": "../assets/documents/Basic-Education-Enrollment-Form.pdf",
+            "btn_text": "Download Form",
+            "icon": "📄",
+            "is_download": true
+        }
+    ],
+    "requirements": {
+        "title": "JHS Requirements",
+        "subtitle": "Please prepare the following documents for Junior High School enrollment:",
+        "items": [
+            { "title": "PSA Birth Certificate", "description": "Required for incoming Grade 7 and transferees." },
+            { "title": "SF9 (JHS Report Card)", "description": "Latest grades from Elementary or previous JHS level." },
+            { "title": "Certificate of Completion", "description": "For incoming Grade 7 students." }
+        ]
+    }
+}
