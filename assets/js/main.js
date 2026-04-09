@@ -219,8 +219,9 @@ document.addEventListener('DOMContentLoaded', () => {
             updateGlobalUI(config);
         } catch (err) { console.warn("Config not found:", err); }
 
-        // 2. Load Page-Specific Content
-        const page = window.location.pathname.split('/').pop() || 'index.html';
+        const pathParts = window.location.pathname.split('/');
+        const lastPart = pathParts.pop() || 'index.html';
+        const page = lastPart.endsWith('.html') ? lastPart : lastPart + '.html';
         
         if (page === 'index.html') {
             loadHomePage(dataPath);
@@ -310,10 +311,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Set active link
-        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        const pathParts = window.location.pathname.split('/');
+        const lastPart = pathParts.pop() || 'index.html';
+        const currentPage = lastPart.endsWith('.html') ? lastPart : lastPart + '.html';
         const navItems = document.querySelectorAll('.nav-links a');
         navItems.forEach(item => {
-            if (item.getAttribute('data-page') === currentPage) {
+            const itemPage = item.getAttribute('data-page');
+            if (itemPage === currentPage) {
                 item.classList.add('active');
             } else {
                 item.classList.remove('active');
