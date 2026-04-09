@@ -1150,6 +1150,28 @@ document.addEventListener('DOMContentLoaded', () => {
     loadDynamicContent();
 
     /* --- AI FAQ BOT LOGIC --- */
+    let chatbotData = null;
+    let dictionaryData = null;
+    let aboutData = null;
+
+    async function initChatbot() {
+        const isSubPage = window.location.pathname.includes('/pages/');
+        const dataPath = isSubPage ? '../assets/data/' : 'assets/data/';
+
+        try {
+            const botRes = await fetch(`${dataPath}chatbot.json`);
+            chatbotData = await botRes.json();
+            
+            const dictRes = await fetch(`${dataPath}pages/dictionary.json`);
+            dictionaryData = await dictRes.json();
+
+            const aboutRes = await fetch(`${dataPath}pages/about.json`);
+            aboutData = await aboutRes.json();
+        } catch (err) {
+            console.error("Error initializing chatbot data:", err);
+        }
+    }
+
     const faqBotToggle = document.getElementById('faq-bot-toggle');
     const faqBotWindow = document.getElementById('faq-bot-window');
     const faqBotClose = document.getElementById('faq-bot-close');
@@ -1159,6 +1181,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const suggestionChips = document.querySelectorAll('.suggestion-chip');
 
     if (faqBotToggle && faqBotWindow) {
+        initChatbot();
+
         // Toggle Bot Window
         faqBotToggle.addEventListener('click', () => {
             const isVisible = faqBotWindow.style.display === 'flex';
@@ -1167,7 +1191,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 faqBotInput.focus();
                 // Add welcome message if empty
                 if (faqBotMessages.children.length === 0) {
-                    addMessage("Flehew! I'm your ULHS assistant. How can I help you today?", 'bot');
+                    const welcomeMsg = chatbotData ? chatbotData.config.welcome_message : "Flehew! I'm your ULHS assistant. How can I help you today?";
+                    addMessage(welcomeMsg, 'bot');
                 }
             }
         });
@@ -1203,80 +1228,127 @@ document.addEventListener('DOMContentLoaded', () => {
         addMessage(query, 'user');
         faqBotInput.value = '';
 
+        // Show Typing Indicator
+        const typingIndicator = showTypingIndicator();
+
         // Simulate Bot Thinking
+        const delay = chatbotData ? chatbotData.config.typing_delay : 600;
         setTimeout(() => {
+            removeTypingIndicator(typingIndicator);
             const response = getBotResponse(query);
-            addMessage(response, 'bot');
-        }, 600);
+            addMessage(response.text, 'bot', response.links);
+        }, delay);
     }
 
-    function addMessage(text, sender) {
+    function showTypingIndicator() {
+        const indicator = document.createElement('div');
+        indicator.classList.add('typing-indicator');
+        indicator.innerHTML = `
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        `;
+        faqBotMessages.appendChild(indicator);
+        faqBotMessages.scrollTop = faqBotMessages.scrollHeight;
+        return indicator;
+    }
+
+    function removeTypingIndicator(indicator) {
+        if (indicator && indicator.parentNode) {
+            indicator.parentNode.removeChild(indicator);
+        }
+    }
+
+    function addMessage(text, sender, links = []) {
         const msgDiv = document.createElement('div');
         msgDiv.classList.add('message', `${sender}-message`);
-        msgDiv.textContent = text;
+        
+        // Convert Markdown-style bolding to HTML
+        const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        msgDiv.innerHTML = formattedText;
+
+        // Add links if provided (for bot messages)
+        if (links && links.length > 0) {
+            const linksDiv = document.createElement('div');
+            linksDiv.classList.add('message-links');
+            
+            const isSubPage = window.location.pathname.includes('/pages/');
+            const root = isSubPage ? '../' : '';
+
+            links.forEach(link => {
+                const a = document.createElement('a');
+                // Check if the link is external (Facebook, etc.)
+                if (link.url.startsWith('http')) {
+                    a.href = link.url;
+                    a.target = "_blank";
+                } else {
+                    a.href = root + link.url;
+                }
+                a.textContent = link.text;
+                a.classList.add('bot-link');
+                linksDiv.appendChild(a);
+            });
+            msgDiv.appendChild(linksDiv);
+        }
+
         faqBotMessages.appendChild(msgDiv);
         faqBotMessages.scrollTop = faqBotMessages.scrollHeight;
     }
 
-    // --- KNOWLEDGE BASE & RESPONSE LOGIC ---
-    const knowledgeBase = [
-        {
-            keywords: ['enroll', 'enrollment', 'register', 'admission', 'kmasut'],
-            response: "Enrollment (Kmasut) is open for JHS and SHS! You can apply online or visit our campus. Check our 'Enrollment' page for the checklist of requirements like SF9 and Birth Certificate."
-        },
-        {
-            keywords: ['requirement', 'document', 'checklist', 'sf9', 'birth certificate'],
-            response: "Basic requirements include your SF9 (Report Card), PSA Birth Certificate, and a 2x2 ID photo. For SHS, additional documents may be needed depending on the track."
-        },
-        {
-            keywords: ['scholarship', 'financial', 'dost', 'ched', 'support'],
-            response: "We support various scholarships including DOST-SEI, CHED Tulong Dunong, and GSC City Scholarships. Visit the 'Career & College Portal' for more details!"
-        },
-        {
-            keywords: ['shs', 'senior high', 'track', 'strand', 'humss', 'tvl'],
-            response: "We offer Academic and Tech-Pro pathways in Grade 11, and HUMSS and TVL-FCS in Grade 12. Our curriculum integrates Blaan cultural heritage."
-        },
-        {
-            keywords: ['location', 'address', 'where', 'place'],
-            response: "Upper Labay High School is located at Purok 1, Brgy. Upper Labay, General Santos City, 9500."
-        },
-        {
-            keywords: ['contact', 'phone', 'call', 'email', 'facebook'],
-            response: "You can reach us through our Facebook page (ULHS Official) or visit our 'Contact Us' page for more details."
-        },
-        {
-            keywords: ['beadwork', 'tradition', 'culture', 'blaan', 'heritage'],
-            response: "We are proud of our Blaan heritage! We teach traditional beadwork and jewelry craftsmanship through our School of Living Traditions (SLT)."
-        },
-        {
-            keywords: ['calendar', 'event', 'holiday', 'schedule'],
-            response: "You can view our updated academic calendar and school events on the 'Calendar' page."
-        },
-        {
-            keywords: ['student life', 'extracurricular', 'sports', 'gallery', 'video', 'photo'],
-            response: "Our Student Life Gallery showcases the vibrant activities, sports, and daily experiences of our students. Check it out to see our campus in action!"
-        },
-        {
-            keywords: ['dictionary', 'language', 'terms', 'phrases', 'meaning', 'flehew', 'bong salamat'],
-            response: "Learn common Blaan terms like 'Flehew' (Welcome) and 'Bong sàlamàt' (Thank you) in our Mini-Dictionary page under the Community section."
-        },
-        {
-            keywords: ['career', 'college', 'university', 'apply', 'timeline', 'alumni'],
-            response: "Our Career & College Portal provides university application timelines, scholarship databases, and alumni success stories for Grade 11-12 students."
-        }
-    ];
-
     function getBotResponse(input) {
         const lowerInput = input.toLowerCase();
         
-        // Find matching intent
-        for (const item of knowledgeBase) {
+        if (!chatbotData) {
+            return { text: "I'm still loading my knowledge base. Please try again in a second!", links: [] };
+        }
+
+        // 1. Search FAQ Knowledge Base
+        for (const item of chatbotData.knowledge_base) {
             if (item.keywords.some(keyword => lowerInput.includes(keyword))) {
-                return item.response;
+                return { text: item.response, links: item.links || [] };
             }
         }
 
-        return "I'm sorry, I don't have information on that yet. You can visit our 'Contact Us' page or message us on Facebook for more specific inquiries. Bong sàlamàt!";
+        // 2. Search Teachers by Name
+        if (aboutData) {
+            const allTeachers = [
+                ...aboutData.leadership,
+                ...aboutData.jhs_faculty,
+                ...aboutData.shs_faculty
+            ];
+
+            const teacherMatch = allTeachers.find(t => 
+                lowerInput.includes(t.name.toLowerCase()) || 
+                (t.role && lowerInput.includes(t.role.toLowerCase()))
+            );
+
+            if (teacherMatch) {
+                return {
+                    text: `You're asking about **${teacherMatch.name}** (${teacherMatch.role}). You can reach out directly via Facebook for specific concerns!`,
+                    links: [{ text: `Message ${teacherMatch.name}`, url: teacherMatch.link }]
+                };
+            }
+        }
+
+        // 3. Fallback: Search Dictionary (Blaan Language Support)
+        if (dictionaryData) {
+            const dictMatch = dictionaryData.terms.find(term => 
+                lowerInput.includes(term.word.toLowerCase()) || 
+                lowerInput.includes(term.meaning.toLowerCase())
+            );
+
+            if (dictMatch) {
+                return { 
+                    text: `That sounds like a Blaan term! **${dictMatch.word}** means: ${dictMatch.meaning}`, 
+                    links: [{ text: "View Full Dictionary", url: "pages/blaan-dictionary.html" }] 
+                };
+            }
+        }
+
+        return { 
+            text: chatbotData.config.fallback_message, 
+            links: [{ text: "Talk to a Teacher", url: "pages/about-dumu.html" }] 
+        };
     }
 });
 

@@ -1,0 +1,96 @@
+{
+    "config": {
+        "welcome_message": "Flehew! I'm your ULHS assistant. How can I help you today?",
+        "fallback_message": "I'm sorry, I don't have information on that yet. You can visit our 'Contact Us' page or message us on Facebook for more specific inquiries. Bong sàlamàt!",
+        "typing_delay": 800
+    },
+    "knowledge_base": [
+        {
+            "keywords": ["enroll", "enrollment", "register", "admission", "kmasut"],
+            "response": "Enrollment (**Kmasut**) is open for JHS and SHS! You can apply online or visit our campus. Check our 'Enrollment' page for the checklist of requirements like SF9 and Birth Certificate.",
+            "links": [
+                { "text": "Enrollment Hub", "url": "pages/enrollment.html" }
+            ]
+        },
+        {
+            "keywords": ["requirement", "document", "checklist", "sf9", "birth certificate"],
+            "response": "Basic requirements include your SF9 (Report Card), PSA Birth Certificate, and a 2x2 ID photo. For SHS, additional documents may be needed depending on the track.",
+            "links": [
+                { "text": "Downloads Center", "url": "pages/downloads-center.html" }
+            ]
+        },
+        {
+            "keywords": ["scholarship", "financial", "dost", "ched", "support"],
+            "response": "We support various scholarships including DOST-SEI, CHED Tulong Dunong, and GSC City Scholarships. Visit the 'Career & College Portal' for more details!",
+            "links": [
+                { "text": "Career & College Portal", "url": "pages/career-portal.html" }
+            ]
+        },
+        {
+            "keywords": ["shs", "senior high", "track", "strand", "humss", "tvl"],
+            "response": "We offer Academic and Tech-Pro pathways in Grade 11, and HUMSS and TVL-FCS in Grade 12. Our curriculum integrates Blaan cultural heritage.",
+            "links": [
+                { "text": "Senior High Academics", "url": "pages/academics-shs.html" }
+            ]
+        },
+        {
+            "keywords": ["location", "address", "where", "place"],
+            "response": "Upper Labay High School is located at Purok 1, Brgy. Upper Labay, General Santos City, 9500.",
+            "links": [
+                { "text": "View on Contact Page", "url": "pages/contact.html" }
+            ]
+        },
+        {
+            "keywords": ["contact", "phone", "call", "email", "facebook"],
+            "response": "You can reach us through our Facebook page (ULHS Official) or visit our 'Contact Us' page for more details.",
+            "links": [
+                { "text": "Contact Us", "url": "pages/contact.html" }
+            ]
+        },
+        {
+            "keywords": ["beadwork", "tradition", "culture", "blaan", "heritage"],
+            "response": "We are proud of our Blaan heritage! We teach traditional beadwork and jewelry craftsmanship through our School of Living Traditions (SLT).",
+            "links": [
+                { "text": "Beadwork Heritage", "url": "pages/slt-beadwork.html" }
+            ]
+        },
+        {
+            "keywords": ["calendar", "event", "holiday", "schedule"],
+            "response": "You can view our updated academic calendar and school events on the 'Calendar' page.",
+            "links": [
+                { "text": "School Calendar", "url": "pages/calendar.html" }
+            ]
+        },
+        {
+            "keywords": ["student life", "extracurricular", "sports", "gallery", "video", "photo"],
+            "response": "Our Student Life Gallery showcases the vibrant activities, sports, and daily experiences of our students. Check it out to see our campus in action!",
+            "links": [
+                { "text": "Student Life Gallery", "url": "pages/student-life.html" }
+            ]
+        },
+        {
+            "keywords": ["dictionary", "language", "terms", "phrases", "meaning", "flehew", "bong salamat"],
+            "response": "Learn common Blaan terms like 'Flehew' (Welcome) and 'Bong sàlamàt' (Thank you) in our Mini-Dictionary page under the Community section.",
+            "links": [
+                { "text": "Blaan Dictionary", "url": "pages/blaan-dictionary.html" }
+            ]
+        },
+        {
+            "keywords": ["career", "college", "university", "apply", "timeline", "alumni"],
+            "response": "Our Career & College Portal provides university application timelines, scholarship databases, and alumni success stories for Grade 11-12 students.",
+            "links": [
+                { "text": "Career & College Portal", "url": "pages/career-portal.html" }
+            ]
+        },
+        {
+            "keywords": ["teacher", "faculty", "staff", "message", "talk to", "help", "person"],
+            "response": "Would you like to speak with one of our teachers or staff? They can help with specific concerns. **Which department are you interested in?**",
+            "links": [
+                { "text": "School Leadership", "url": "pages/about-dumu.html#admin-grid" },
+                { "text": "JHS Faculty", "url": "pages/about-dumu.html#jhs-grid" },
+                { "text": "SHS Faculty", "url": "pages/about-dumu.html#shs-grid" }
+            ],
+            "is_teacher_query": true
+        }
+    ]
+}
