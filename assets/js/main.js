@@ -212,7 +212,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // 0. Load Shared Components (Header/Footer)
         await loadSharedComponents(componentPath, root);
 
-        // 1. Load Global Config (Footer, etc.)
+        // 1. Initialize Chatbot (now in footer.html)
+        await setupChatbot();
+
+        // 2. Load Global Config (Footer, etc.)
         try {
             const configRes = await fetch(`${dataPath}config.json`);
             const config = await configRes.json();
@@ -376,6 +379,207 @@ document.addEventListener('DOMContentLoaded', () => {
                 button.textContent = originalText;
             }
         });
+    }
+
+    /* --- AI FAQ BOT LOGIC --- */
+    let chatbotData = null;
+    let dictionaryData = null;
+    let aboutData = null;
+
+    async function setupChatbot() {
+        const faqBotToggle = document.getElementById('faq-bot-toggle');
+        const faqBotWindow = document.getElementById('faq-bot-window');
+        const faqBotClose = document.getElementById('faq-bot-close');
+        const faqBotSend = document.getElementById('faq-bot-send');
+        const faqBotInput = document.getElementById('faq-bot-input');
+        const faqBotMessages = document.getElementById('faq-bot-messages');
+        const suggestionChips = document.querySelectorAll('.suggestion-chip');
+
+        if (!faqBotToggle || !faqBotWindow) return;
+
+        // Load bot data
+        const isSubPage = window.location.pathname.includes('/pages/');
+        const dataPath = isSubPage ? '../assets/data/' : 'assets/data/';
+
+        try {
+            const botRes = await fetch(`${dataPath}chatbot.json`);
+            chatbotData = await botRes.json();
+            
+            const dictRes = await fetch(`${dataPath}pages/dictionary.json`);
+            dictionaryData = await dictRes.json();
+
+            const aboutRes = await fetch(`${dataPath}pages/about.json`);
+            aboutData = await aboutRes.json();
+        } catch (err) {
+            console.error("Error initializing chatbot data:", err);
+        }
+
+        // Toggle Bot Window
+        faqBotToggle.addEventListener('click', () => {
+            const isVisible = faqBotWindow.style.display === 'flex';
+            faqBotWindow.style.display = isVisible ? 'none' : 'flex';
+            if (!isVisible) {
+                faqBotInput.focus();
+                // Add welcome message if empty
+                if (faqBotMessages.children.length === 0) {
+                    const welcomeMsg = chatbotData ? chatbotData.config.welcome_message : "Flehew! I'm your ULHS assistant. How can I help you today?";
+                    addMessage(welcomeMsg, 'bot', [], faqBotMessages);
+                }
+            }
+        });
+
+        // Close Bot Window
+        faqBotClose.addEventListener('click', (e) => {
+            e.stopPropagation();
+            faqBotWindow.style.display = 'none';
+        });
+
+        // Send Message on Button Click
+        faqBotSend.addEventListener('click', () => handleUserMessage(faqBotInput, faqBotMessages));
+
+        // Send Message on Enter Key
+        faqBotInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleUserMessage(faqBotInput, faqBotMessages);
+        });
+
+        // Suggestion Chips
+        suggestionChips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                const text = chip.textContent;
+                faqBotInput.value = text;
+                handleUserMessage(faqBotInput, faqBotMessages);
+            });
+        });
+    }
+
+    function handleUserMessage(input, container) {
+        const query = input.value.trim();
+        if (!query) return;
+
+        addMessage(query, 'user', [], container);
+        input.value = '';
+
+        // Show Typing Indicator
+        const typingIndicator = showTypingIndicator(container);
+
+        // Simulate Bot Thinking
+        const delay = chatbotData ? chatbotData.config.typing_delay : 600;
+        setTimeout(() => {
+            removeTypingIndicator(typingIndicator);
+            const response = getBotResponse(query);
+            addMessage(response.text, 'bot', response.links, container);
+        }, delay);
+    }
+
+    function showTypingIndicator(container) {
+        const indicator = document.createElement('div');
+        indicator.classList.add('typing-indicator');
+        indicator.innerHTML = `
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        `;
+        container.appendChild(indicator);
+        container.scrollTop = container.scrollHeight;
+        return indicator;
+    }
+
+    function removeTypingIndicator(indicator) {
+        if (indicator && indicator.parentNode) {
+            indicator.parentNode.removeChild(indicator);
+        }
+    }
+
+    function addMessage(text, sender, links = [], container) {
+        const msgDiv = document.createElement('div');
+        msgDiv.classList.add('message', `${sender}-message`);
+        
+        // Convert Markdown-style bolding to HTML
+        const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        msgDiv.innerHTML = formattedText;
+
+        // Add links if provided (for bot messages)
+        if (links && links.length > 0) {
+            const linksDiv = document.createElement('div');
+            linksDiv.classList.add('message-links');
+            
+            const isSubPage = window.location.pathname.includes('/pages/');
+            const root = isSubPage ? '../' : '';
+
+            links.forEach(link => {
+                const a = document.createElement('a');
+                // Check if the link is external (Facebook, etc.)
+                if (link.url.startsWith('http')) {
+                    a.href = link.url;
+                    a.target = "_blank";
+                } else {
+                    a.href = root + link.url;
+                }
+                a.textContent = link.text;
+                a.classList.add('bot-link');
+                linksDiv.appendChild(a);
+            });
+            msgDiv.appendChild(linksDiv);
+        }
+
+        container.appendChild(msgDiv);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function getBotResponse(input) {
+        const lowerInput = input.toLowerCase();
+        
+        if (!chatbotData) {
+            return { text: "I'm still loading my knowledge base. Please try again in a second!", links: [] };
+        }
+
+        // 1. Search FAQ Knowledge Base
+        for (const item of chatbotData.knowledge_base) {
+            if (item.keywords.some(keyword => lowerInput.includes(keyword))) {
+                return { text: item.response, links: item.links || [] };
+            }
+        }
+
+        // 2. Search Teachers by Name
+        if (aboutData) {
+            const allTeachers = [
+                ...aboutData.leadership,
+                ...aboutData.jhs_faculty,
+                ...aboutData.shs_faculty
+            ];
+
+            const teacherMatch = allTeachers.find(t => 
+                lowerInput.includes(t.name.toLowerCase()) || 
+                (t.role && lowerInput.includes(t.role.toLowerCase()))
+            );
+
+            if (teacherMatch) {
+                return {
+                    text: `You're asking about **${teacherMatch.name}** (${teacherMatch.role}). You can reach out directly via Facebook for specific concerns!`,
+                    links: [{ text: `Message ${teacherMatch.name}`, url: teacherMatch.link }]
+                };
+            }
+        }
+
+        // 3. Fallback: Search Dictionary (Blaan Language Support)
+        if (dictionaryData) {
+            const dictMatch = dictionaryData.terms.find(term => 
+                lowerInput.includes(term.word.toLowerCase()) || 
+                lowerInput.includes(term.meaning.toLowerCase())
+            );
+
+            if (dictMatch) {
+                return { 
+                    text: `That sounds like a Blaan term! **${dictMatch.word}** means: ${dictMatch.meaning}`, 
+                    links: [{ text: "View Full Dictionary", url: "pages/blaan-dictionary.html" }] 
+                };
+            }
+        }
+
+        return { 
+            text: chatbotData.config.fallback_message, 
+            links: [{ text: "Talk to a Teacher", url: "pages/about-dumu.html" }] 
+        };
     }
 
     function updateGlobalUI(config) {
@@ -1152,208 +1356,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loadDynamicContent();
-
-    /* --- AI FAQ BOT LOGIC --- */
-    let chatbotData = null;
-    let dictionaryData = null;
-    let aboutData = null;
-
-    async function initChatbot() {
-        const isSubPage = window.location.pathname.includes('/pages/');
-        const dataPath = isSubPage ? '../assets/data/' : 'assets/data/';
-
-        try {
-            const botRes = await fetch(`${dataPath}chatbot.json`);
-            chatbotData = await botRes.json();
-            
-            const dictRes = await fetch(`${dataPath}pages/dictionary.json`);
-            dictionaryData = await dictRes.json();
-
-            const aboutRes = await fetch(`${dataPath}pages/about.json`);
-            aboutData = await aboutRes.json();
-        } catch (err) {
-            console.error("Error initializing chatbot data:", err);
-        }
-    }
-
-    const faqBotToggle = document.getElementById('faq-bot-toggle');
-    const faqBotWindow = document.getElementById('faq-bot-window');
-    const faqBotClose = document.getElementById('faq-bot-close');
-    const faqBotSend = document.getElementById('faq-bot-send');
-    const faqBotInput = document.getElementById('faq-bot-input');
-    const faqBotMessages = document.getElementById('faq-bot-messages');
-    const suggestionChips = document.querySelectorAll('.suggestion-chip');
-
-    if (faqBotToggle && faqBotWindow) {
-        initChatbot();
-
-        // Toggle Bot Window
-        faqBotToggle.addEventListener('click', () => {
-            const isVisible = faqBotWindow.style.display === 'flex';
-            faqBotWindow.style.display = isVisible ? 'none' : 'flex';
-            if (!isVisible) {
-                faqBotInput.focus();
-                // Add welcome message if empty
-                if (faqBotMessages.children.length === 0) {
-                    const welcomeMsg = chatbotData ? chatbotData.config.welcome_message : "Flehew! I'm your ULHS assistant. How can I help you today?";
-                    addMessage(welcomeMsg, 'bot');
-                }
-            }
-        });
-
-        // Close Bot Window
-        faqBotClose.addEventListener('click', (e) => {
-            e.stopPropagation();
-            faqBotWindow.style.display = 'none';
-        });
-
-        // Send Message on Button Click
-        faqBotSend.addEventListener('click', handleUserMessage);
-
-        // Send Message on Enter Key
-        faqBotInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleUserMessage();
-        });
-
-        // Suggestion Chips
-        suggestionChips.forEach(chip => {
-            chip.addEventListener('click', () => {
-                const text = chip.textContent;
-                faqBotInput.value = text;
-                handleUserMessage();
-            });
-        });
-    }
-
-    function handleUserMessage() {
-        const query = faqBotInput.value.trim();
-        if (!query) return;
-
-        addMessage(query, 'user');
-        faqBotInput.value = '';
-
-        // Show Typing Indicator
-        const typingIndicator = showTypingIndicator();
-
-        // Simulate Bot Thinking
-        const delay = chatbotData ? chatbotData.config.typing_delay : 600;
-        setTimeout(() => {
-            removeTypingIndicator(typingIndicator);
-            const response = getBotResponse(query);
-            addMessage(response.text, 'bot', response.links);
-        }, delay);
-    }
-
-    function showTypingIndicator() {
-        const indicator = document.createElement('div');
-        indicator.classList.add('typing-indicator');
-        indicator.innerHTML = `
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-        `;
-        faqBotMessages.appendChild(indicator);
-        faqBotMessages.scrollTop = faqBotMessages.scrollHeight;
-        return indicator;
-    }
-
-    function removeTypingIndicator(indicator) {
-        if (indicator && indicator.parentNode) {
-            indicator.parentNode.removeChild(indicator);
-        }
-    }
-
-    function addMessage(text, sender, links = []) {
-        const msgDiv = document.createElement('div');
-        msgDiv.classList.add('message', `${sender}-message`);
-        
-        // Convert Markdown-style bolding to HTML
-        const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        msgDiv.innerHTML = formattedText;
-
-        // Add links if provided (for bot messages)
-        if (links && links.length > 0) {
-            const linksDiv = document.createElement('div');
-            linksDiv.classList.add('message-links');
-            
-            const isSubPage = window.location.pathname.includes('/pages/');
-            const root = isSubPage ? '../' : '';
-
-            links.forEach(link => {
-                const a = document.createElement('a');
-                // Check if the link is external (Facebook, etc.)
-                if (link.url.startsWith('http')) {
-                    a.href = link.url;
-                    a.target = "_blank";
-                } else {
-                    a.href = root + link.url;
-                }
-                a.textContent = link.text;
-                a.classList.add('bot-link');
-                linksDiv.appendChild(a);
-            });
-            msgDiv.appendChild(linksDiv);
-        }
-
-        faqBotMessages.appendChild(msgDiv);
-        faqBotMessages.scrollTop = faqBotMessages.scrollHeight;
-    }
-
-    function getBotResponse(input) {
-        const lowerInput = input.toLowerCase();
-        
-        if (!chatbotData) {
-            return { text: "I'm still loading my knowledge base. Please try again in a second!", links: [] };
-        }
-
-        // 1. Search FAQ Knowledge Base
-        for (const item of chatbotData.knowledge_base) {
-            if (item.keywords.some(keyword => lowerInput.includes(keyword))) {
-                return { text: item.response, links: item.links || [] };
-            }
-        }
-
-        // 2. Search Teachers by Name
-        if (aboutData) {
-            const allTeachers = [
-                ...aboutData.leadership,
-                ...aboutData.jhs_faculty,
-                ...aboutData.shs_faculty
-            ];
-
-            const teacherMatch = allTeachers.find(t => 
-                lowerInput.includes(t.name.toLowerCase()) || 
-                (t.role && lowerInput.includes(t.role.toLowerCase()))
-            );
-
-            if (teacherMatch) {
-                return {
-                    text: `You're asking about **${teacherMatch.name}** (${teacherMatch.role}). You can reach out directly via Facebook for specific concerns!`,
-                    links: [{ text: `Message ${teacherMatch.name}`, url: teacherMatch.link }]
-                };
-            }
-        }
-
-        // 3. Fallback: Search Dictionary (Blaan Language Support)
-        if (dictionaryData) {
-            const dictMatch = dictionaryData.terms.find(term => 
-                lowerInput.includes(term.word.toLowerCase()) || 
-                lowerInput.includes(term.meaning.toLowerCase())
-            );
-
-            if (dictMatch) {
-                return { 
-                    text: `That sounds like a Blaan term! **${dictMatch.word}** means: ${dictMatch.meaning}`, 
-                    links: [{ text: "View Full Dictionary", url: "pages/blaan-dictionary.html" }] 
-                };
-            }
-        }
-
-        return { 
-            text: chatbotData.config.fallback_message, 
-            links: [{ text: "Talk to a Teacher", url: "pages/about-dumu.html" }] 
-        };
-    }
 });
 
 /* --- OPEN CALENDAR IN NEW TAB --- */
