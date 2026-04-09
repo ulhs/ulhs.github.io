@@ -283,23 +283,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadSharedComponents(path, root) {
-        try {
-            const headerEl = document.querySelector('header');
-            const footerEl = document.querySelector('footer');
+        const headerEl = document.querySelector('header');
+        const footerEl = document.querySelector('footer');
 
-            if (headerEl) {
+        if (headerEl) {
+            try {
                 const res = await fetch(`${path}header.html`);
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                 let html = await res.text();
                 headerEl.innerHTML = html.replace(/{root}/g, root);
-                setupHeaderLogic(); // Re-bind events for the new header
+                setupHeaderLogic();
+            } catch (err) {
+                console.error("Error loading header:", err);
             }
+        }
 
-            if (footerEl) {
+        if (footerEl) {
+            try {
                 const res = await fetch(`${path}footer.html`);
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                 let html = await res.text();
                 footerEl.innerHTML = html.replace(/{root}/g, root);
+            } catch (err) {
+                console.error("Error loading footer:", err);
             }
-        } catch (err) { console.error("Error loading components:", err); }
+        }
     }
 
     function setupHeaderLogic() {
@@ -387,6 +395,34 @@ document.addEventListener('DOMContentLoaded', () => {
     let aboutData = null;
 
     async function setupChatbot() {
+        // 1. Inject Bot HTML Structure if it doesn't exist
+        if (!document.getElementById('faq-bot-toggle')) {
+            const botContainer = document.createElement('div');
+            botContainer.className = 'faq-bot-container';
+            botContainer.innerHTML = `
+                <div class="faq-bot-toggle" id="faq-bot-toggle">
+                    <span class="bot-icon">💬</span>
+                </div>
+                <div class="faq-bot-window" id="faq-bot-window">
+                    <div class="faq-bot-header">
+                        <h4>ULHS Assistant</h4>
+                        <span class="faq-bot-close" id="faq-bot-close">&times;</span>
+                    </div>
+                    <div class="faq-bot-messages" id="faq-bot-messages"></div>
+                    <div class="faq-suggestions">
+                        <span class="suggestion-chip">Enrollment</span>
+                        <span class="suggestion-chip">Scholarships</span>
+                        <span class="suggestion-chip">SHS Tracks</span>
+                    </div>
+                    <div class="faq-bot-input-area">
+                        <input type="text" class="faq-bot-input" id="faq-bot-input" placeholder="Ask a question...">
+                        <button class="faq-bot-send" id="faq-bot-send">➤</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(botContainer);
+        }
+
         const faqBotToggle = document.getElementById('faq-bot-toggle');
         const faqBotWindow = document.getElementById('faq-bot-window');
         const faqBotClose = document.getElementById('faq-bot-close');
@@ -395,23 +431,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const faqBotMessages = document.getElementById('faq-bot-messages');
         const suggestionChips = document.querySelectorAll('.suggestion-chip');
 
-        if (!faqBotToggle || !faqBotWindow) return;
+        if (!faqBotToggle || !faqBotWindow) {
+            console.error("Chatbot initialization failed: Toggle or window element not found.");
+            return;
+        }
 
         // Load bot data
         const isSubPage = window.location.pathname.includes('/pages/');
         const dataPath = isSubPage ? '../assets/data/' : 'assets/data/';
 
+        console.log("Initializing chatbot data from:", dataPath);
+
         try {
             const botRes = await fetch(`${dataPath}chatbot.json`);
+            if (!botRes.ok) throw new Error(`HTTP error! status: ${botRes.status}`);
             chatbotData = await botRes.json();
             
             const dictRes = await fetch(`${dataPath}pages/dictionary.json`);
-            dictionaryData = await dictRes.json();
+            if (dictRes.ok) dictionaryData = await dictRes.json();
 
             const aboutRes = await fetch(`${dataPath}pages/about.json`);
-            aboutData = await aboutRes.json();
+            if (aboutRes.ok) aboutData = await aboutRes.json();
+
+            console.log("Chatbot data loaded successfully.");
         } catch (err) {
-            console.error("Error initializing chatbot data:", err);
+            console.warn("Error initializing chatbot data (non-critical):", err);
         }
 
         // Toggle Bot Window
