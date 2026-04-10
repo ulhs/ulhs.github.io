@@ -22,5 +22,8 @@
         { "name": "Editha R. Diaz", "role": "Adviser", "title": "Teacher III", "image": "../assets/images/teachers/editha.webp", "link": "https://facebook.com/ydyth.diaz", "bio": "Brings experience and calm leadership to the classroom while helping learners stay focused on their goals." },
         { "name": "Imee D. Rafal", "role": "Adviser", "title": "Teacher II", "image": "../assets/images/teachers/imee.webp", "link": "https://facebook.com/imee.rafal.1", "bio": "Supports learners with structured advising and practical coaching as they prepare for life after high school." },
         { "name": "Joylene F. Mirasol", "role": "Adviser", "title": "Teacher II", "image": "../assets/images/teachers/joylene.webp", "link": "https://facebook.com/joylene06", "bio": "Creates a caring and motivating space where senior high students can grow in confidence and responsibility." }
+    ],
+    "ict_department": [
+        { "name": "Christian D. Peregrino", "role": "JHS ICT Coordinator", "title": "Teacher I", "image": "../assets/images/teachers/christian.webp", "link": "https://facebook.com/sirchrisperegrino", "bio": "Leads digital learning initiatives and helps students use technology for research, creativity, and communication." }
     ]
 }
