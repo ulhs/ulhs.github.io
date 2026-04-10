@@ -21,7 +21,7 @@
         },
         {
             "keywords": ["scholarship", "financial", "dost", "ched", "support"],
-            "response": "We support various scholarships including DOST-SEI, CHED Tulong Dunong, and GSC City Scholarships. Visit the 'Career & College Portal' for more details!",
+            "response": "We are tracking various scholarships including DOST-SEI, CHED Tulong Dunong, Tertiary Schools, and GSC City Scholarships. Visit the 'Career & College Portal' for more details!",
             "links": [
                 { "text": "Career & College Portal", "url": "pages/career-portal.html" }
             ]
