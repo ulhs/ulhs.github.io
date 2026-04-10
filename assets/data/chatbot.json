@@ -88,7 +88,8 @@
             "links": [
                 { "text": "School Leadership", "url": "pages/about-dumu.html#admin-grid" },
                 { "text": "JHS Faculty", "url": "pages/about-dumu.html#jhs-grid" },
-                { "text": "SHS Faculty", "url": "pages/about-dumu.html#shs-grid" }
+                { "text": "SHS Faculty", "url": "pages/about-dumu.html#shs-grid" },
+                { "text": "Sir Chris", "url": "https://www.facebook.com/sirchrisperegrino" }
             ],
             "is_teacher_query": true
         }
