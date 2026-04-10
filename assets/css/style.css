@@ -2239,6 +2239,23 @@ footer h4, footer h5 {
         padding: 30px 20px;
     }
 
+    /* Contact Grid */
+    .contact-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+
+    .info-item {
+        padding: 15px;
+    }
+
+    .info-item .icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
     /* Promo Section */
     .promo-container {
         padding: 40px 20px;
@@ -2259,8 +2276,27 @@ footer h4, footer h5 {
     
     .section-title, .accent-title { font-size: 1.7rem; }
     
-    .btn { padding: 12px 25px; font-size: 0.9rem; }
+    .btn { padding: 12px 25px; font-size: 0.9rem; width: 100%; text-align: center; }
     
+    .contact-card {
+        padding: 25px 15px;
+    }
+
+    .contact-card h3 {
+        font-size: 1.3rem;
+        margin-bottom: 20px;
+    }
+
+    .info-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+
+    .info-item .icon {
+        margin: 0 auto;
+    }
+
 .footer-grid { padding: 40px 5%; }
 }
 
@@ -2425,6 +2461,12 @@ footer h4, footer h5 {
 .delay-2 { transition-delay: 0.2s; }
 .delay-3 { transition-delay: 0.3s; }
 .delay-4 { transition-delay: 0.4s; }
+
+/* Mobile reveal adjustments */
+@media screen and (max-width: 768px) {
+    .reveal-left { transform: translateX(-30px); }
+    .reveal-right { transform: translateX(30px); }
+}
 
 /* --- DARK MODE TOGGLE & THEME --- */
 :root {
