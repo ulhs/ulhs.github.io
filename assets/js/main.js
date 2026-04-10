@@ -504,13 +504,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Theme toggle logic (already global, but just in case)
+        // Sync theme toggle UI after header loads
         const themeBtn = document.getElementById('theme-toggle');
         if (themeBtn) {
+            const isDark = document.body.classList.contains('dark-mode');
+            themeBtn.textContent = isDark ? '☀️' : '🌙';
+            themeBtn.setAttribute('data-tooltip', isDark ? 'Switch to Light' : 'Switch to Dark');
+
             themeBtn.addEventListener('click', () => {
                 const isDark = document.body.classList.toggle('dark-mode');
                 localStorage.setItem('theme', isDark ? 'dark' : 'light');
                 themeBtn.textContent = isDark ? '☀️' : '🌙';
+                themeBtn.setAttribute('data-tooltip', isDark ? 'Switch to Light' : 'Switch to Dark');
             });
         }
     }
