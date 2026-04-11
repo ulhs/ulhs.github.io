@@ -2187,7 +2187,7 @@ footer h4, footer h5 {
     display: block;
     margin-bottom: 8px;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: var(--fs-sm);
     color: var(--midnight-black);
 }
 
@@ -2199,7 +2199,7 @@ footer h4, footer h5 {
     border: 2px solid var(--abaca-cream);
     border-radius: 6px;
     font-family: inherit;
-    font-size: 1rem;
+    font-size: var(--fs-base);
     transition: border-color 0.3s, box-shadow 0.3s;
 }
 
@@ -2714,12 +2714,10 @@ body.dark-mode .btn-small:hover {
     box-shadow: 0 15px 35px rgba(0,0,0,0.2);
     width: 100%;
     max-width: 400px;
-    text-align: center;
     border-bottom: 8px solid var(--madder-red);
 }
 .login-card h2 {
     margin-bottom: 20px;
-    color: var(--midnight-black);
 }
 .login-logo {
     height: 80px;
@@ -2734,7 +2732,7 @@ body.dark-mode .btn-small:hover {
     padding: 12px 15px;
     border: 2px solid var(--abaca-cream);
     border-radius: 6px;
-    font-size: 1rem;
+    font-size: var(--fs-base);
 }
 .login-form input:focus {
     outline: none;
@@ -2742,7 +2740,7 @@ body.dark-mode .btn-small:hover {
 }
 .error-msg {
     color: var(--madder-red);
-    font-size: 0.9rem;
+    font-size: var(--fs-sm);
     margin-top: 10px;
 }
 .login-links {
@@ -2753,7 +2751,7 @@ body.dark-mode .btn-small:hover {
 .back-link {
     text-decoration: none;
     color: var(--text-gray);
-    font-size: 0.9rem;
+    font-size: var(--fs-sm);
     font-weight: 600;
     transition: all 0.3s ease;
 }
@@ -2883,7 +2881,7 @@ body.dark-mode .btn-small:hover {
     align-items: center;
     gap: 10px;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: var(--fs-sm);
     color: var(--text-main);
 }
 .checkbox-container input {
