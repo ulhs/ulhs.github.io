@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID Generator | Upper Labay High School</title>
+    <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <!-- MediaPipe Selfie Segmentation -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
+    <!-- Cropper.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+</head>
+<body>
+    <script>
+        // Security check
+        if (sessionStorage.getItem('adminLoggedIn') !== 'true') {
+            window.location.href = 'admin.html';
+        }
+    </script>
+
+    <header>
+        <div class="branding">
+            <a href="../../index.html" class="logo-link">
+                <img src="../../assets/images/school-logo.webp" alt="Logo" id="main-logo">
+                <div class="name-container">
+                    <span class="school-name">UPPER LABAY</span>
+                    <span class="school-sub">HIGH SCHOOL</span>
+                </div>
+            </a>
+        </div>
+        <div class="nav-links">
+            <a href="admin.html" onclick="sessionStorage.removeItem('adminLoggedIn')">Logout</a>
+        </div>
+    </header>
+
+    <main class="id-gen-container">
+        <!-- IMAGE EDITOR MODAL -->
+        <div id="editor-modal" class="modal">
+            <div class="modal-content">
+                <h3 class="accent-title">Edit Photo</h3>
+                <div class="cropper-container-box">
+                    <img id="editor-image" src="">
+                </div>
+                <div class="editor-controls">
+                    <button type="button" id="btn-rotate-left" class="btn btn-small btn-secondary">Rotate Left 90°</button>
+                    <button type="button" id="btn-rotate-right" class="btn btn-small btn-secondary">Rotate Right 90°</button>
+                    
+                    <div class="rotate-slider-container">
+                        <label for="rotate-arbitrary">Arbitrary Rotation: <span id="rotate-val">0</span>°</label>
+                        <input type="range" id="rotate-arbitrary" class="rotate-slider" min="-180" max="180" value="0">
+                    </div>
+
+                    <div class="editor-actions">
+                        <button type="button" id="btn-cancel-edit" class="btn btn-small btn-secondary">Cancel</button>
+                        <button type="button" id="btn-apply-edit" class="btn btn-small">Apply Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="accent-title">Student ID Generator</h2>
+        <p>Complete the form below to generate a student ID card.</p>
+
+        <div class="gen-grid">
+            <!-- FORM SECTION -->
+            <div class="form-section">
+                <form id="id-form" class="main-form">
+                    <div class="form-group">
+                        <label>Student Photo</label>
+                        <div class="webcam-box">
+                            <video id="webcam-video" autoplay playsinline></video>
+                            <img id="captured-photo" src="" alt="Captured">
+                            <div id="processing-overlay">
+                                <div class="spinner"></div>
+                                <p>Enhancing Image...</p>
+                            </div>
+                        </div>
+                        <div class="form-group bg-remove-toggle">
+                            <label class="checkbox-container">
+                                <input type="checkbox" id="remove-bg-toggle">
+                                <span class="checkmark"></span>
+                                Remove Background (Beta)
+                            </label>
+                        </div>
+                        <div class="btn-group">
+                            <button type="button" id="btn-capture" class="btn btn-small">Capture Photo</button>
+                            <button type="button" id="btn-upload" class="btn btn-small btn-secondary">Upload Photo</button>
+                            <input type="file" id="file-input" accept="image/*" style="display:none">
+                            <button type="button" id="btn-retake" class="btn btn-small btn-secondary" style="display:none">Retake / New Photo</button>
+                        </div>
+                    </div>
+
+                    <div class="form-row-three">
+                        <div class="form-group">
+                            <label for="firstname">First Name</label>
+                            <input type="text" id="firstname" required placeholder="Juan">
+                        </div>
+                        <div class="form-group">
+                            <label for="mi">M.I.</label>
+                            <input type="text" id="mi" maxlength="1" placeholder="D">
+                        </div>
+                        <div class="form-group">
+                            <label for="lastname">Last Name</label>
+                            <input type="text" id="lastname" required placeholder="Dela Cruz">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lrn">12-Digit LRN</label>
+                        <input type="text" id="lrn" required pattern="\d{12}" maxlength="12" placeholder="123456789012">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="birthdate">Birthdate (mm-dd-yyyy)</label>
+                        <input type="text" id="birthdate" required pattern="(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])-\d{4}" placeholder="01-25-2010" title="Please enter date in mm-dd-yyyy format" maxlength="10">
+                        <span id="birthdate-error" class="error-msg" style="display:none; color: var(--madder-red); font-size: 0.8rem; margin-top: 5px;">Invalid date format or value.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="guardian">Name of Father/Mother/Guardian</label>
+                        <input type="text" id="guardian" required placeholder="Maria Dela Cruz">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="address-select">Address</label>
+                        <select id="address-select" required>
+                            <option value="" disabled selected>Select Purok</option>
+                            <option value="Purok 1, Upper Labay, GSC">Purok 1, Upper Labay, GSC</option>
+                            <option value="Purok 2, Upper Labay, GSC">Purok 2, Upper Labay, GSC</option>
+                            <option value="Purok 4, Upper Labay, GSC">Purok 4, Upper Labay, GSC</option>
+                            <option value="Purok 5, Upper Labay, GSC">Purok 5, Upper Labay, GSC</option>
+                            <option value="Purok 6, Upper Labay, GSC">Purok 6, Upper Labay, GSC</option>
+                            <option value="Purok 7, Upper Labay, GSC">Purok 7, Upper Labay, GSC</option>
+                            <option value="Purok 8, Upper Labay, GSC">Purok 8, Upper Labay, GSC</option>
+                            <option value="Purok 9, Upper Labay, GSC">Purok 9, Upper Labay, GSC</option>
+                            <option value="Purok 10, Upper Labay, GSC">Purok 10, Upper Labay, GSC</option>
+                            <option value="others">Others (Specify below)</option>
+                        </select>
+                        <input type="text" id="address-manual" class="address-manual" placeholder="Enter full address manually">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="parent-mobile">Parent's Mobile Number (Optional)</label>
+                        <input type="tel" id="parent-mobile" placeholder="09123456789">
+                    </div>
+
+                    <button type="button" id="btn-generate" class="btn btn-full">Generate Preview</button>
+                </form>
+            </div>
+
+            <!-- PREVIEW SECTION -->
+            <div class="preview-section">
+                <h3>ID Preview</h3>
+                <div class="preview-box">
+                    <p class="preview-label">Front Side</p>
+                    <canvas id="canvas-front" width="600" height="960" class="id-preview-canvas"></canvas>
+                </div>
+                <div class="preview-box">
+                    <p class="preview-label">Back Side</p>
+                    <canvas id="canvas-back" width="600" height="960" class="id-preview-canvas"></canvas>
+                </div>
+                <div class="btn-group">
+                    <button id="btn-download-front" class="btn" disabled>Download Front</button>
+                    <button id="btn-download-back" class="btn" disabled>Download Back</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../../assets/js/main.js"></script>
+</body>
+</html>

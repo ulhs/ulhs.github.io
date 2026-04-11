@@ -10,6 +10,11 @@
         if (document.getElementById('faq-bot-toggle')) return;
         if (!document.body) return;
 
+        // Skip chatbot for admin pages
+        const isAdminPage = window.location.pathname.includes('admin.html') || 
+                          window.location.pathname.includes('id-gen.html');
+        if (isAdminPage) return;
+
         const botContainer = document.createElement('div');
         botContainer.className = 'faq-bot-container';
         botContainer.innerHTML = `
@@ -1346,4 +1351,449 @@ function openFullscreen() {
     const fileUrl = isSubPage ? "../assets/documents/school-calendar.webp" : "assets/documents/school-calendar.webp";
     window.open(fileUrl, '_blank');
 }
+
+/* --- ADMIN & ID GENERATOR LOGIC --- */
+function setupAdminLogic() {
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) initAdminLogin();
+
+    const idForm = document.getElementById('id-form');
+    if (idForm) initIDGenerator();
+}
+
+async function initAdminLogin() {
+    async function sha256(message) {
+        const msgBuffer = new TextEncoder().encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    const targetHash = 'ac9689e2272427085e35b9d3e3e8bed88cb3434828b43b86fc0596cad4c6e270'; //password_hash
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const pwd = document.getElementById('password').value.trim();
+        const hash = await sha256(pwd);
+
+        if (hash === targetHash) {
+            sessionStorage.setItem('adminLoggedIn', 'true');
+            window.location.href = 'id-gen.html';
+        } else {
+            const errorMsg = document.getElementById('error-msg');
+            if (errorMsg) errorMsg.style.display = 'block';
+        }
+    });
+}
+
+async function initIDGenerator() {
+    const video = document.getElementById('webcam-video');
+    const capturedPhoto = document.getElementById('captured-photo');
+    const btnCapture = document.getElementById('btn-capture');
+    const btnUpload = document.getElementById('btn-upload');
+    const fileInput = document.getElementById('file-input');
+    const btnRetake = document.getElementById('btn-retake');
+    const addressSelect = document.getElementById('address-select');
+    const addressManual = document.getElementById('address-manual');
+    const birthdateInput = document.getElementById('birthdate');
+    const birthdateError = document.getElementById('birthdate-error');
+    const removeBgToggle = document.getElementById('remove-bg-toggle');
+    const processingOverlay = document.getElementById('processing-overlay');
+
+    // Image Editor Elements
+    const editorModal = document.getElementById('editor-modal');
+    const editorImage = document.getElementById('editor-image');
+    const btnRotateLeft = document.getElementById('btn-rotate-left');
+    const btnRotateRight = document.getElementById('btn-rotate-right');
+    const rotateArbitrary = document.getElementById('rotate-arbitrary');
+    const rotateVal = document.getElementById('rotate-val');
+    const btnCancelEdit = document.getElementById('btn-cancel-edit');
+    const btnApplyEdit = document.getElementById('btn-apply-edit');
+    let cropper;
+
+    // Initialize Selfie Segmentation
+    let selfieSegmentation;
+    if (typeof SelfieSegmentation !== 'undefined') {
+        selfieSegmentation = new SelfieSegmentation({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+        });
+        selfieSegmentation.setOptions({
+            modelSelection: 0,
+            selfieMode: false,
+        });
+    }
+
+    if (birthdateInput) {
+        birthdateInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 2 && value.length <= 4) {
+                value = value.slice(0, 2) + '-' + value.slice(2);
+            } else if (value.length > 4) {
+                value = value.slice(0, 2) + '-' + value.slice(2, 4) + '-' + value.slice(4, 8);
+            }
+            e.target.value = value;
+
+            if (value.length === 10) {
+                if (isValidDate(value)) {
+                    if (birthdateError) birthdateError.style.display = 'none';
+                    birthdateInput.style.borderColor = '';
+                } else {
+                    if (birthdateError) birthdateError.style.display = 'block';
+                    birthdateInput.style.borderColor = 'var(--madder-red)';
+                }
+            } else {
+                if (birthdateError) birthdateError.style.display = 'none';
+                birthdateInput.style.borderColor = '';
+            }
+        });
+    }
+
+    if (addressSelect) {
+        addressSelect.addEventListener('change', () => {
+            if (addressSelect.value === 'others') {
+                addressManual.style.display = 'block';
+                addressManual.required = true;
+            } else {
+                addressManual.style.display = 'none';
+                addressManual.required = false;
+            }
+        });
+    }
+
+    async function initWebcam() {
+        if (!video) return;
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { aspectRatio: 3/4 } });
+            video.srcObject = stream;
+        } catch (err) {
+            console.error("Error accessing webcam:", err);
+        }
+    }
+
+    if (btnCapture) {
+        btnCapture.addEventListener('click', async () => {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = video.videoWidth;
+            tempCanvas.height = video.videoHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(video, 0, 0);
+            openEditor(tempCanvas.toDataURL('image/webp'));
+        });
+    }
+
+    if (btnUpload) {
+        btnUpload.addEventListener('click', () => fileInput.click());
+    }
+
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => openEditor(event.target.result);
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function openEditor(imageSrc) {
+        if (!editorImage || !editorModal) return;
+        editorImage.src = imageSrc;
+        editorModal.style.display = 'block';
+        if (cropper) cropper.destroy();
+        cropper = new Cropper(editorImage, {
+            aspectRatio: 3/4,
+            viewMode: 1,
+            dragMode: 'move',
+            autoCropArea: 1,
+            restore: false,
+            guides: true,
+            center: true,
+            highlight: false,
+            cropBoxMovable: true,
+            cropBoxResizable: true,
+            toggleDragModeOnDblclick: false,
+        });
+        if (rotateArbitrary) rotateArbitrary.value = 0;
+        if (rotateVal) rotateVal.textContent = 0;
+    }
+
+    if (btnRotateLeft) btnRotateLeft.addEventListener('click', () => cropper && cropper.rotate(-90));
+    if (btnRotateRight) btnRotateRight.addEventListener('click', () => cropper && cropper.rotate(90));
+    
+    if (rotateArbitrary) {
+        rotateArbitrary.addEventListener('input', (e) => {
+            const val = e.target.value;
+            if (rotateVal) rotateVal.textContent = val;
+            if (cropper) cropper.rotateTo(val);
+        });
+    }
+
+    if (btnCancelEdit) {
+        btnCancelEdit.addEventListener('click', () => {
+            editorModal.style.display = 'none';
+            if (cropper) cropper.destroy();
+        });
+    }
+
+    if (btnApplyEdit) {
+        btnApplyEdit.addEventListener('click', async () => {
+            const canvas = cropper.getCroppedCanvas({
+                width: 600,
+                height: 800,
+                imageSmoothingEnabled: true,
+                imageSmoothingQuality: 'high',
+            });
+            editorModal.style.display = 'none';
+            if (cropper) cropper.destroy();
+            await processImage(canvas);
+        });
+    }
+
+    window.addEventListener('click', (e) => {
+        if (e.target === editorModal) {
+            editorModal.style.display = 'none';
+            if (cropper) cropper.destroy();
+        }
+    });
+
+    async function processImage(sourceCanvas) {
+        if (processingOverlay) processingOverlay.style.display = 'flex';
+
+        if (removeBgToggle && removeBgToggle.checked && selfieSegmentation) {
+            selfieSegmentation.onResults((results) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = results.image.width;
+                canvas.height = results.image.height;
+                const ctx = canvas.getContext('2d');
+                ctx.save();
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.filter = 'blur(2px)';
+                ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
+                ctx.globalCompositeOperation = 'source-in';
+                ctx.filter = 'none';
+                ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+                ctx.restore();
+
+                const shadowCanvas = document.createElement('canvas');
+                shadowCanvas.width = canvas.width;
+                shadowCanvas.height = canvas.height;
+                const shadowCtx = shadowCanvas.getContext('2d');
+                shadowCtx.filter = 'drop-shadow(0 0 5px rgba(0,0,0,0.2))';
+                shadowCtx.drawImage(canvas, 0, 0);
+
+                const enhancedCanvas = enhanceImage(shadowCanvas);
+                capturedPhoto.src = enhancedCanvas.toDataURL('image/webp', 0.9);
+                finishCapture();
+            });
+            await selfieSegmentation.send({ image: sourceCanvas });
+        } else {
+            const enhancedCanvas = enhanceImage(sourceCanvas);
+            capturedPhoto.src = enhancedCanvas.toDataURL('image/webp', 0.9);
+            finishCapture();
+        }
+    }
+
+    function finishCapture() {
+        if (capturedPhoto) capturedPhoto.style.display = 'block';
+        if (video) video.style.display = 'none';
+        if (btnCapture) btnCapture.style.display = 'none';
+        if (btnUpload) btnUpload.style.display = 'none';
+        if (btnRetake) btnRetake.style.display = 'inline-block';
+        if (processingOverlay) processingOverlay.style.display = 'none';
+    }
+
+    function enhanceImage(sourceCanvas) {
+        const width = sourceCanvas.width;
+        const height = sourceCanvas.height;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, width, height);
+        ctx.filter = 'contrast(1.08) saturate(1.05) brightness(1.02)';
+        ctx.drawImage(sourceCanvas, 0, 0);
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+        const sharpenMatrix = [0, -0.5, 0, -0.5, 3, -0.5, 0, -0.5, 0];
+        const side = Math.round(Math.sqrt(sharpenMatrix.length));
+        const halfSide = Math.floor(side/2);
+        const output = ctx.createImageData(width, height);
+        const outputData = output.data;
+        for (let y=0; y<height; y++) {
+            for (let x=0; x<width; x++) {
+                const sy = y, sx = x, dstOff = (y*width+x)*4;
+                let r=0, g=0, b=0, a=0;
+                for (let cy=0; cy<side; cy++) {
+                    for (let cx=0; cx<side; cx++) {
+                        const scy = sy + cy - halfSide, scx = sx + cx - halfSide;
+                        if (scy >= 0 && scy < height && scx >= 0 && scx < width) {
+                            const srcOff = (scy*width+scx)*4, wt = sharpenMatrix[cy*side+cx];
+                            r += data[srcOff] * wt; g += data[srcOff+1] * wt; b += data[srcOff+2] * wt; a += data[srcOff+3] * wt;
+                        }
+                    }
+                }
+                outputData[dstOff] = r; outputData[dstOff+1] = g; outputData[dstOff+2] = b; outputData[dstOff+3] = data[dstOff+3];
+            }
+        }
+        ctx.putImageData(output, 0, 0);
+        return canvas;
+    }
+
+    if (btnRetake) {
+        btnRetake.addEventListener('click', () => {
+            capturedPhoto.style.display = 'none';
+            video.style.display = 'block';
+            btnCapture.style.display = 'inline-block';
+            btnUpload.style.display = 'inline-block';
+            btnRetake.style.display = 'none';
+            if (fileInput) fileInput.value = '';
+        });
+    }
+
+    initWebcam();
+
+    // Canvas Generation
+    const canvasFront = document.getElementById('canvas-front');
+    const canvasBack = document.getElementById('canvas-back');
+    if (!canvasFront || !canvasBack) return;
+
+    const ctxFront = canvasFront.getContext('2d');
+    const ctxBack = canvasBack.getContext('2d');
+    const imgFront = new Image();
+    const imgBack = new Image();
+    imgFront.src = '../../assets/admin/id-front.webp';
+    imgBack.src = '../../assets/admin/id-back.webp';
+
+    const btnGenerate = document.getElementById('btn-generate');
+    if (btnGenerate) {
+        btnGenerate.addEventListener('click', async () => {
+            const form = document.getElementById('id-form');
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+            if (capturedPhoto.style.display === 'none') { alert("Please capture a student photo first."); return; }
+
+            const firstname = document.getElementById('firstname').value.toUpperCase();
+            const miVal = document.getElementById('mi').value.trim();
+            const mi = miVal ? (miVal.endsWith('.') ? miVal.toUpperCase() : miVal.toUpperCase() + '.') : "";
+            const lastname = document.getElementById('lastname').value.toUpperCase();
+            const lrn = document.getElementById('lrn').value;
+            const birthdate = birthdateInput.value;
+
+            if (!isValidDate(birthdate)) {
+                if (birthdateError) birthdateError.style.display = 'block';
+                birthdateInput.style.borderColor = 'var(--madder-red)';
+                alert("Invalid birthdate. Please use mm-dd-yyyy format and ensure the date exists.");
+                birthdateInput.focus();
+                return;
+            }
+
+            const colorName = "#0ff184", colorLRN = "#a52a2a", colorBirthdate = "#2980b9";
+            const fontIdDetails = "Acme", baseFontSize = 28;
+
+            ctxFront.drawImage(imgFront, 0, 0, 600, 960);
+            const photoX = 8.09, photoY = 312.99, photoW = 272.54 - 8.09, photoH = 646.68 - 312.99;
+            const photoImg = new Image();
+            photoImg.onload = async () => {
+                const borderRadius = 15, borderWidth = 6, borderColor = "#2980b9";
+                ctxFront.save();
+                ctxFront.beginPath(); ctxFront.roundRect(photoX, photoY, photoW, photoH, borderRadius); ctxFront.clip();
+                ctxFront.drawImage(photoImg, photoX, photoY, photoW, photoH);
+                ctxFront.restore();
+                ctxFront.strokeStyle = borderColor; ctxFront.lineWidth = borderWidth;
+                ctxFront.beginPath(); ctxFront.roundRect(photoX, photoY, photoW, photoH, borderRadius); ctxFront.stroke();
+
+                ctxFront.textAlign = "left"; ctxFront.strokeStyle = "black"; ctxFront.lineWidth = 10; ctxFront.lineJoin = "round";
+                const maxWidthFront = 280;
+                ctxFront.fillStyle = colorName;
+                const nameFontSize = drawAutoScaledText(ctxFront, firstname, 280.89, 367.15, maxWidthFront, baseFontSize, fontIdDetails, "bold", true);
+                drawAutoScaledText(ctxFront, mi, 284.03, 401.71, maxWidthFront, nameFontSize, fontIdDetails, "bold", true);
+                drawAutoScaledText(ctxFront, lastname, 285.61, 439.05, maxWidthFront, nameFontSize, fontIdDetails, "bold", true);
+                ctxFront.fillStyle = colorLRN;
+                drawAutoScaledText(ctxFront, lrn, 348.44, 540.73, maxWidthFront, baseFontSize, fontIdDetails, "bold", true);
+                ctxFront.fillStyle = colorBirthdate;
+                drawAutoScaledText(ctxFront, birthdate, 346.08, 633.41, maxWidthFront, baseFontSize, fontIdDetails, "bold", true);
+
+                const qrX = 178.29, qrY = 689.10, qrW = 420.99 - 178.29, qrH = 932.58 - 689.10;
+                const qrData = `NAME: ${firstname} ${mi} ${lastname}\nLRN: ${lrn}`;
+                try {
+                    const qrUrl = await QRCode.toDataURL(qrData, { margin: 1, width: 300 });
+                    const qrImg = new Image();
+                    qrImg.onload = () => {
+                        ctxFront.drawImage(qrImg, qrX, qrY, qrW, qrH);
+                        const btnDownloadFront = document.getElementById('btn-download-front');
+                        if (btnDownloadFront) btnDownloadFront.disabled = false;
+                    };
+                    qrImg.src = qrUrl;
+                } catch (err) { console.error("QR Error:", err); }
+            };
+            photoImg.src = capturedPhoto.src;
+
+            ctxBack.drawImage(imgBack, 0, 0, 600, 960);
+            ctxBack.fillStyle = "#000"; ctxBack.textAlign = "left"; ctxBack.font = "bold 24px Acme";
+            ctxBack.fillText(document.getElementById('guardian').value, 185, 552);
+            const address = addressSelect.value === 'others' ? addressManual.value : addressSelect.value;
+            wrapText(ctxBack, address, 185, 627, 350, 28);
+            const mobile = document.getElementById('parent-mobile').value || "N/A";
+            ctxBack.fillText(mobile, 185, 719);
+            const btnDownloadBack = document.getElementById('btn-download-back');
+            if (btnDownloadBack) btnDownloadBack.disabled = false;
+        });
+    }
+
+    function drawAutoScaledText(ctx, text, x, y, maxWidth, baseSize, font, weight = "normal", stroke = false) {
+        let fontSize = baseSize;
+        ctx.font = `${weight} ${fontSize}px ${font}`;
+        let textWidth = ctx.measureText(text).width;
+        while (textWidth > maxWidth && fontSize > 10) {
+            fontSize -= 1; ctx.font = `${weight} ${fontSize}px ${font}`; textWidth = ctx.measureText(text).width;
+        }
+        if (stroke) ctx.strokeText(text, x, y);
+        ctx.fillText(text, x, y);
+        return fontSize;
+    }
+
+    function isValidDate(dateStr) {
+        const parts = dateStr.split("-");
+        if (parts.length !== 3) return false;
+        const m = parseInt(parts[0], 10), d = parseInt(parts[1], 10), y = parseInt(parts[2], 10);
+        const date = new Date(y, m - 1, d);
+        return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
+    }
+
+    function wrapText(context, text, x, y, maxWidth, lineHeight) {
+        const words = text.split(' ');
+        let line = '';
+        for (let n = 0; n < words.length; n++) {
+            let testLine = line + words[n] + ' ';
+            let metrics = context.measureText(testLine);
+            if (metrics.width > maxWidth && n > 0) {
+                context.fillText(line, x, y); line = words[n] + ' '; y += lineHeight;
+            } else { line = testLine; }
+        }
+        context.fillText(line, x, y);
+    }
+
+    const btnDownloadFront = document.getElementById('btn-download-front');
+    if (btnDownloadFront) {
+        btnDownloadFront.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `ID-Front-${document.getElementById('lastname').value}.png`;
+            link.href = canvasFront.toDataURL('image/png');
+            link.click();
+        });
+    }
+
+    const btnDownloadBack = document.getElementById('btn-download-back');
+    if (btnDownloadBack) {
+        btnDownloadBack.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `ID-Back-${document.getElementById('lastname').value}.png`;
+            link.href = canvasBack.toDataURL('image/png');
+            link.click();
+        });
+    }
+}
+
+// Call setup on load
+document.addEventListener('DOMContentLoaded', setupAdminLogic);
 
