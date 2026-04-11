@@ -2745,6 +2745,22 @@ body.dark-mode .btn-small:hover {
     font-size: 0.9rem;
     margin-top: 10px;
 }
+.login-links {
+    margin-top: 20px;
+    border-top: 1px solid var(--abaca-cream);
+    padding-top: 15px;
+}
+.back-link {
+    text-decoration: none;
+    color: var(--text-gray);
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+.back-link:hover {
+    color: var(--madder-red);
+    text-decoration: underline;
+}
 
 .id-gen-container {
     padding: 40px 5%;
