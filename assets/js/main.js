@@ -1729,11 +1729,14 @@ async function initIDGenerator() {
             photoImg.src = capturedPhoto.src;
 
             ctxBack.drawImage(imgBack, 0, 0, 600, 960);
-            ctxBack.fillStyle = "#000"; ctxBack.textAlign = "left"; ctxBack.font = "bold 24px Acme";
+            ctxBack.fillStyle = "#000"; ctxBack.textAlign = "left"; 
+            const backFont = "bold 24px Acme";
+            ctxBack.font = backFont;
             ctxBack.fillText(document.getElementById('guardian').value, 185, 552);
             const address = addressSelect.value === 'others' ? addressManual.value : addressSelect.value;
-            wrapText(ctxBack, address, 185, 627, 350, 28);
+            wrapText(ctxBack, address, 185, 627, 350, 28, backFont);
             const mobile = document.getElementById('parent-mobile').value || "N/A";
+            ctxBack.font = backFont;
             ctxBack.fillText(mobile, 185, 719);
             const btnDownloadBack = document.getElementById('btn-download-back');
             if (btnDownloadBack) btnDownloadBack.disabled = false;
@@ -1760,7 +1763,8 @@ async function initIDGenerator() {
         return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
     }
 
-    function wrapText(context, text, x, y, maxWidth, lineHeight) {
+    function wrapText(context, text, x, y, maxWidth, lineHeight, font) {
+        if (font) context.font = font;
         const words = text.split(' ');
         let line = '';
         for (let n = 0; n < words.length; n++) {
