@@ -1,0 +1,113 @@
+/* Zipper Reveal Styles */
+#zipper-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 10000;
+    display: flex;
+    overflow: hidden;
+    pointer-events: none; /* Let clicks pass through when finished */
+}
+
+.zipper-panel {
+    position: absolute;
+    top: 0;
+    width: 50vw;
+    height: 100%;
+    background: var(--midnight-black);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+}
+
+.zipper-panel.left {
+    left: 0;
+    border-right: 2px solid var(--accent-gold);
+}
+
+.zipper-panel.right {
+    right: 0;
+    border-left: 2px solid var(--accent-gold);
+}
+
+/* Zipper Teeth Styles */
+.zipper-teeth-container {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 30px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    z-index: 10002;
+}
+
+.zipper-panel.left .zipper-teeth-container {
+    right: -15px;
+}
+
+.zipper-panel.right .zipper-teeth-container {
+    left: -15px;
+}
+
+/* Individual Teeth */
+.tooth {
+    width: 24px;
+    height: 10px;
+    background: linear-gradient(90deg, var(--accent-gold), var(--deep-madder));
+    border-radius: 2px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.4);
+    position: relative;
+}
+
+/* Add a metallic "stud" look to teeth */
+.tooth::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px;
+    height: 4px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 50%;
+}
+
+.zipper-panel.left .tooth {
+    margin-right: -12px;
+    align-self: flex-end;
+}
+
+.zipper-panel.right .tooth {
+    margin-left: -12px;
+    align-self: flex-start;
+}
+
+/* Hide hero initially for reveal */
+.hero-reveal {
+    opacity: 0;
+    transform: scale(0.9);
+}
+
+/* Logo and Text inside Panels (Optional) */
+.zipper-logo {
+    width: 150px;
+    height: auto;
+    opacity: 0.8;
+}
+
+/* Accessibility: Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    #zipper-overlay {
+        display: none !important;
+    }
+    .hero-reveal {
+        opacity: 1 !important;
+        transform: scale(1) !important;
+    }
+}
