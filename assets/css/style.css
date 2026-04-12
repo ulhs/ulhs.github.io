@@ -2526,6 +2526,30 @@ footer h4, footer h5 {
 }
 
 /* --- DARK MODE TOGGLE & THEME --- */
+@media screen and (max-width: 768px) {
+    .faq-bot-container {
+        bottom: 20px;
+        right: 20px;
+    }
+    .faq-bot-window {
+        width: calc(100vw - 40px);
+        height: 70vh;
+        bottom: 75px;
+        right: 0;
+    }
+    .faq-bot-toggle {
+        width: 55px;
+        height: 55px;
+    }
+    .faq-bot-toggle .bot-icon {
+        font-size: 1.5rem;
+    }
+    .message {
+        max-width: 90%;
+        font-size: 0.85rem;
+    }
+}
+
 :root {
     /* Define dark mode colors as variables */
     --bg-dark: #0f0f0f;         /* Deeper black for better contrast */
