@@ -99,46 +99,46 @@ class ZipperReveal {
     animate() {
         // GSAP Timeline
         const tl = gsap.timeline({
-            defaults: { ease: "power4.inOut", duration: 1.2 }
+            defaults: { ease: "power4.inOut", duration: 5.0 }
         });
 
         // 1. Staggered "Teeth" pull apart
         const leftTeeth = this.leftPanel.querySelectorAll('.tooth');
         const rightTeeth = this.rightPanel.querySelectorAll('.tooth');
 
-        // Unzip from top downwards
+        // Unzip from top downwards - slowed down for 5s feel
         tl.to(leftTeeth, {
-            x: -30,
+            x: -40,
             stagger: {
-                each: 0.02,
+                each: 0.08,
                 from: "top"
             },
             opacity: 0,
-            duration: 0.8
+            duration: 3.0
         }, 0);
 
         tl.to(rightTeeth, {
-            x: 30,
+            x: 40,
             stagger: {
-                each: 0.02,
+                each: 0.08,
                 from: "top"
             },
             opacity: 0,
-            duration: 0.8
+            duration: 3.0
         }, 0);
 
         // 2. Panels slide off-screen (The Reveal)
         tl.to(this.leftPanel, {
             x: '-100%',
-            duration: 1.4,
+            duration: 5.0,
             ease: "power4.inOut"
-        }, 0.2);
+        }, 0.5);
 
         tl.to(this.rightPanel, {
             x: '100%',
-            duration: 1.4,
+            duration: 5.0,
             ease: "power4.inOut"
-        }, 0.2);
+        }, 0.5);
 
         // 3. Hero Reveal with scale and opacity
         const heroSection = document.querySelector('.hero-reveal');
@@ -146,20 +146,19 @@ class ZipperReveal {
             tl.to(heroSection, {
                 opacity: 1,
                 scale: 1,
-                duration: 1.2,
+                duration: 3.0,
                 ease: "power2.out"
-            }, 0.6);
+            }, 2.0);
             
-            // Wait for dynamic content to be loaded in hero
-            // We animate the overlay directly as it contains the H1 and Button
+            // Hero Overlay (Text/Button) pops in at the end
             const heroOverlay = heroSection.querySelector('.hero-overlay');
             if (heroOverlay) {
                 tl.from(heroOverlay, { 
                     y: 40, 
                     opacity: 0, 
-                    duration: 1,
+                    duration: 2.0,
                     ease: "back.out(1.7)"
-                }, 0.8);
+                }, 3.5);
             }
         }
 
