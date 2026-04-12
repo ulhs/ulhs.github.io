@@ -582,6 +582,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function injectAnnouncement(data, root) {
+        if (document.getElementById('site-announcement')) return;
+        if (sessionStorage.getItem('announcementDismissed')) return;
+
+        const header = document.querySelector('header');
+        if (!header) return;
+
+        const banner = document.createElement('div');
+        banner.id = 'site-announcement';
+        banner.className = 'announcement-banner';
+        
+        const linkUrl = data.link.startsWith('http') ? data.link : root + data.link;
+        const target = data.link.startsWith('http') ? 'target="_blank"' : '';
+        
+        banner.innerHTML = `
+            <div class="announcement-content">
+                <span class="announcement-text">${data.text}</span>
+                <a href="${linkUrl}" class="announcement-btn" ${target}>${data.button_text}</a>
+            </div>
+            <button class="announcement-close" id="close-announcement">&times;</button>
+        `;
+
+        // Insert below the header
+        header.after(banner);
+
+        document.getElementById('close-announcement').addEventListener('click', () => {
+            banner.style.display = 'none';
+            sessionStorage.setItem('announcementDismissed', 'true');
+        });
+    }
+
     function updateGlobalUI(config, root) {
         // Update Footer Social Links if they exist
         const fbLink = document.querySelector('.social-icon.fb')?.parentElement;
@@ -596,6 +627,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const url = link.url.startsWith('http') ? link.url : root + link.url;
                 return `<li><a href="${url}">${link.text}</a></li>`;
             }).join('');
+        }
+
+        // --- HOMEPAGE ANNOUNCEMENT BANNER ---
+        const isHomePage = window.location.pathname === '/' || 
+                          window.location.pathname.endsWith('index.html') ||
+                          (window.location.pathname.split('/').pop() === '');
+        
+        if (isHomePage && config.announcement && config.announcement.enabled) {
+            injectAnnouncement(config.announcement, root);
         }
 
         // Update Site-wide Branding (School Name in Footer/Header)

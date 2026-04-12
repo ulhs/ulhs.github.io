@@ -17,5 +17,11 @@
         { "text": "Career & College Portal", "url": "pages/career-portal.html" },
         { "text": "Transparency Board", "url": "pages/transparency.html" },
         { "text": "Enrollment Hub", "url": "pages/enrollment.html" }
-    ]
+    ],
+    "announcement": {
+        "enabled": true,
+        "text": "Our website is undergoing exciting improvements! We are currently making constant changes to the site content and planning to roll out new tools like the Student ID Generator to better serve the Upper Labay community. Thank you for your patience during this rollout. For comments, suggestions, or feedback, please reach out to us on Facebook.",
+        "button_text": "Ask SirChris for Latest Updates",
+        "link": "https://facebook.com/sirchrisperegrino"
+    }
 }
