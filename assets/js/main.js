@@ -1,7 +1,19 @@
+/* --- HELPER: GET ROOT PATH --- */
+function getRootPath() {
+    const pathParts = window.location.pathname.split('/').filter(p => p !== '');
+    const pagesIndex = pathParts.indexOf('pages');
+    let root = '';
+    if (pagesIndex !== -1) {
+        const depth = pathParts.length - pagesIndex - 1;
+        for (let i = 0; i < depth; i++) root += '../';
+    }
+    return root;
+}
+
 /* --- GLOBAL CHATBOT INITIALIZATION --- */
 (function() {
-    const isSubPage = window.location.pathname.includes('/pages/');
-    const dataPath = isSubPage ? '../assets/data/' : 'assets/data/';
+    const root = getRootPath();
+    const dataPath = root + 'assets/data/';
     let chatbotData = null;
     let dictionaryData = null;
     let aboutData = null;
@@ -126,7 +138,6 @@
         if (links && links.length > 0) {
             const linksDiv = document.createElement('div');
             linksDiv.className = 'message-links';
-            const root = isSubPage ? '../' : '';
             links.forEach(link => {
                 const a = document.createElement('a');
                 a.href = link.url.startsWith('http') ? link.url : root + link.url;
@@ -381,19 +392,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /* --- DYNAMIC CONTENT LOADING --- */
     async function loadDynamicContent() {
-        const isSubPage = window.location.pathname.includes('/pages/');
-        const dataPath = isSubPage ? '../assets/data/' : 'assets/data/';
-        const componentPath = isSubPage ? '../assets/components/' : 'assets/components/';
-        const root = isSubPage ? '../' : '';
+        const root = getRootPath();
+        const dataPath = root + 'assets/data/';
+        const componentPath = root + 'assets/components/';
 
-        // 0. Load Shared Components (Header/Footer)
-        await loadSharedComponents(componentPath, root);
+        // Skip shared components for admin pages to preserve custom headers
+        const isAdminPage = window.location.pathname.includes('/pages/admin/');
+        if (!isAdminPage) {
+            // 0. Load Shared Components (Header/Footer)
+            await loadSharedComponents(componentPath, root);
+        }
 
         // 2. Load Global Config (Footer, etc.)
         try {
             const configRes = await fetch(`${dataPath}config.json`);
             const config = await configRes.json();
-            updateGlobalUI(config);
+            updateGlobalUI(config, root);
         } catch (err) { console.warn("Config not found:", err); }
 
         const pathParts = window.location.pathname.split('/');
@@ -568,7 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function updateGlobalUI(config) {
+    function updateGlobalUI(config, root) {
         // Update Footer Social Links if they exist
         const fbLink = document.querySelector('.social-icon.fb')?.parentElement;
         const ytLink = document.querySelector('.social-icon.yt')?.parentElement;
@@ -578,9 +592,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update Footer Navigation if it exists
         const footerNav = document.querySelector('.footer-nav ul');
         if (footerNav && config.footer_links) {
-            footerNav.innerHTML = config.footer_links.map(link => 
-                `<li><a href="${link.url}">${link.text}</a></li>`
-            ).join('');
+            footerNav.innerHTML = config.footer_links.map(link => {
+                const url = link.url.startsWith('http') ? link.url : root + link.url;
+                return `<li><a href="${url}">${link.text}</a></li>`;
+            }).join('');
         }
 
         // Update Site-wide Branding (School Name in Footer/Header)
@@ -1347,8 +1362,8 @@ document.addEventListener('DOMContentLoaded', () => {
 /* --- OPEN CALENDAR IN NEW TAB --- */
 function openFullscreen() {
     // Determine the correct path based on current location
-    const isSubPage = window.location.pathname.includes('/pages/');
-    const fileUrl = isSubPage ? "../assets/documents/school-calendar.webp" : "assets/documents/school-calendar.webp";
+    const root = getRootPath();
+    const fileUrl = root + "assets/documents/school-calendar.webp";
     window.open(fileUrl, '_blank');
 }
 

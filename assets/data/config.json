@@ -11,11 +11,11 @@
         "youtube": "https://www.youtube.com/@upperlabaynhs"
     },
     "footer_links": [
-        { "text": "Downloads Center", "url": "downloads-center.html" },
-        { "text": "Student Life Gallery", "url": "student-life.html" },
-        { "text": "Blaan Dictionary", "url": "blaan-dictionary.html" },
-        { "text": "Career & College Portal", "url": "career-portal.html" },
-        { "text": "Transparency Board", "url": "transparency.html" },
-        { "text": "Enrollment Hub", "url": "enrollment.html" }
+        { "text": "Downloads Center", "url": "pages/downloads-center.html" },
+        { "text": "Student Life Gallery", "url": "pages/student-life.html" },
+        { "text": "Blaan Dictionary", "url": "pages/blaan-dictionary.html" },
+        { "text": "Career & College Portal", "url": "pages/career-portal.html" },
+        { "text": "Transparency Board", "url": "pages/transparency.html" },
+        { "text": "Enrollment Hub", "url": "pages/enrollment.html" }
     ]
 }
