@@ -31,9 +31,9 @@
         "description": "Upper Labay High School is more than just an educational institution; it is a sanctuary for the Blaan soul. Our vision is to empower students who are globally competitive yet deeply anchored in their cultural roots."
     },
     "promo": {
-        "title": "Ready to join Gumnè Fgalad?",
+        "title": "Ready to join Upper Labay High School?",
         "description": "Start your enrollment journey today and be part of a community that values both tradition and excellence.",
-        "btn_text": "Start Kmasut (Enrollment)",
+        "btn_text": "Start Enrollment",
         "btn_link": "pages/enrollment.html"
     }
 }

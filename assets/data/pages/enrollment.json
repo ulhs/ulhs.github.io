@@ -1,6 +1,6 @@
 {
     "banner": {
-        "title": "Kmasut: Enrollment Hub",
+        "title": "Enrollment Hub",
         "subtitle": "Ready to join our community? Select your department to begin the enrollment process."
     },
     "paths": [
@@ -10,7 +10,7 @@
             "grades": "Grades 7 to 10 Enrollment",
             "description": "Start your JHS journey with our localized Blaan curriculum.",
             "link": "enrollment-jhs.html",
-            "btn_text": "Start JHS Kmasut",
+            "btn_text": "Start JHS Enrollment",
             "icon": "🎒"
         },
         {
@@ -19,7 +19,7 @@
             "grades": "Grades 11 to 12 Enrollment",
             "description": "Enroll in Academic or TVL tracks with specialized SLT training.",
             "link": "enrollment-shs.html",
-            "btn_text": "Start SHS Kmasut",
+            "btn_text": "Start SHS Enrollment",
             "icon": "🎓"
         }
     ],
