@@ -1325,12 +1325,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     errorEl.hidden = false;
                     return false;
                 }
-                const agreeCb = document.getElementById('old-agreement');
-                if (agreeCb && !agreeCb.checked) {
-                    agreeCb.focus();
-                    errorEl.textContent = 'Please certify that the information provided is true and correct.';
-                    errorEl.hidden = false;
-                    return false;
+                if (step === 3) {
+                    const agreeCb = document.getElementById(`enroll-agreement`);
+                    if (agreeCb && !agreeCb.checked) {
+                        agreeCb.focus();
+                        errorEl.textContent = 'Please certify that the information provided is true and correct to proceed.';
+                        return false;
+                    }
                 }
             }
 
@@ -1359,10 +1360,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 { label: 'Data Agreement', value: document.getElementById('old-agreement')?.checked ? 'Accepted' : 'Not Accepted' }
             ];
 
-            reviewGrid.innerHTML = items.map(item => `
+            const type = getValue('enroll-type-modal');
+            if (type === 'transferee') {
+                items.push({ label: 'Previous School ID', value: getValue('enroll-prev-school-id') });
+                items.push({ label: 'Previous School Address', value: getValue('enroll-prev-school-address') });
+                items.push({ label: 'Previous School Last Attended', value: getValue('enroll-prev-school-last-attended') });
+            }
+
+            reviewEl.innerHTML = items.map(item => `
                 <div class="enroll-review-item">
                     <span>${item.label}</span>
-                    <strong>${item.value}</strong>
+                    <strong>${item.value || '—'}</strong>
                 </div>
             `).join('');
         }
@@ -1700,42 +1708,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     <div class="enroll-step" data-step="4">
                         <div class="enroll-module-header" style="margin-bottom: 20px;">
-                            <h3 class="accent-title" style="font-size: 1.3rem;">Attach Required Documents</h3>
-                            <p style="font-size: 0.9rem;"><strong>SF9 (Report Card)</strong> is mandatory for enrollment. Other documents can be submitted once classes start.</p>
+                            <h3 class="accent-title" style="font-size: 1.3rem;">Document Requirements</h3>
+                            <p style="font-size: 0.9rem; color: var(--primary-color);"><strong>Important:</strong> Please prepare the following documents for submission during the first week of classes:</p>
                         </div>
 
                         <div class="enroll-grid">
-                            <!-- SF9 is now the only mandatory field -->
-                            <div class="form-group">
-                                <label for="enroll-doc-sf9-modal">SF9 (Report Card)</label>
-                                <input type="file" id="enroll-doc-sf9-modal" name="attachment" accept="image/*" required>
-                                <small>Latest report card from previous level (Mandatory).</small>
-                            </div>
-
-                            <!-- Others are optional -->
-                            <div class="form-group">
-                                <label for="enroll-doc-psa-modal">PSA Birth Certificate</label>
-                                <input type="file" id="enroll-doc-psa-modal" name="PSA_Attachment" accept="image/*">
-                                <small>Optional: Can be followed later.</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="enroll-doc-completion-modal">Certificate of Completion</label>
-                                <input type="file" id="enroll-doc-completion-modal" name="Completion_Certificate" accept="image/*">
-                                <small>Optional: From Elementary or JHS.</small>
-                            </div>
-
-                            <!-- SHS Specific Optional -->
-                            <div class="form-group enroll-conditional" data-cond="grade11" hidden>
-                                <label for="enroll-doc-sf10-modal">SF10 (Permanent Record)</label>
-                                <input type="file" id="enroll-doc-sf10-modal" name="SF10_Attachment" accept="image/*">
-                                <small>Optional: Official SF10-SHS.</small>
-                            </div>
-
-                            <div class="form-group enroll-conditional" data-cond="grade11" hidden>
-                                <label for="enroll-doc-ncae-modal">NCAE Results</label>
-                                <input type="file" id="enroll-doc-ncae-modal" name="NCAE_Attachment" accept="image/*">
-                                <small>Optional: National Career Assessment Examination results.</small>
+                            <div style="background: var(--light-bg); padding: 20px; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+                                <h4 style="margin-bottom: 15px; color: var(--primary-color);">📋 Required Documents for Submission:</h4>
+                                <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
+                                    <li><strong>SF9 (Report Card)</strong> - Latest report card from previous level</li>
+                                    <li><strong>PSA Birth Certificate</strong> - Original or certified true copy</li>
+                                    <li><strong>Certificate of Completion</strong> - For Grade 7 students</li>
+                                    <li><strong>Good Moral Character</strong> - From previous school</li>
+                                </ul>
+                                
+                                <h4 style="margin: 20px 0 15px 0; color: var(--primary-color);">📚 Additional Documents (if applicable):</h4>
+                                <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
+                                    <li><strong>SF10 (Permanent Record)</strong> - For Grade 11 students</li>
+                                    <li><strong>NCAE Results</strong> - For Grade 11 students</li>
+                                    <li><strong>4Ps ID</strong> - If applicable</li>
+                                </ul>
+                                
+                                <p style="margin-top: 20px; padding: 15px; background: var(--accent-color); color: white; border-radius: 6px; text-align: center;">
+                                    <strong>📅 Submit these documents during the first week of classes to complete your enrollment.</strong>
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -2079,43 +2075,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const type = enrollmentTypeEl.value;
                 if (!type) {
                     enrollmentTypeEl.focus();
-                    setError('Please select an Enrollment Type.');
+                    setError('Please select an enrollment type.');
                     return false;
                 }
-            }
-
-            if (step === 3) {
-                const agreeCb = document.getElementById(`enroll-agreement${suffix}`);
-                if (agreeCb && !agreeCb.checked) {
-                    agreeCb.focus();
-                    setError('Please certify that the information provided is true and correct to proceed.');
-                    return false;
-                }
-            }
-
-            if (step === 4) {
-                // Validate SF9 file specifically as it is mandatory
-                const sf9Input = document.getElementById(`enroll-doc-sf9${suffix}`);
-                if (sf9Input && sf9Input.required) {
-                    if (!sf9Input.files || sf9Input.files.length === 0) {
-                        sf9Input.focus();
-                        setError('Please attach your SF9 (Report Card) to proceed. This is required.');
-                        return false;
-                    }
-                }
-            }
-
-            // Step 5 is the review step, validation is handled by individual field checks in steps 1-4
-            if (step === 5) {
-                return true;
             }
 
             return true;
-        }
-
-        function getValue(id) {
-            const el = document.getElementById(id + suffix);
-            return el ? el.value.trim() : '';
         }
 
         function updateReview() {
@@ -2156,11 +2121,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             ];
 
-            if (!isSameAddress) {
-                items.push({ label: 'Permanent Address', value: permanentAddress });
-            }
-
             items.push(
+                { label: 'Permanent Address', value: permanentAddress },
                 { label: 'Mother\'s Maiden Name', value: getValue('enroll-mother') },
                 { label: 'Father\'s Name', value: getValue('enroll-father') },
                 { label: 'Guardian', value: getValue('enroll-guardian') || 'N/A' },
@@ -2174,15 +2136,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (type === 'transferee') {
                 items.push({ label: 'Previous School ID', value: getValue('enroll-prev-school-id') });
                 items.push({ label: 'Previous School Address', value: getValue('enroll-prev-school-address') });
-            }
-
-            // Document Status
-            items.push({ label: 'SF9 (Report Card)', value: docSf9El.files.length > 0 ? 'Attached' : 'Missing (Required)' });
-            items.push({ label: 'PSA Birth Certificate', value: docPsaEl.files.length > 0 ? 'Attached' : 'To follow' });
-            items.push({ label: 'Certificate of Completion', value: docCompletionEl.files.length > 0 ? 'Attached' : 'To follow' });
-            if (type === 'grade11') {
-                items.push({ label: 'SF10 (Permanent Record)', value: docSf10El.files.length > 0 ? 'Attached' : 'To follow' });
-                items.push({ label: 'NCAE Results', value: docNcaeEl.files.length > 0 ? 'Attached' : 'To follow' });
+                items.push({ label: 'Previous School Last Attended', value: getValue('enroll-prev-school-last-attended') });
             }
 
             reviewEl.innerHTML = items.map(item => `
@@ -2254,14 +2208,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const titleEl = thanksModal.querySelector('#enroll-thanks-title');
             const messageEl = thanksModal.querySelector('#enroll-thanks-message');
 
-            if (titleEl) titleEl.textContent = 'Enrollment Submitted!';
+            if (titleEl) titleEl.textContent = 'Enrollment Submitted Successfully!';
             if (messageEl) {
                 if (type === 'grade7') {
-                    messageEl.textContent = 'Your JHS enrollment details were submitted successfully. Please wait for further instructions via school announcements.';
+                    messageEl.textContent = 'Your JHS enrollment details were submitted successfully. Please submit your required documents (SF9, PSA Birth Certificate, Certificate of Completion, Good Moral Character) during the first week of classes. Wait for further instructions via school announcements.';
                 } else if (type === 'grade11') {
-                    messageEl.textContent = 'Your SHS enrollment details were submitted successfully. Please prepare your requirements for verification.';
+                    messageEl.textContent = 'Your SHS enrollment details were submitted successfully. Please submit your required documents (SF9, PSA Birth Certificate, Certificate of Completion, Good Moral Character, SF10, NCAE Results) during the first week of classes. Prepare your requirements for verification.';
                 } else {
-                    messageEl.textContent = 'Your enrollment details were submitted successfully. We will contact you soon.';
+                    messageEl.textContent = 'Your enrollment details were submitted successfully. Please submit your required documents during the first week of classes. We will contact you soon.';
                 }
             }
 
