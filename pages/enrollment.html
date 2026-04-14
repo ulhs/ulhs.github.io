@@ -45,6 +45,27 @@
     </footer>
     <script src="../assets/js/main.js"></script>
 
+    <script>
+        // Show success message if redirected from FormSubmit.co
+        if (window.location.search.includes('submitted=true')) {
+            document.addEventListener('DOMContentLoaded', function() {
+                const modal = document.getElementById('enroll-thanks-modal');
+                if (modal) {
+                    const titleEl = modal.querySelector('#enroll-thanks-title');
+                    const messageEl = modal.querySelector('#enroll-thanks-message');
+                    
+                    if (titleEl) titleEl.textContent = 'Enrollment Submitted Successfully!';
+                    if (messageEl) messageEl.textContent = 'Thank you for your enrollment submission! Your documents have been received and will be processed by our school staff. Please wait for further instructions via school announcements or Facebook updates.';
+                    
+                    modal.hidden = false;
+                    
+                    // Clean up URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            });
+        }
+    </script>
+
     <div class="enroll-modal" id="enroll-thanks-modal" hidden>
         <div class="enroll-modal-content" role="dialog" aria-modal="true" aria-labelledby="enroll-thanks-title">
             <h3 id="enroll-thanks-title" class="accent-title">Thank you!</h3>

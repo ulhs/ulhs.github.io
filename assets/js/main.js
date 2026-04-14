@@ -2196,8 +2196,16 @@ document.addEventListener('DOMContentLoaded', () => {
         async function submitFormWithFiles() {
             const formData = new FormData();
             
-            // Web3Forms Access Key
-            formData.append('access_key', '8d18cddf-f892-4353-9cf9-5486928ecda8');
+            // FormSubmit.co configurations
+            const lastName = getValue('enroll-lastname');
+            const firstName = getValue('enroll-firstname');
+            formData.append('_subject', `New Enrollment: ${lastName}, ${firstName}`);
+            formData.append('_template', 'table');
+            formData.append('_captcha', 'false');
+            formData.append('_next', window.location.origin + '/pages/enrollment.html?submitted=true');
+
+            // FormSubmit.co endpoint
+            const endpoint = `https://formsubmit.co/upperlabay.nhs@deped.gov.ph`;
 
             // Add all form fields using their 'name' attribute
             const allInputs = Array.from(form.querySelectorAll('input, select, textarea'));
@@ -2219,18 +2227,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Web3Forms configurations
-            const lastName = getValue('enroll-lastname');
-            const firstName = getValue('enroll-firstname');
-            formData.append('subject', `New Enrollment: ${lastName}, ${firstName}`);
-            formData.append('from_name', 'ULHS Online Enrollment');
-
-            // Web3Forms AJAX endpoint
-            const endpoint = `https://api.web3forms.com/submit`;
-
             const response = await fetch(endpoint, {
                 method: 'POST',
-                headers: { 'Accept': 'application/json' },
                 body: formData
             });
 
@@ -2318,7 +2316,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnSubmit.textContent = 'Submitting...';
 
             try {
-                console.log('Calling Web3Forms API...');
+                console.log('Calling FormSubmit.co API...');
                 await submitFormWithFiles();
                 console.log('API Response: Success');
                 
