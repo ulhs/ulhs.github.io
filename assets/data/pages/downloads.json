@@ -10,8 +10,15 @@
     "files": [
         {
             "category": "Enrollment Form",
-            "title": "Basic Education Enrollment Form",
-            "description": "Official PDF form for learner registration and document preparation.",
+            "title": "Confirmation Slip (Continuing Students)",
+            "description": "Required for old students (Grades 8, 9, 10, and 12) to confirm their intent to enroll.",
+            "link": "../assets/documents/confirmation-slip.pdf",
+            "icon": "✅"
+        },
+        {
+            "category": "Enrollment Form",
+            "title": "Basic Education Enrollment Form (BEEF)",
+            "description": "Official PDF form for new student registration and document preparation.",
             "link": "../assets/documents/Basic-Education-Enrollment-Form.pdf",
             "icon": "📝"
         },

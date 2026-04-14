@@ -1094,6 +1094,704 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) { console.error("Error loading downloads page data:", err); }
     }
 
+    /* --- ENROLLMENT FORM MODAL --- */
+    function setupEnrollmentTriggers() {
+        const triggers = document.querySelectorAll('[data-enroll-trigger]');
+        triggers.forEach(trigger => {
+            trigger.addEventListener('click', (e) => {
+                e.preventDefault();
+                const type = trigger.getAttribute('data-enroll-trigger');
+                
+                if (type.startsWith('old-student')) {
+                    injectOldStudentModal();
+                    const modal = document.getElementById('old-student-modal');
+                    if (modal) {
+                        modal.hidden = false;
+                        const targetLevel = document.getElementById('old-target-level');
+                        if (targetLevel) {
+                            const isSHS = type === 'old-student-shs';
+                            Array.from(targetLevel.options).forEach(opt => {
+                                if (opt.value === '') return;
+                                const val = parseInt(opt.value);
+                                opt.hidden = isSHS ? (val < 11) : (val >= 11);
+                            });
+                        }
+                    }
+                } else {
+                    injectEnrollmentModal();
+                    const modal = document.getElementById('enrollment-form-modal');
+                    if (modal) {
+                        modal.hidden = false;
+                        const typeSelect = document.getElementById('enroll-type-modal');
+                        if (typeSelect && type) {
+                            // Filter Enrollment Types for JHS vs SHS
+                            Array.from(typeSelect.options).forEach(opt => {
+                                if (opt.value === '' || opt.value === 'transferee') {
+                                    opt.hidden = false;
+                                    return;
+                                }
+                                if (type === 'grade7') { // JHS
+                                    opt.hidden = opt.value === 'grade11';
+                                } else if (type === 'grade11') { // SHS
+                                    opt.hidden = opt.value === 'grade7';
+                                }
+                            });
+
+                            typeSelect.value = type;
+                            typeSelect.dispatchEvent(new Event('change'));
+                        }
+                    }
+                }
+            });
+        });
+    }
+
+    function injectOldStudentModal() {
+        if (document.getElementById('old-student-modal')) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'old-student-modal';
+        modal.className = 'enroll-modal';
+        modal.hidden = true;
+        modal.innerHTML = `
+            <div class="enroll-module" style="max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;">
+                <button type="button" class="faq-bot-close" id="old-modal-close" style="position: absolute; top: 15px; right: 20px; font-size: 2rem;">&times;</button>
+                <div class="enroll-module-header">
+                    <h2 class="accent-title">Confirmation Slip</h2>
+                    <p>For Continuing/Old Students. High-speed confirmation for the upcoming school year.</p>
+                </div>
+
+                <div class="enroll-progress" aria-hidden="true">
+                    <div class="enroll-progress-bar">
+                        <div class="enroll-progress-fill" id="old-progress-fill"></div>
+                    </div>
+                    <div class="enroll-progress-steps">
+                        <span class="old-step-indicator active" data-step="1">1</span>
+                        <span class="old-step-indicator" data-step="2">2</span>
+                        <span class="old-step-indicator" data-step="3">3</span>
+                    </div>
+                </div>
+
+                <form id="old-student-form" class="enroll-form" style="margin-top: 25px;" novalidate>
+                    <div class="enroll-error" id="old-error" role="alert" hidden></div>
+
+                    <div class="old-step active" data-step="1">
+                        <div class="enroll-grid">
+                            <div class="form-group">
+                                <label for="old-lrn">12-Digit LRN</label>
+                                <input type="text" id="old-lrn" required inputmode="numeric" pattern="\\d{12}" maxlength="12" placeholder="123456789012">
+                            </div>
+                            <div class="form-group">
+                                <label for="old-lastname">Last Name</label>
+                                <input type="text" id="old-lastname" required placeholder="Last Name">
+                            </div>
+                            <div class="form-group">
+                                <label for="old-firstname">First Name</label>
+                                <input type="text" id="old-firstname" required placeholder="First Name">
+                            </div>
+                            <div class="form-group">
+                                <label for="old-middlename">Middle Name (Optional)</label>
+                                <input type="text" id="old-middlename" placeholder="Middle Name">
+                            </div>
+                            <div class="form-group">
+                            <label for="old-extension">Extension Name (Optional)</label>
+                            <input type="text" id="old-extension" placeholder="e.g. Jr., III (Leave blank if none)">
+                        </div>
+                            <div class="form-group">
+                                <label for="old-target-level">Grade Level to Enroll</label>
+                                <select id="old-target-level" required>
+                                    <option value="" disabled selected>Select Grade</option>
+                                    <option value="8">Grade 8</option>
+                                    <option value="9">Grade 9</option>
+                                    <option value="10">Grade 10</option>
+                                    <option value="11">Grade 11</option>
+                                    <option value="12">Grade 12</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="old-step" data-step="2">
+                        <div class="form-group">
+                            <label style="font-weight: 700; display: block; margin-bottom: 10px;">Do you confirm your intent to enroll for the upcoming school year?</label>
+                            <div style="display: flex; gap: 30px; align-items: center;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 1.1rem;">
+                                    <input type="radio" name="old-confirm" value="yes" required style="width: 20px; height: 20px;"> YES
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 1.1rem;">
+                                    <input type="radio" name="old-confirm" value="no" required style="width: 20px; height: 20px;"> NO
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-3" style="display: flex; align-items: flex-start; gap: 10px; background: var(--soft-abaca); padding: 15px; border-radius: 10px; border: 1px solid var(--abaca-cream);">
+                            <input type="checkbox" id="old-agreement" required style="width: auto; margin-top: 5px;">
+                            <label for="old-agreement" style="font-size: 0.9rem; cursor: pointer; color: var(--midnight-black); line-height: 1.5;">
+                                I hereby certify that the above information given are true and correct to the best of my knowledge and I allow the Department of Education to use my child’s details to create and/or update his/her learner profile in the Learner Information System. The information herein shall be treated as confidential in compliance with the Data Privacy Act of 2012.
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="old-step" data-step="3">
+                        <div class="enroll-review">
+                            <h3 class="accent-title">Review Confirmation Details</h3>
+                            <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-gray);">Please check all information before confirming.</p>
+                            <div class="enroll-review-grid" id="old-review-grid"></div>
+                        </div>
+                    </div>
+
+                    <div class="enroll-actions" style="margin-top: 25px;">
+                        <button type="button" class="btn btn-secondary" id="old-prev" disabled>Back</button>
+                        <button type="button" class="btn" id="old-next">Next</button>
+                        <button type="submit" class="btn btn-gold" id="old-submit" style="display: none;">Confirm Enrollment</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const closeBtn = document.getElementById('old-modal-close');
+        const cancelBtn = document.getElementById('old-cancel');
+        const closeModal = () => { modal.hidden = true; };
+        
+        if (closeBtn) closeBtn.onclick = closeModal;
+        if (cancelBtn) cancelBtn.onclick = closeModal;
+        modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+        initOldStudentForm();
+    }
+
+    function initOldStudentForm() {
+        const form = document.getElementById('old-student-form');
+        if (!form) return;
+
+        injectThanksModal();
+
+        const errorEl = document.getElementById('old-error');
+        const btnPrev = document.getElementById('old-prev');
+        const btnNext = document.getElementById('old-next');
+        const btnSubmit = document.getElementById('old-submit');
+        const thanksModal = document.getElementById('enroll-thanks-modal');
+        const progressFill = document.getElementById('old-progress-fill');
+        const stepIndicators = Array.from(document.querySelectorAll('.old-step-indicator'));
+        const steps = Array.from(form.querySelectorAll('.old-step'));
+        const totalSteps = steps.length;
+        let currentStep = 1;
+
+        function showStep(step) {
+            currentStep = step;
+            steps.forEach(s => s.classList.toggle('active', Number(s.getAttribute('data-step')) === step));
+            
+            const isLastStep = step === totalSteps;
+            btnPrev.disabled = step === 1;
+            btnNext.style.display = isLastStep ? 'none' : 'block';
+            btnSubmit.style.display = isLastStep ? 'block' : 'none';
+
+            // Progress Bar
+            const pct = Math.round((step / totalSteps) * 100);
+            if (progressFill) progressFill.style.width = `${pct}%`;
+            stepIndicators.forEach(ind => {
+                const indStep = Number(ind.getAttribute('data-step'));
+                ind.classList.toggle('active', indStep <= step);
+            });
+
+            if (isLastStep) updateReview();
+        }
+
+        function validateStep(step) {
+            const container = steps.find(s => Number(s.getAttribute('data-step')) === step);
+            if (!container) return true;
+
+            const inputs = Array.from(container.querySelectorAll('input, select'));
+            for (const input of inputs) {
+                if (input.required && !input.value && input.type !== 'radio') {
+                    input.focus();
+                    errorEl.textContent = 'Please fill out all required fields.';
+                    errorEl.hidden = false;
+                    return false;
+                }
+                if (input.id === 'old-lrn' && !/^\d{12}$/.test(input.value.trim())) {
+                    input.focus();
+                    errorEl.textContent = 'LRN must be exactly 12 digits.';
+                    errorEl.hidden = false;
+                    return false;
+                }
+            }
+
+            if (step === 2) {
+                const confirmVal = form.querySelector('input[name="old-confirm"]:checked')?.value;
+                if (!confirmVal) {
+                    errorEl.textContent = 'Please select YES or NO to confirm your intent.';
+                    errorEl.hidden = false;
+                    return false;
+                }
+                const agreeCb = document.getElementById('old-agreement');
+                if (agreeCb && !agreeCb.checked) {
+                    agreeCb.focus();
+                    errorEl.textContent = 'Please certify that the information provided is true and correct.';
+                    errorEl.hidden = false;
+                    return false;
+                }
+            }
+
+            errorEl.hidden = true;
+            return true;
+        }
+
+        function updateReview() {
+            const reviewGrid = document.getElementById('old-review-grid');
+            if (!reviewGrid) return;
+
+            const getValue = (id) => document.getElementById(id)?.value.trim() || '—';
+            const confirmVal = (form.querySelector('input[name="old-confirm"]:checked')?.value || '—').toUpperCase();
+            
+            const lastName = getValue('old-lastname');
+            const firstName = getValue('old-firstname');
+            const middleName = getValue('old-middlename');
+            const extension = getValue('old-extension');
+            const fullName = `${lastName}, ${firstName}${middleName !== '—' ? ' ' + middleName : ''}${extension !== '—' ? ' ' + extension : ''}`;
+
+            const items = [
+                { label: 'Full Name', value: fullName },
+                { label: '12-Digit LRN', value: getValue('old-lrn') },
+                { label: 'Grade to Enroll', value: 'Grade ' + getValue('old-target-level') },
+                { label: 'Intent to Enroll', value: confirmVal },
+                { label: 'Data Agreement', value: document.getElementById('old-agreement')?.checked ? 'Accepted' : 'Not Accepted' }
+            ];
+
+            reviewGrid.innerHTML = items.map(item => `
+                <div class="enroll-review-item">
+                    <span>${item.label}</span>
+                    <strong>${item.value}</strong>
+                </div>
+            `).join('');
+        }
+
+        btnPrev.addEventListener('click', () => { if (currentStep > 1) showStep(currentStep - 1); });
+        btnNext.addEventListener('click', () => { if (validateStep(currentStep)) showStep(currentStep + 1); });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!validateStep(currentStep)) return;
+
+            btnSubmit.disabled = true;
+            const originalText = btnSubmit.textContent;
+            btnSubmit.textContent = 'Confirming...';
+
+            try {
+                await new Promise(resolve => setTimeout(resolve, 1200));
+                document.getElementById('old-student-modal').hidden = true;
+                if (thanksModal) {
+                    const thanksTitle = thanksModal.querySelector('#enroll-thanks-title');
+                    const thanksMsg = thanksModal.querySelector('#enroll-thanks-message');
+                    if (thanksTitle) thanksTitle.textContent = 'Confirmation Received!';
+                    if (thanksMsg) thanksMsg.textContent = 'Your intent to enroll has been recorded. Thank you for continuing your journey with ULHS!';
+                    thanksModal.hidden = false;
+                }
+                form.reset();
+                showStep(1);
+            } catch (err) {
+                errorEl.textContent = 'Submission failed. Please try again.';
+                errorEl.hidden = false;
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = originalText;
+            }
+        });
+
+        showStep(1);
+    }
+
+    function injectEnrollmentModal() {
+        if (document.getElementById('enrollment-form-modal')) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'enrollment-form-modal';
+        modal.className = 'enroll-modal';
+        modal.hidden = true;
+        modal.innerHTML = `
+            <div class="enroll-module" style="max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto;">
+                <button type="button" class="faq-bot-close" id="enroll-modal-close" style="position: absolute; top: 15px; right: 20px; font-size: 2rem;">&times;</button>
+                <div class="enroll-module-header">
+                    <h2 class="accent-title">Online Enrollment Form</h2>
+                    <p>Complete the steps below to submit your details.</p>
+                </div>
+
+                <div class="enroll-progress" aria-hidden="true">
+                    <div class="enroll-progress-bar">
+                        <div class="enroll-progress-fill" id="enroll-progress-fill-modal"></div>
+                    </div>
+                    <div class="enroll-progress-steps">
+                        <span class="enroll-step-indicator active" data-step="1">1</span>
+                        <span class="enroll-step-indicator" data-step="2">2</span>
+                        <span class="enroll-step-indicator" data-step="3">3</span>
+                        <span class="enroll-step-indicator" data-step="4">4</span>
+                        <span class="enroll-step-indicator" data-step="5">5</span>
+                    </div>
+                </div>
+
+                <form id="modal-enrollment-form" class="enroll-form" enctype="multipart/form-data" novalidate>
+                    <div class="enroll-error" id="enroll-error-modal" role="alert" hidden></div>
+
+                    <div class="enroll-step active" data-step="1">
+                        <div class="enroll-grid">
+                            <div class="form-group">
+                                <label for="enroll-type-modal">Enrollment Type</label>
+                                <select id="enroll-type-modal" name="Enrollment Type" required>
+                                    <option value="" disabled selected>Select</option>
+                                    <option value="grade7">Grade 7 (New Student)</option>
+                                    <option value="grade11">Grade 11 (New Student)</option>
+                                    <option value="transferee">Transferee</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-lastname-modal">Last Name</label>
+                                <input type="text" id="enroll-lastname-modal" name="Last Name" required placeholder="Last Name">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-firstname-modal">First Name</label>
+                                <input type="text" id="enroll-firstname-modal" name="First Name" required placeholder="First Name">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-middlename-modal">Middle Name (Optional)</label>
+                                <input type="text" id="enroll-middlename-modal" name="Middle Name" placeholder="Middle Name">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-extension-modal">Extension Name (Optional)</label>
+                                <input type="text" id="enroll-extension-modal" name="Extension Name" placeholder="e.g. Jr., III (Leave blank if none)">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-birthdate-modal">Birthdate</label>
+                                <input type="date" id="enroll-birthdate-modal" name="Birthdate" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-age-modal">Age</label>
+                                <input type="number" id="enroll-age-modal" name="Age" readonly placeholder="Auto-calculated" style="background: rgba(30, 79, 163, 0.05); font-weight: 700;">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-sex-modal">Sex</label>
+                                <select id="enroll-sex-modal" name="Sex" required>
+                                    <option value="" disabled selected>Select</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-mother-tongue-modal">Mother Tongue</label>
+                                <input type="text" id="enroll-mother-tongue-modal" name="Mother Tongue" required placeholder="e.g. Blaan, Cebuano, Tagalog">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-religion-modal">Religion</label>
+                                <input type="text" id="enroll-religion-modal" name="Religion" required placeholder="e.g. Roman Catholic, Islam, SDA">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-ip-modal">Indigenous People (IP) Member?</label>
+                                <select id="enroll-ip-modal" name="IP Member" required>
+                                    <option value="no">No</option>
+                                    <option value="yes">Yes</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" id="ip-specify-container-modal" hidden>
+                                <label for="enroll-ip-specify-modal">Please specify IP Group</label>
+                                <input type="text" id="enroll-ip-specify-modal" name="IP Group" placeholder="e.g. Blaan, Tboli, Manobo">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-disability-modal">Is the child a Learner with Disability?</label>
+                                <select id="enroll-disability-modal" name="Has Disability" required>
+                                    <option value="no">No</option>
+                                    <option value="yes">Yes</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" id="disability-type-container-modal" hidden>
+                                <label for="enroll-disability-type-modal">Type of Disability</label>
+                                <select id="enroll-disability-type-modal" name="Disability Type">
+                                    <option value="" disabled selected>Select Disability Type</option>
+                                    <option value="visual-blind">Visual Impairment - Blind</option>
+                                    <option value="visual-low-vision">Visual Impairment - Low Vision</option>
+                                    <option value="hearing">Hearing Impairment</option>
+                                    <option value="learning">Learning Disability</option>
+                                    <option value="intellectual">Intellectual Disability</option>
+                                    <option value="autism">Autism Spectrum Disorder</option>
+                                    <option value="emotional">Emotional-Behavioral Disorder</option>
+                                    <option value="orthopedic">Orthopedic/Physical Handicap</option>
+                                    <option value="multiple">Multiple Disorder</option>
+                                    <option value="speech">Speech/Language Disorder</option>
+                                    <option value="cerebral">Cerebral Palsy</option>
+                                    <option value="special-health">Special Health Problem/Chronic Disease</option>
+                                    <option value="special-health-cancer">Special Health Problem - Cancer</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="enroll-step" data-step="2">
+                        <div class="enroll-grid">
+                            <div class="form-group">
+                                <label for="enroll-lrn-modal">12-Digit LRN</label>
+                                <input type="text" id="enroll-lrn-modal" name="LRN" required inputmode="numeric" pattern="\\d{12}" maxlength="12" placeholder="123456789012">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-psa-modal">PSA Birth Certificate No. (Optional)</label>
+                                <input type="text" id="enroll-psa-modal" name="PSA Number" placeholder="Enter PSA number">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-4ps-modal">4Ps ID (If applicable)</label>
+                                <input type="text" id="enroll-4ps-modal" name="4Ps ID" placeholder="Enter 4Ps ID">
+                            </div>
+                        </div>
+
+                        <div class="enroll-address-section mt-2">
+                            <h4 class="accent-title" style="font-size: 1.1rem; margin-bottom: 10px;">Current Address</h4>
+                            <div class="enroll-grid">
+                                <div class="form-group">
+                                    <label for="enroll-curr-house-modal">House No. / Street</label>
+                                    <input type="text" id="enroll-curr-house-modal" name="Current House" required placeholder="House No. / Street">
+                                </div>
+                                <div class="form-group">
+                                    <label for="enroll-curr-sitio-modal">Sitio / Street Name</label>
+                                    <input type="text" id="enroll-curr-sitio-modal" name="Current Sitio" required placeholder="Sitio / Street Name">
+                                </div>
+                                <div class="form-group">
+                                    <label for="enroll-curr-barangay-modal">Barangay</label>
+                                    <input type="text" id="enroll-curr-barangay-modal" name="Current Barangay" required placeholder="Barangay">
+                                </div>
+                                <div class="form-group">
+                                    <label for="enroll-curr-city-modal">Municipality / City</label>
+                                    <input type="text" id="enroll-curr-city-modal" name="Current City" required placeholder="Municipality / City">
+                                </div>
+                                <div class="form-group">
+                                    <label for="enroll-curr-province-modal">Province</label>
+                                    <input type="text" id="enroll-curr-province-modal" name="Current Province" required placeholder="Province">
+                                </div>
+                                <div class="form-group">
+                                    <label for="enroll-curr-country-modal">Country</label>
+                                    <input type="text" id="enroll-curr-country-modal" name="Current Country" required value="Philippines">
+                                </div>
+                                <div class="form-group">
+                                    <label for="enroll-curr-zip-modal">Zip Code</label>
+                                    <input type="text" id="enroll-curr-zip-modal" name="Current Zip" required placeholder="e.g. 9500 -  if you came from General Santos City">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="enroll-address-section mt-2">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <h4 class="accent-title" style="font-size: 1.1rem; margin: 0;">Permanent Address</h4>
+                                <label style="font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                    <input type="checkbox" id="enroll-same-address-modal" name="Same Address" style="width: auto;"> Same as Current?
+                                </label>
+                            </div>
+                            <div class="enroll-grid" id="permanent-address-fields-modal">
+                                <div class="form-group">
+                                    <label for="enroll-perm-house-modal">House No. / Street</label>
+                                    <input type="text" id="enroll-perm-house-modal" name="Permanent House" required placeholder="House No. / Street">
+                                </div>
+                                <div class="form-group">
+                                    <label for="enroll-perm-sitio-modal">Sitio / Street Name</label>
+                                    <input type="text" id="enroll-perm-sitio-modal" name="Permanent Sitio" required placeholder="Sitio / Street Name">
+                                </div>
+                                <div class="form-group">
+                                    <label for="enroll-perm-barangay-modal">Barangay</label>
+                                    <input type="text" id="enroll-perm-barangay-modal" name="Permanent Barangay" required placeholder="Barangay">
+                                </div>
+                                <div class="form-group">
+                                    <label for="enroll-perm-city-modal">Municipality / City</label>
+                                    <input type="text" id="enroll-perm-city-modal" name="Permanent City" required placeholder="Municipality / City">
+                                </div>
+                                <div class="form-group">
+                                    <label for="enroll-perm-province-modal">Province</label>
+                                    <input type="text" id="enroll-perm-province-modal" name="Permanent Province" required placeholder="Province">
+                                </div>
+                                <div class="form-group">
+                                    <label for="enroll-perm-country-modal">Country</label>
+                                    <input type="text" id="enroll-perm-country-modal" name="Permanent Country" required value="Philippines">
+                                </div>
+                                <div class="form-group">
+                                    <label for="enroll-perm-zip-modal">Zip Code</label>
+                                    <input type="text" id="enroll-perm-zip-modal" name="Permanent Zip" required placeholder="Zip Code">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="enroll-step" data-step="3">
+                        <div class="enroll-grid">
+                            <div class="form-group">
+                                <label for="enroll-mother-modal">Mother's Maiden Name</label>
+                                <input type="text" id="enroll-mother-modal" name="Mother Name" required placeholder="Last Name, First Name, Middle Name">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-father-modal">Father's Name</label>
+                                <input type="text" id="enroll-father-modal" name="Father Name" required placeholder="Last Name, First Name, Middle Name">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-guardian-modal">Guardian's Name (If not parents)</label>
+                                <input type="text" id="enroll-guardian-modal" name="Guardian Name" placeholder="Full name of guardian">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-guardian-contact-modal">Parent/Guardian Contact No. (Optional)</label>
+                                <input type="tel" id="enroll-guardian-contact-modal" name="Guardian Contact" inputmode="tel" placeholder="09123456789">
+                            </div>
+                        </div>
+
+                        <div class="enroll-conditional" data-cond="grade7" hidden>
+                            <div class="enroll-grid">
+                                <div class="form-group">
+                                    <label for="enroll-elem-school-modal">Elementary School Graduated</label>
+                                    <input type="text" id="enroll-elem-school-modal" name="Elementary School" placeholder="Name of elementary school">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="enroll-conditional" data-cond="grade11" hidden>
+                            <div class="enroll-grid">
+                                <div class="form-group">
+                                    <label for="enroll-track-modal">SHS Track/Strand Preference</label>
+                                    <select id="enroll-track-modal" name="SHS Track">
+                                        <option value="" disabled selected>Select Track/Strand</option>
+                                        <option value="academic-stem">Academic - STEM</option>
+                                        <option value="academic-abm">Academic - ABM</option>
+                                        <option value="academic-humss">Academic - HUMSS</option>
+                                        <option value="tvl">TVL</option>
+                                        <option value="gas">GAS</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="enroll-conditional" data-cond="transferee" hidden>
+                            <div class="enroll-grid">
+                                <div class="form-group">
+                                    <label for="enroll-prev-school-id-modal">Previous School Name</label>
+                                    <input type="text" id="enroll-prev-school-id-modal" name="Previous School" placeholder="Name of Previous School">
+                                </div>
+                                <div class="form-group">
+                                    <label for="enroll-prev-school-address-modal">Previous School Address</label>
+                                    <input type="text" id="enroll-prev-school-address-modal" name="Previous School Address" placeholder="Complete address of previous school">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-3" style="display: flex; align-items: flex-start; gap: 10px; background: var(--soft-abaca); padding: 15px; border-radius: 10px; border: 1px solid var(--abaca-cream);">
+                            <input type="checkbox" id="enroll-agreement-modal" name="Agreement" required style="width: auto; margin-top: 5px;">
+                            <label for="enroll-agreement-modal" style="font-size: 0.9rem; cursor: pointer; color: var(--midnight-black); line-height: 1.5;">
+                                I hereby certify that the above information given are true and correct to the best of my knowledge and I allow the Department of Education to use my child’s details to create and/or update his/her learner profile in the Learner Information System. The information herein shall be treated as confidential in compliance with the Data Privacy Act of 2012.
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="enroll-step" data-step="4">
+                        <div class="enroll-module-header" style="margin-bottom: 20px;">
+                            <h3 class="accent-title" style="font-size: 1.3rem;">Attach Required Documents</h3>
+                            <p style="font-size: 0.9rem;"><strong>SF9 (Report Card)</strong> is mandatory for enrollment. Other documents can be submitted once classes start.</p>
+                        </div>
+
+                        <div class="enroll-grid">
+                            <!-- SF9 is now the only mandatory field -->
+                            <div class="form-group">
+                                <label for="enroll-doc-sf9-modal">SF9 (Report Card)</label>
+                                <input type="file" id="enroll-doc-sf9-modal" name="attachment" accept="image/*" required>
+                                <small>Latest report card from previous level (Mandatory).</small>
+                            </div>
+
+                            <!-- Others are optional -->
+                            <div class="form-group">
+                                <label for="enroll-doc-psa-modal">PSA Birth Certificate</label>
+                                <input type="file" id="enroll-doc-psa-modal" name="PSA_Attachment" accept="image/*">
+                                <small>Optional: Can be followed later.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="enroll-doc-completion-modal">Certificate of Completion</label>
+                                <input type="file" id="enroll-doc-completion-modal" name="Completion_Certificate" accept="image/*">
+                                <small>Optional: From Elementary or JHS.</small>
+                            </div>
+
+                            <!-- SHS Specific Optional -->
+                            <div class="form-group enroll-conditional" data-cond="grade11" hidden>
+                                <label for="enroll-doc-sf10-modal">SF10 (Permanent Record)</label>
+                                <input type="file" id="enroll-doc-sf10-modal" name="SF10_Attachment" accept="image/*">
+                                <small>Optional: Official SF10-SHS.</small>
+                            </div>
+
+                            <div class="form-group enroll-conditional" data-cond="grade11" hidden>
+                                <label for="enroll-doc-ncae-modal">NCAE Results</label>
+                                <input type="file" id="enroll-doc-ncae-modal" name="NCAE_Attachment" accept="image/*">
+                                <small>Optional: National Career Assessment Examination results.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="enroll-step" data-step="5">
+                        <div class="enroll-review">
+                            <h3 class="accent-title">Review Enrollment Data</h3>
+                            <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-gray);">Please check all information before submitting.</p>
+                            <div class="enroll-review-grid" id="enroll-review-modal"></div>
+                        </div>
+                    </div>
+
+                    <div class="enroll-actions">
+                        <button type="button" class="btn btn-secondary" id="enroll-prev-modal" disabled>Back</button>
+                        <button type="button" class="btn" id="enroll-next-modal">Next</button>
+                        <button type="submit" class="btn btn-gold" id="enroll-submit-modal" style="display: none;">Submit Enrollment</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // Setup events for this specific modal
+        const closeBtn = document.getElementById('enroll-modal-close');
+        closeBtn.onclick = () => { modal.hidden = true; };
+        modal.onclick = (e) => { if (e.target === modal) modal.hidden = true; };
+
+        // Initialize logic for the modal form
+        initEnrollmentModuleSY2026('modal-enrollment-form');
+    }
+
+    function injectThanksModal() {
+        if (document.getElementById('enroll-thanks-modal')) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'enroll-thanks-modal';
+        modal.className = 'enroll-modal';
+        modal.hidden = true;
+        modal.innerHTML = `
+            <div class="enroll-modal-content" role="dialog" aria-modal="true" aria-labelledby="enroll-thanks-title">
+                <h3 id="enroll-thanks-title" class="accent-title">Thank you!</h3>
+                <p id="enroll-thanks-message">Your enrollment details were submitted successfully. Please wait for further instructions via school announcements or Facebook updates.</p>
+                <button type="button" class="btn" id="enroll-thanks-close">Close</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const closeBtn = document.getElementById('enroll-thanks-close');
+        if (closeBtn) {
+            closeBtn.onclick = () => { modal.hidden = true; };
+        }
+        modal.onclick = (e) => {
+            if (e.target === modal) modal.hidden = true;
+        };
+    }
+
     async function loadEnrollmentHub(dataPath) {
         try {
             const res = await fetch(`${dataPath}pages/enrollment.json`);
@@ -1133,6 +1831,514 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) { console.error("Error loading enrollment hub data:", err); }
     }
 
+    function initEnrollmentModuleSY2026(formId = 'new-enrollment-form') {
+        const form = document.getElementById(formId);
+        if (!form) return;
+
+        injectThanksModal();
+
+        const isModal = formId === 'modal-enrollment-form';
+        const suffix = isModal ? '-modal' : '';
+
+        /*
+        Google Forms mapping guide:
+        1) Open your Google Form in a browser.
+        2) Click Preview (eye icon) and open DevTools.
+        3) Inspect each form input element and look for its "name" attribute in the submitted payload.
+           It will look like: entry.1234567890
+        4) Copy those entry IDs into ENTRY below so each website field maps to the right Google Sheet column.
+        5) Use the form "formResponse" URL:
+           https://docs.google.com/forms/d/e/<FORM_ID>/formResponse
+        */
+        const GOOGLE_FORM_ACTION_URL = '';
+        const ENTRY = {
+            enrollmentType: '',
+            fullName: '',
+            birthdate: '',
+            lrn: '',
+            psaNumber: '',
+            address: '',
+            guardianName: '',
+            guardianContact: '',
+            fourPsId: '',
+            elementarySchool: '',
+            shsTrack: '',
+            previousSchoolId: '',
+            previousSchoolAddress: ''
+        };
+
+        const errorEl = document.getElementById(`enroll-error${suffix}`);
+        const progressFill = document.getElementById(`enroll-progress-fill${suffix}`);
+        const stepIndicators = Array.from(form.closest(isModal ? '.enroll-module' : 'section').querySelectorAll('.enroll-step-indicator'));
+
+        const steps = Array.from(form.querySelectorAll('.enroll-step'));
+        const totalSteps = steps.length;
+
+        const btnPrev = document.getElementById(`enroll-prev${suffix}`);
+        const btnNext = document.getElementById(`enroll-next${suffix}`);
+        const btnSubmit = document.getElementById(`enroll-submit${suffix}`);
+
+        const enrollmentTypeEl = document.getElementById(`enroll-type${suffix}`);
+        const condBlocks = Array.from(form.querySelectorAll('.enroll-conditional'));
+        const elemSchoolEl = document.getElementById(`enroll-elem-school${suffix}`);
+        const trackEl = document.getElementById(`enroll-track${suffix}`);
+        const prevSchoolIdEl = document.getElementById(`enroll-prev-school-id${suffix}`);
+        const prevSchoolAddrEl = document.getElementById(`enroll-prev-school-address${suffix}`);
+
+        // Document inputs
+        const docPsaEl = document.getElementById(`enroll-doc-psa${suffix}`);
+        const docCompletionEl = document.getElementById(`enroll-doc-completion${suffix}`);
+        const docSf9El = document.getElementById(`enroll-doc-sf9${suffix}`);
+        const docSf10El = document.getElementById(`enroll-doc-sf10${suffix}`);
+        const docNcaeEl = document.getElementById(`enroll-doc-ncae${suffix}`);
+
+        const thanksModal = document.getElementById('enroll-thanks-modal');
+        const thanksClose = document.getElementById('enroll-thanks-close');
+
+        const disabilityEl = document.getElementById(`enroll-disability${suffix}`);
+        const disabilityTypeContainer = document.getElementById(`disability-type-container${suffix}`);
+        const ipEl = document.getElementById(`enroll-ip${suffix}`);
+        const ipSpecifyContainer = document.getElementById(`ip-specify-container${suffix}`);
+        const sameAddressEl = document.getElementById(`enroll-same-address${suffix}`);
+        const permAddressFields = document.getElementById(`permanent-address-fields${suffix}`);
+
+        if (disabilityEl) {
+            disabilityEl.addEventListener('change', () => {
+                const isYes = disabilityEl.value === 'yes';
+                if (disabilityTypeContainer) disabilityTypeContainer.hidden = !isYes;
+                const typeSelect = document.getElementById(`enroll-disability-type${suffix}`);
+                if (typeSelect) typeSelect.required = isYes;
+            });
+        }
+
+        if (ipEl) {
+            ipEl.addEventListener('change', () => {
+                const isYes = ipEl.value === 'yes';
+                if (ipSpecifyContainer) ipSpecifyContainer.hidden = !isYes;
+                const specifyInput = document.getElementById(`enroll-ip-specify${suffix}`);
+                if (specifyInput) specifyInput.required = isYes;
+            });
+        }
+
+        const birthdateEl = document.getElementById(`enroll-birthdate${suffix}`);
+        const ageEl = document.getElementById(`enroll-age${suffix}`);
+        if (birthdateEl && ageEl) {
+            birthdateEl.addEventListener('change', () => {
+                const birthDate = new Date(birthdateEl.value);
+                const today = new Date();
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const m = today.getMonth() - birthDate.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+                ageEl.value = isNaN(age) ? '' : age;
+            });
+        }
+
+        if (sameAddressEl) {
+            sameAddressEl.addEventListener('change', () => {
+                const isSame = sameAddressEl.checked;
+                if (isSame) syncPermanentAddress();
+                if (permAddressFields) {
+                    const inputs = permAddressFields.querySelectorAll('input');
+                    inputs.forEach(input => input.disabled = isSame);
+                }
+            });
+
+            // Sync on input change if "same" is checked
+            const currentAddressInputs = form.querySelectorAll('.enroll-address-section:first-of-type input');
+            currentAddressInputs.forEach(input => {
+                input.addEventListener('input', () => {
+                    if (sameAddressEl.checked) syncPermanentAddress();
+                });
+            });
+        }
+
+        function syncPermanentAddress() {
+            const fields = ['house', 'sitio', 'barangay', 'city', 'province', 'country', 'zip'];
+            fields.forEach(f => {
+                const curr = document.getElementById(`enroll-curr-${f}${suffix}`);
+                const perm = document.getElementById(`enroll-perm-${f}${suffix}`);
+                if (curr && perm) perm.value = curr.value;
+            });
+        }
+
+        let currentStep = 1;
+
+        function setError(message) {
+            if (!errorEl) return;
+            errorEl.textContent = message;
+            errorEl.hidden = false;
+        }
+
+        function clearError() {
+            if (!errorEl) return;
+            errorEl.textContent = '';
+            errorEl.hidden = true;
+        }
+
+        function setConditionalRequirements(type) {
+            if (elemSchoolEl) elemSchoolEl.required = false;
+            if (trackEl) trackEl.required = false;
+            if (prevSchoolIdEl) prevSchoolIdEl.required = false;
+            if (prevSchoolAddrEl) prevSchoolAddrEl.required = false;
+
+            // Docs - SF9 is mandatory for all new students (Grade 7 & 11)
+            // Other docs are optional as per user request
+            if (docSf9El) docSf9El.required = true; 
+            if (docSf10El) docSf10El.required = false;
+            if (docNcaeEl) docNcaeEl.required = false;
+
+            if (type === 'grade7') {
+                if (elemSchoolEl) elemSchoolEl.required = true;
+            }
+            if (type === 'grade11') {
+                if (trackEl) trackEl.required = true;
+            }
+            if (type === 'transferee') {
+                if (prevSchoolIdEl) prevSchoolIdEl.required = true;
+                if (prevSchoolAddrEl) prevSchoolAddrEl.required = true;
+            }
+        }
+
+        function updateConditionalVisibility(type) {
+            condBlocks.forEach(block => {
+                const shouldShow = block.getAttribute('data-cond') === type;
+                block.hidden = !shouldShow;
+            });
+            setConditionalRequirements(type);
+        }
+
+        function updateProgress(step) {
+            const pct = Math.round((step / totalSteps) * 100);
+            if (progressFill) progressFill.style.width = `${pct}%`;
+            stepIndicators.forEach(ind => {
+                const indStep = Number(ind.getAttribute('data-step'));
+                ind.classList.toggle('active', indStep <= step);
+            });
+        }
+
+        function showStep(step) {
+            currentStep = step;
+            steps.forEach(s => s.classList.toggle('active', Number(s.getAttribute('data-step')) === step));
+
+            const isLastStep = step === totalSteps;
+
+            btnPrev.disabled = step === 1;
+            
+            // Toggle visibility using display style for more robust behavior with flex containers
+            btnNext.style.display = isLastStep ? 'none' : 'block';
+            btnSubmit.style.display = isLastStep ? 'block' : 'none';
+
+            // Change Next button text on Step 4 to "Preview"
+            if (step === 4) {
+                btnNext.textContent = 'Preview Enrollment Data';
+            } else {
+                btnNext.textContent = 'Next';
+            }
+
+            updateProgress(step);
+            clearError();
+
+            if (isLastStep) {
+                updateReview();
+            }
+        }
+
+        function validateStep(step) {
+            const container = steps.find(s => Number(s.getAttribute('data-step')) === step);
+            if (!container) return true;
+
+            const visibleInputs = Array.from(container.querySelectorAll('input, select, textarea'))
+                .filter(el => {
+                    if (el.closest('[hidden]')) return false;
+                    return true;
+                });
+
+            for (const el of visibleInputs) {
+                if (!el.checkValidity()) {
+                    el.focus();
+                    setError(el.validationMessage || 'Please complete the required fields.');
+                    return false;
+                }
+            }
+
+            if (step === 2) {
+                const lrnEl = document.getElementById(`enroll-lrn${suffix}`);
+                if (lrnEl) {
+                    const lrn = lrnEl.value.trim();
+                    if (!/^\d{12}$/.test(lrn)) {
+                        lrnEl.focus();
+                        setError('LRN must be exactly 12 digits.');
+                        return false;
+                    }
+                }
+            }
+
+            if (step === 1) {
+                const type = enrollmentTypeEl.value;
+                if (!type) {
+                    enrollmentTypeEl.focus();
+                    setError('Please select an Enrollment Type.');
+                    return false;
+                }
+            }
+
+            if (step === 3) {
+                const agreeCb = document.getElementById(`enroll-agreement${suffix}`);
+                if (agreeCb && !agreeCb.checked) {
+                    agreeCb.focus();
+                    setError('Please certify that the information provided is true and correct to proceed.');
+                    return false;
+                }
+            }
+
+            if (step === 4) {
+                // Validate SF9 file specifically as it is mandatory
+                const sf9Input = document.getElementById(`enroll-doc-sf9${suffix}`);
+                if (sf9Input && sf9Input.required) {
+                    if (!sf9Input.files || sf9Input.files.length === 0) {
+                        sf9Input.focus();
+                        setError('Please attach your SF9 (Report Card) to proceed. This is required.');
+                        return false;
+                    }
+                }
+            }
+
+            // Step 5 is the review step, validation is handled by individual field checks in steps 1-4
+            if (step === 5) {
+                return true;
+            }
+
+            return true;
+        }
+
+        function getValue(id) {
+            const el = document.getElementById(id + suffix);
+            return el ? el.value.trim() : '';
+        }
+
+        function updateReview() {
+            const reviewEl = document.getElementById(`enroll-review${suffix}`);
+            if (!reviewEl) return;
+
+            const type = getValue('enroll-type');
+            const typeLabel =
+                type === 'grade7' ? 'Grade 7 (New Student)' :
+                type === 'grade11' ? 'Grade 11 (New Student)' :
+                type === 'transferee' ? 'Transferee' : '';
+
+            const isSameAddress = document.getElementById(`enroll-same-address${suffix}`)?.checked;
+            const currentAddress = `${getValue('enroll-curr-house')}, ${getValue('enroll-curr-sitio')}, ${getValue('enroll-curr-barangay')}, ${getValue('enroll-curr-city')}, ${getValue('enroll-curr-province')}, ${getValue('enroll-curr-zip')}, ${getValue('enroll-curr-country')}`;
+            const permanentAddress = `${getValue('enroll-perm-house')}, ${getValue('enroll-perm-sitio')}, ${getValue('enroll-perm-barangay')}, ${getValue('enroll-perm-city')}, ${getValue('enroll-perm-province')}, ${getValue('enroll-perm-zip')}, ${getValue('enroll-perm-country')}`;
+
+            const lastName = getValue('enroll-lastname');
+            const firstName = getValue('enroll-firstname');
+            const middleName = getValue('enroll-middlename');
+            const extension = getValue('enroll-extension');
+            const fullName = `${lastName}, ${firstName}${middleName ? ' ' + middleName : ''}${extension ? ' ' + extension : ''}`;
+
+            const items = [
+                { label: 'Enrollment Type', value: typeLabel },
+                { label: 'Full Name', value: fullName },
+                { label: 'Birthdate', value: getValue('enroll-birthdate') },
+                { label: 'Age', value: getValue('enroll-age') },
+                { label: 'Sex', value: getValue('enroll-sex').toUpperCase() },
+                { label: 'Mother Tongue', value: getValue('enroll-mother-tongue') },
+                { label: 'Religion', value: getValue('enroll-religion') },
+                { label: 'IP Member', value: getValue('enroll-ip') === 'yes' ? `Yes (${getValue('enroll-ip-specify')})` : 'No' },
+                { label: 'Disability', value: getValue('enroll-disability') === 'yes' ? `Yes (${getValue('enroll-disability-type')})` : 'No' },
+                { label: 'LRN', value: getValue('enroll-lrn') },
+                { label: 'PSA No.', value: getValue('enroll-psa') },
+                { 
+                    label: isSameAddress ? 'Current & Permanent Address' : 'Current Address', 
+                    value: currentAddress 
+                }
+            ];
+
+            if (!isSameAddress) {
+                items.push({ label: 'Permanent Address', value: permanentAddress });
+            }
+
+            items.push(
+                { label: 'Mother\'s Maiden Name', value: getValue('enroll-mother') },
+                { label: 'Father\'s Name', value: getValue('enroll-father') },
+                { label: 'Guardian', value: getValue('enroll-guardian') || 'N/A' },
+                { label: 'Contact No.', value: getValue('enroll-guardian-contact') },
+                { label: '4Ps ID', value: getValue('enroll-4ps') || 'N/A' },
+                { label: 'Data Privacy Agreement', value: document.getElementById(`enroll-agreement${suffix}`)?.checked ? 'Accepted' : 'Not Accepted' }
+            );
+
+            if (type === 'grade7') items.push({ label: 'Elementary School Graduated', value: getValue('enroll-elem-school') });
+            if (type === 'grade11') items.push({ label: 'SHS Track/Strand', value: getValue('enroll-track') });
+            if (type === 'transferee') {
+                items.push({ label: 'Previous School ID', value: getValue('enroll-prev-school-id') });
+                items.push({ label: 'Previous School Address', value: getValue('enroll-prev-school-address') });
+            }
+
+            // Document Status
+            items.push({ label: 'SF9 (Report Card)', value: docSf9El.files.length > 0 ? 'Attached' : 'Missing (Required)' });
+            items.push({ label: 'PSA Birth Certificate', value: docPsaEl.files.length > 0 ? 'Attached' : 'To follow' });
+            items.push({ label: 'Certificate of Completion', value: docCompletionEl.files.length > 0 ? 'Attached' : 'To follow' });
+            if (type === 'grade11') {
+                items.push({ label: 'SF10 (Permanent Record)', value: docSf10El.files.length > 0 ? 'Attached' : 'To follow' });
+                items.push({ label: 'NCAE Results', value: docNcaeEl.files.length > 0 ? 'Attached' : 'To follow' });
+            }
+
+            reviewEl.innerHTML = items.map(item => `
+                <div class="enroll-review-item">
+                    <span>${item.label}</span>
+                    <strong>${item.value || '—'}</strong>
+                </div>
+            `).join('');
+        }
+
+        async function submitFormWithFiles() {
+            const formData = new FormData();
+            
+            // Web3Forms Access Key
+            formData.append('access_key', '8d18cddf-f892-4353-9cf9-5486928ecda8');
+
+            // Add all form fields using their 'name' attribute
+            const allInputs = Array.from(form.querySelectorAll('input, select, textarea'));
+            
+            allInputs.forEach(field => {
+                if (!field.name) return;
+                
+                // Skip hidden containers' fields (like optional IP or disability details)
+                if (field.closest('[hidden]')) return;
+
+                if (field.type === 'file') {
+                    if (field.files && field.files.length > 0) {
+                        formData.append(field.name, field.files[0]);
+                    }
+                } else if (field.type === 'checkbox') {
+                    if (field.checked) formData.append(field.name, 'Accepted');
+                } else if (field.value) {
+                    formData.append(field.name, field.value);
+                }
+            });
+
+            // Web3Forms configurations
+            const lastName = getValue('enroll-lastname');
+            const firstName = getValue('enroll-firstname');
+            formData.append('subject', `New Enrollment: ${lastName}, ${firstName}`);
+            formData.append('from_name', 'ULHS Online Enrollment');
+
+            // Web3Forms AJAX endpoint
+            const endpoint = `https://api.web3forms.com/submit`;
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' },
+                body: formData
+            });
+
+            const result = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                const errorMsg = result.message || 'Form submission failed.';
+                throw new Error(errorMsg);
+            }
+        }
+
+        function showThanks() {
+            if (isModal) {
+                const modal = document.getElementById('enrollment-form-modal');
+                if (modal) modal.hidden = true;
+            }
+            if (!thanksModal) {
+                alert('Enrollment Submitted Successfully!');
+                return;
+            }
+
+            const type = enrollmentTypeEl.value;
+            const titleEl = thanksModal.querySelector('#enroll-thanks-title');
+            const messageEl = thanksModal.querySelector('#enroll-thanks-message');
+
+            if (titleEl) titleEl.textContent = 'Enrollment Submitted!';
+            if (messageEl) {
+                if (type === 'grade7') {
+                    messageEl.textContent = 'Your JHS enrollment details were submitted successfully. Please wait for further instructions via school announcements.';
+                } else if (type === 'grade11') {
+                    messageEl.textContent = 'Your SHS enrollment details were submitted successfully. Please prepare your requirements for verification.';
+                } else {
+                    messageEl.textContent = 'Your enrollment details were submitted successfully. We will contact you soon.';
+                }
+            }
+
+            thanksModal.hidden = false;
+        }
+
+        function hideThanks() {
+            if (!thanksModal) return;
+            thanksModal.hidden = true;
+        }
+
+        enrollmentTypeEl.addEventListener('change', () => {
+            updateConditionalVisibility(enrollmentTypeEl.value);
+            if (currentStep === totalSteps) updateReview();
+        });
+
+        btnPrev.addEventListener('click', () => {
+            if (currentStep > 1) showStep(currentStep - 1);
+        });
+
+        btnNext.addEventListener('click', () => {
+            if (!validateStep(currentStep)) return;
+            if (currentStep < totalSteps) showStep(currentStep + 1);
+        });
+
+        // Explicitly handle the submit button click as well
+        btnSubmit.addEventListener('click', (e) => {
+            console.log('Submit button clicked directly');
+            handleSubmission();
+        });
+
+        // Form submit event
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            console.log('Form submit event fired');
+            handleSubmission();
+        });
+
+        async function handleSubmission() {
+            if (btnSubmit.disabled) return;
+            
+            console.log('Starting handleSubmission sequence...');
+            clearError();
+            
+            if (!validateStep(currentStep)) {
+                console.warn('Validation failed at step:', currentStep);
+                return;
+            }
+
+            btnSubmit.disabled = true;
+            const originalText = btnSubmit.textContent;
+            btnSubmit.textContent = 'Submitting...';
+
+            try {
+                console.log('Calling Web3Forms API...');
+                await submitFormWithFiles();
+                console.log('API Response: Success');
+                
+                showThanks();
+                form.reset();
+                updateConditionalVisibility('');
+                showStep(1);
+            } catch (err) {
+                console.error('Submission Error:', err);
+                setError(err.message || 'Submission failed. Please try again.');
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = originalText;
+            }
+        }
+
+        updateConditionalVisibility('');
+        showStep(1);
+    }
+
     async function loadEnrollmentJHS(dataPath) {
         try {
             const res = await fetch(`${dataPath}pages/enrollment-jhs.json`);
@@ -1148,16 +2354,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const optionsGrid = document.querySelector('.section-container .grid');
             if (optionsGrid) {
-                optionsGrid.innerHTML = data.options.map((opt, i) => `
-                    <div class="card reveal reveal-bottom delay-${i + 1}">
-                        <div class="card-icon">${opt.icon}</div>
-                        <h3>${opt.title}</h3>
-                        <p>${opt.description}</p>
-                        ${opt.note ? `<p><strong>Note:</strong> ${opt.note}</p>` : ''}
-                        <a href="${opt.link}" ${opt.is_download ? 'download' : 'target="_blank"'} class="btn ${opt.is_download ? 'mt-1' : ''}">${opt.btn_text}</a>
-                        ${opt.is_download ? `<p class="mt-1 opacity-8">Print and fill out before visiting the school office.</p>` : ''}
-                    </div>
-                `).join('');
+                optionsGrid.innerHTML = data.options.map((opt, i) => {
+                    let buttonsHtml = '';
+                    if (opt.buttons) {
+                        buttonsHtml = opt.buttons.map(btn => `
+                            <a href="${btn.link}" 
+                               ${btn.is_download ? 'download' : ''} 
+                               ${btn.trigger ? `data-enroll-trigger="${btn.trigger}"` : 'target="_blank"'}
+                               class="btn ${btn.class || ''} mt-1">${btn.text}</a>
+                        `).join('');
+                    } else {
+                        buttonsHtml = `
+                            <a href="${opt.link}" 
+                               ${opt.is_download ? 'download' : ''} 
+                               ${!opt.is_download && opt.link.includes('forms.gle') ? 'data-enroll-trigger="grade7"' : 'target="_blank"'}
+                               class="btn ${opt.is_download ? 'mt-1' : ''}">${opt.btn_text}</a>
+                        `;
+                    }
+
+                    return `
+                        <div class="card reveal reveal-bottom delay-${i + 1}">
+                            <div class="card-icon">${opt.icon}</div>
+                            <h3>${opt.title}</h3>
+                            <p>${opt.description}</p>
+                            ${opt.note ? `<p><strong>Note:</strong> ${opt.note}</p>` : ''}
+                            <div class="enroll-btn-group">
+                                ${buttonsHtml}
+                            </div>
+                            ${opt.is_download ? `<p class="mt-1 opacity-8">Print and fill out before visiting the school office.</p>` : ''}
+                        </div>
+                    `;
+                }).join('');
+
+                setupEnrollmentTriggers();
             }
 
             const reqContainer = document.querySelector('.req-container');
@@ -1198,15 +2427,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const optionsGrid = document.querySelector('.section-container .grid');
             if (optionsGrid) {
-                optionsGrid.innerHTML = data.options.map((opt, i) => `
-                    <div class="card reveal reveal-bottom delay-${i + 1}">
-                        <div class="card-icon">${opt.icon}</div>
-                        <h3>${opt.title}</h3>
-                        <p>${opt.description}</p>
-                        ${opt.note ? `<p>${opt.note}</p>` : ''}
-                        ${opt.link ? `<a href="${opt.link}" target="_blank" class="btn">${opt.btn_text}</a>` : ''}
-                    </div>
-                `).join('');
+                optionsGrid.innerHTML = data.options.map((opt, i) => {
+                    let buttonsHtml = '';
+                    if (opt.buttons) {
+                        buttonsHtml = opt.buttons.map(btn => `
+                            <a href="${btn.link}" 
+                               ${btn.is_download ? 'download' : ''} 
+                               ${btn.trigger ? `data-enroll-trigger="${btn.trigger}"` : 'target="_blank"'}
+                               class="btn ${btn.class || ''} mt-1">${btn.text}</a>
+                        `).join('');
+                    } else {
+                        buttonsHtml = `
+                            <a href="${opt.link}" 
+                               ${opt.link && opt.link.includes('forms.gle') ? 'data-enroll-trigger="grade11"' : 'target="_blank"'}
+                               class="btn mt-1">${opt.btn_text}</a>
+                        `;
+                    }
+
+                    return `
+                        <div class="card reveal reveal-bottom delay-${i + 1}">
+                            <div class="card-icon">${opt.icon}</div>
+                            <h3>${opt.title}</h3>
+                            <p>${opt.description}</p>
+                            ${opt.note ? `<p>${opt.note}</p>` : ''}
+                            <div class="enroll-btn-group">
+                                ${buttonsHtml}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                setupEnrollmentTriggers();
             }
 
             const reqContainer = document.querySelector('.req-container');
@@ -1855,4 +3106,3 @@ async function initIDGenerator() {
 
 // Call setup on load
 document.addEventListener('DOMContentLoaded', setupAdminLogic);
-

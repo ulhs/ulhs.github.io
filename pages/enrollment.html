@@ -37,12 +37,21 @@
                 <!-- Content loaded dynamically from enrollment.json -->
             </div>
         </section>
+
     </main>
 
     <footer>
         <!-- Loaded dynamically from footer.html -->
     </footer>
     <script src="../assets/js/main.js"></script>
+
+    <div class="enroll-modal" id="enroll-thanks-modal" hidden>
+        <div class="enroll-modal-content" role="dialog" aria-modal="true" aria-labelledby="enroll-thanks-title">
+            <h3 id="enroll-thanks-title" class="accent-title">Thank you!</h3>
+            <p id="enroll-thanks-message">Your enrollment details were submitted successfully. Please wait for further instructions via school announcements or Facebook updates.</p>
+            <button type="button" class="btn" id="enroll-thanks-close">Close</button>
+        </div>
+    </div>
 
     <!-- AI FAQ BOT STRUCTURE -->
     <div class="faq-bot-container">

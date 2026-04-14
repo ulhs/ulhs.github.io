@@ -5,17 +5,41 @@
     },
     "options": [
         {
-            "title": "Online SHS Form",
-            "description": "Select your track and strand through our digital enrollment system.",
-            "link": "https://forms.gle/bJZ2LDtyCP2e1U5QA",
-            "btn_text": "Start SHS Form",
+            "title": "Online SHS Forms",
+            "description": "Choose your track and strand through our high-speed digital enrollment system.",
+            "buttons": [
+                {
+                    "text": "Start New SHS Form (Grade 11)",
+                    "link": "#",
+                    "trigger": "grade11"
+                },
+                {
+                    "text": "Confirmation Slip (Grade 12)",
+                    "link": "#",
+                    "trigger": "old-student-shs",
+                    "class": "btn-outline"
+                }
+            ],
             "icon": "💻"
         },
         {
             "title": "Physical Enrollment",
-            "description": "Visit the SHS Coordinator's office for personalized track counseling.",
+            "description": "Visit the SHS Coordinator's office for personalized track counseling. You may also download the required forms below.",
             "note": "<strong>Hours:</strong> Mon-Fri | 8AM - 4PM",
-            "icon": "🏫"
+            "buttons": [
+                {
+                    "text": "Download Enrollment Form (BEEF)",
+                    "link": "../assets/documents/Basic-Education-Enrollment-Form.pdf",
+                    "is_download": true
+                },
+                {
+                    "text": "Download Confirmation Slip",
+                    "link": "../assets/documents/confirmation-slip.pdf",
+                    "is_download": true,
+                    "class": "btn-outline"
+                }
+            ],
+            "icon": "📄"
         }
     ],
     "requirements": {
