@@ -47,8 +47,8 @@
         "subtitle": "Please prepare the following documents for Senior High School enrollment:",
         "items": [
             { "title": "SF9 (Report Card)", "description": "Mandatory requirement for enrollment." },
-            { "title": "SF10 (Permanent Record)", "description": "Required for incoming Grade 11 students." },
-            { "title": "NCAE Results", "description": "Optional requirement that is helpful for track and strand placement." },
+            { "title": "SF10 (Permanent Record)", "description": "Required for all students and transferees." },
+            { "title": "PSA Birth Certificate", "description": "Required for all students and transferees." },
             { "title": "Completion Certificate", "description": "Optional requirement from Junior High School (Grade 10)." }
         ]
     }
