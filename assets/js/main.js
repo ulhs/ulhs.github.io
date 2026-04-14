@@ -2083,6 +2083,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return true;
         }
 
+        function getValue(id) {
+            const el = document.getElementById(`${id}${suffix}`);
+            return el ? el.value.trim() : '';
+        }
+
         function updateReview() {
             const reviewEl = document.getElementById(`enroll-review${suffix}`);
             if (!reviewEl) return;
