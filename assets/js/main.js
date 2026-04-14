@@ -1672,14 +1672,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="enroll-conditional" data-cond="grade11" hidden>
                             <div class="enroll-grid">
                                 <div class="form-group">
-                                    <label for="enroll-track-modal">SHS Track/Strand Preference</label>
+                                    <label for="enroll-track-modal">SHS Track Preference</label>
                                     <select id="enroll-track-modal" name="SHS Track">
-                                        <option value="" disabled selected>Select Track/Strand</option>
-                                        <option value="academic-stem">Academic - STEM</option>
-                                        <option value="academic-abm">Academic - ABM</option>
-                                        <option value="academic-humss">Academic - HUMSS</option>
-                                        <option value="tvl">TVL</option>
-                                        <option value="gas">GAS</option>
+                                        <option value="" disabled selected>Select SHS Pathway</option>
+                                        <option value="academic">Academic</option>
+                                        <option value="techpro">Technical Professional</option>
                                     </select>
                                 </div>
                             </div>
