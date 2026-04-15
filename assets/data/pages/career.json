@@ -44,9 +44,9 @@
         "title": "Alumni Success Stories",
         "description": "Inspiration from our graduates who are making their mark in the world.",
         "stories": [
-            { "name": "Alumna 1", "batch": "Batch 2020", "image": "../assets/images/alumni/alumna1.webp", "quote": "ULHS gave me the foundation to pursue my dreams in Education. Now, I am back serving the community as a licensed professional." },
+            { "name": "Alumna 1.", "batch": "Batch 2020", "image": "../assets/images/alumni/alumna1.webp", "quote": "ULHS gave me the foundation to pursue my dreams in Education. Now, I am back serving the community as a licensed professional." },
             { "name": "Alumnus 2.", "batch": "Batch 2018", "image": "../assets/images/alumni/alumnus2.webp", "quote": "The cultural heritage we learned at ULHS helped me stay rooted while studying Engineering in the city. Never forget where you come from." },
-            { "name": "Alumna 3", "batch": "Batch 2019", "image": "../assets/images/alumni/alumna3.webp", "quote": "Being part of the first SHS batch was challenging, but the teachers pushed us to excel. Now I'm working in the tech industry." }
+            { "name": "Alumna 3.", "batch": "Batch 2019", "image": "../assets/images/alumni/alumna3.webp", "quote": "Being part of the first SHS batch was challenging, but the teachers pushed us to excel. Now I'm working in the tech industry." }
         ]
     }
 }

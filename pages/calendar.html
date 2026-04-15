@@ -136,7 +136,7 @@
             </div>
             
             <div class="calendar-footer reveal reveal-bottom delay-3">
-                <p>💡 Tip: Click on events to see more details. You can also click the "<strong>+ Google Calendar</strong>" or "<strong>Add to Google Calendar</strong>" button above to sync this to your phone.</p>
+                <p id="calendar-footer-tip"></p>
             </div>
         </section>
     </main>
@@ -146,8 +146,9 @@
     </footer>
     <script src="../assets/js/main.js"></script>
     <script>
-        // Load Google Calendar from calendar.json data
+        // Load Google Calendar and footer tip from calendar.json data
         const calendarIframe = document.getElementById('google-calendar-iframe');
+        const calendarFooterTip = document.getElementById('calendar-footer-tip');
         
         // Load calendar data from JSON file
         async function loadCalendarData() {
@@ -155,12 +156,16 @@
                 const response = await fetch('../assets/data/pages/calendar.json');
                 const calendarData = await response.json();
                 
-                // Use the calendar URL from JSON
+                // Load calendar URL from JSON
                 const calendarUrl = calendarData.google_calendar_src;
-                
-                // Load calendar
                 if (calendarIframe && calendarUrl) {
                     calendarIframe.src = calendarUrl;
+                }
+                
+                // Load footer tip from JSON
+                const footerTip = calendarData.footer_tip;
+                if (calendarFooterTip && footerTip) {
+                    calendarFooterTip.innerHTML = footerTip;
                 }
             } catch (error) {
                 console.error('Error loading calendar data:', error);

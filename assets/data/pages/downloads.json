@@ -11,7 +11,7 @@
         {
             "category": "Enrollment Form",
             "title": "Confirmation Slip (Continuing Students)",
-            "description": "Required for old students (Grades 8, 9, 10, and 12) to confirm their intent to enroll.",
+            "description": "Required for continuing students (Grades 8, 9, 10, and 12) to confirm their intent to enroll.",
             "link": "../assets/documents/confirmation-slip.pdf",
             "icon": "✅"
         },

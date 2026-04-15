@@ -47,9 +47,9 @@
         "subtitle": "Please prepare the following documents for Junior High School enrollment:",
         "items": [
             { "title": "PSA Birth Certificate", "description": "Required for all students and transferees." },
-            { "title": "SF9 (Report Card)", "description": "Mandatory requirement for enrollment." },
+            { "title": "SF9 (Report Card)", "description": "Required for enrollment." },
             { "title": "SF10 (Permanent Record)", "description": "Required for all students and transferees." },
-            { "title": "Certificate of Completion", "description": "Optional requirement for incoming Grade 7 students." }
+            { "title": "Certificate of Completion", "description": "Optional document for incoming Grade 7 students." }
         ]
     }
 }
