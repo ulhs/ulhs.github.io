@@ -30,9 +30,108 @@
                 <p>This calendar is automatically updated by the school office. You can also view the <a href="../assets/documents/school-calendar.webp" target="_blank" class="calendar-link">Official Calendar Image</a> for the full SY 2026-2027 overview.</p>
             </div>
 
-            <div class="calendar-container reveal reveal-bottom delay-2">
+            <!-- Calendar Comparison Infographic -->
+            <div class="calendar-comparison-wrapper reveal reveal-bottom delay-2">
+                <div class="comparison-header">
+                    <h2 class="accent-title">Calendar System Transformation</h2>
+                    <p class="subtitle">Enhanced learning structure for SY 2026-2027</p>
+                </div>
+                
+                <div class="comparison-grid">
+                    <!-- Left Side: THEN - 4-Quarter System -->
+                    <div class="comparison-side left-side">
+                        <div class="side-header">
+                            <div class="icon-wrapper">
+                                <svg class="icon calendar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                            </div>
+                            <h3>THEN: 4-Quarter System</h3>
+                        </div>
+                        
+                        <div class="timeline-container">
+                            <div class="timeline-quarter q1">
+                                <div class="quarter-label">Q1</div>
+                                <div class="quarter-content">June - August</div>
+                            </div>
+                            <div class="timeline-quarter q2">
+                                <div class="quarter-label">Q2</div>
+                                <div class="quarter-content">August - October</div>
+                            </div>
+                            <div class="timeline-quarter q3">
+                                <div class="quarter-label">Q3</div>
+                                <div class="quarter-content">October - January</div>
+                            </div>
+                            <div class="timeline-quarter q4">
+                                <div class="quarter-label">Q4</div>
+                                <div class="quarter-content">January - March</div>
+                            </div>
+                            <div class="timeline-quarter q4">
+                                <div class="quarter-label">GOODBYE 4-QUARTER SYSTEM!</div>
+                                <div class="arrow-container">
+                                    <span class="arrow-text">HELLO 3-TERM SYSTEM!</span>
+                                    <svg class="icon arrow-icon" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        <polyline points="12 5 19 12 12 19"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Side: NOW - 3-Term System -->
+                    <div class="comparison-side right-side">
+                        <div class="side-header">
+                            <div class="icon-wrapper">
+                                <svg class="icon graduation-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+                                    <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                                </svg>
+                            </div>
+                            <h3>NOW: 3-Term System (SY 2026-2027)</h3>
+                        </div>
+                        
+                        <div class="timeline-container">
+                            <div class="timeline-term term1">
+                                <div class="term-label">Term 1</div>
+                                <div class="term-content">June 8, 2026 - September 15, 2026</div>
+                                <div class="enrichment-block">
+                                    <span class="enrichment-label">Enrichment Block</span>
+                                    <span class="enrichment-duration">69 Days</span>
+                                </div>
+                            </div>
+                            <div class="timeline-term term2">
+                                <div class="term-label">Term 2</div>
+                                <div class="term-content">September 16, 2026 - December 18, 2026</div>
+                                <div class="enrichment-block">
+                                    <span class="enrichment-label">Enrichment Block</span>
+                                    <span class="enrichment-duration">65 Days</span>
+                                </div>
+                            </div>
+                            <div class="timeline-term term3">
+                                <div class="term-label">Term 3</div>
+                                <div class="term-content">January 4, 2027 - April 8, 2027</div>
+                                <div class="enrichment-block">
+                                    <span class="enrichment-label">Enrichment Block</span>
+                                    <span class="enrichment-duration">67 Days</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="comparison-footer">
+                    <p class="footer-note">Transition to enhanced learning structure with dedicated enrichment periods for student development</p>
+                </div>
+            </div>
+
+            <div class="calendar-container reveal reveal-bottom delay-3">
                 <!-- GOOGLE CALENDAR EMBED -->
-                <iframe src="about:blank" 
+                <iframe id="google-calendar-iframe"
+                        src="about:blank"
                         class="no-border" width="100%" height="600" frameborder="0" scrolling="no"></iframe>
             </div>
             
@@ -46,6 +145,35 @@
         <!-- Loaded dynamically from footer.html -->
     </footer>
     <script src="../assets/js/main.js"></script>
+    <script>
+        // Load Google Calendar from calendar.json data
+        const calendarIframe = document.getElementById('google-calendar-iframe');
+        
+        // Load calendar data from JSON file
+        async function loadCalendarData() {
+            try {
+                const response = await fetch('../assets/data/pages/calendar.json');
+                const calendarData = await response.json();
+                
+                // Use the calendar URL from JSON
+                const calendarUrl = calendarData.google_calendar_src;
+                
+                // Load calendar
+                if (calendarIframe && calendarUrl) {
+                    calendarIframe.src = calendarUrl;
+                }
+            } catch (error) {
+                console.error('Error loading calendar data:', error);
+                // Fallback to empty URL if JSON fails to load
+                if (calendarIframe) {
+                    calendarIframe.src = 'about:blank';
+                }
+            }
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', loadCalendarData);
+    </script>
 </body>
 </html>
 

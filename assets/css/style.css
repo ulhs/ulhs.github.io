@@ -3388,3 +3388,470 @@ body.dark-mode .btn-small:hover {
     }
 }
 
+/* ==================== CALENDAR COMPARISON INFOGRAPHIC STYLES ==================== */
+
+.calendar-comparison-wrapper {
+    margin: 3rem 0;
+    padding: 2rem;
+    background: #f8f9fa;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.comparison-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.comparison-header h2 {
+    font-size: 2rem;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+.subtitle {
+    font-size: 1.1rem;
+    color: #7f8c8d;
+    font-weight: 400;
+}
+
+.comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    margin-bottom: 2rem;
+}
+
+.comparison-side {
+    padding: 1.5rem;
+    border-radius: 12px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background: white;
+}
+
+.comparison-side:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.left-side {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border: 2px solid #2196f3;
+}
+
+.right-side {
+    background: linear-gradient(135deg, #e8f5e9 0%, #fff3e0 100%);
+    border: 2px solid #4caf50;
+}
+
+.side-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 3px solid rgba(0, 0, 0, 0.1);
+}
+
+.icon-wrapper {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.icon {
+    width: 30px;
+    height: 30px;
+}
+
+.calendar-icon {
+    color: #2196f3;
+}
+
+.graduation-icon {
+    color: #ff9800;
+}
+
+.arrow-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #e74c3c;
+}
+
+.side-header h3 {
+    font-size: 1.3rem;
+    color: #2c3e50;
+    font-weight: 600;
+    margin: 0;
+}
+
+.timeline-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.timeline-quarter {
+    padding: 1rem;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.timeline-quarter::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 5px;
+    height: 100%;
+}
+
+.q1::before {
+    background: #2196f3;
+}
+
+.q2::before {
+    background: #1976d2;
+}
+
+.q3::before {
+    background: #1565c0;
+}
+
+.q4::before {
+    background: #0d47a1;
+}
+
+.quarter-label {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1976d2;
+    margin-bottom: 0.3rem;
+}
+
+.quarter-content {
+    font-size: 0.9rem;
+    color: #546e7a;
+}
+
+.arrow-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 0;
+    margin-top: 0.5rem;
+}
+
+.arrow-icon, .arrow-text {
+    width: 100%;
+    height: 40px;
+    animation: arrowPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes arrowPulse {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    50% {
+        transform: translateX(5px);
+    }
+}
+
+.timeline-term {
+    padding: 1rem;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.timeline-term::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 5px;
+    height: 100%;
+}
+
+.term1::before {
+    background: linear-gradient(to bottom, #4caf50, #8bc34a);
+}
+
+.term2::before {
+    background: linear-gradient(to bottom, #ff9800, #ffeb3b);
+}
+
+.term3::before {
+    background: linear-gradient(to bottom, #f44336, #ff9800);
+}
+
+.term-label {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+}
+
+.term1 .term-label {
+    color: #4caf50;
+}
+
+.term2 .term-label {
+    color: #ff9800;
+}
+
+.term3 .term-label {
+    color: #f44336;
+}
+
+.term-content {
+    font-size: 0.9rem;
+    color: #546e7a;
+    margin-bottom: 0.8rem;
+}
+
+.enrichment-block {
+    background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+    padding: 0.8rem;
+    border-radius: 6px;
+    margin-top: 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(255, 107, 107, 0);
+    }
+}
+
+.enrichment-label {
+    font-weight: 700;
+    color: white;
+    font-size: 0.85rem;
+}
+
+.enrichment-duration {
+    background: rgba(255, 255, 255, 0.3);
+    padding: 0.2rem 0.6rem;
+    border-radius: 15px;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.comparison-footer {
+    text-align: center;
+    padding-top: 1.5rem;
+    border-top: 2px solid #ecf0f1;
+}
+
+.footer-note {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+@media (max-width: 1024px) {
+    .comparison-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .comparison-header h2 {
+        font-size: 1.8rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .calendar-comparison-wrapper {
+        padding: 1.5rem;
+        margin: 2rem 0;
+    }
+    
+    .comparison-header h2 {
+        font-size: 1.6rem;
+    }
+    
+    .subtitle {
+        font-size: 1rem;
+    }
+    
+    .comparison-side {
+        padding: 1.2rem;
+    }
+    
+    .side-header h3 {
+        font-size: 1.1rem;
+    }
+    
+    .quarter-label,
+    .term-label {
+        font-size: 1rem;
+    }
+    
+    .enrichment-block {
+        flex-direction: column;
+        gap: 0.5rem;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .comparison-header h2 {
+        font-size: 1.4rem;
+    }
+    
+    .icon-wrapper {
+        width: 45px;
+        height: 45px;
+    }
+    
+    .icon {
+        width: 25px;
+        height: 25px;
+    }
+    
+    .timeline-quarter,
+    .timeline-term {
+        padding: 0.8rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .enrichment-block {
+        animation: none;
+    }
+    
+    .comparison-side:hover {
+        transform: none;
+    }
+}
+
+@media print {
+    body {
+        background: white;
+    }
+    
+    .calendar-comparison-container {
+        box-shadow: none;
+    }
+    
+    .enrichment-block {
+        animation: none;
+    }
+}
+
+/* ==================== DARK MODE STYLES FOR CALENDAR COMPARISON ==================== */
+
+body.dark-mode .calendar-comparison-wrapper {
+    background: var(--card-dark);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .comparison-header h2 {
+    color: var(--accent-gold);
+}
+
+body.dark-mode .subtitle {
+    color: var(--text-gray-dark);
+}
+
+body.dark-mode .comparison-side {
+    background: var(--card-dark);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .left-side {
+    background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+    border-color: #1976d2;
+}
+
+body.dark-mode .right-side {
+    background: linear-gradient(135deg, #1b5e20 0%, #e65100 100%);
+    border-color: #66bb6a;
+}
+
+body.dark-mode .icon-wrapper {
+    background: var(--bg-dark);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .side-header h3 {
+    color: var(--text-dark);
+}
+
+body.dark-mode .timeline-quarter,
+body.dark-mode .timeline-term {
+    background: var(--card-dark);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .quarter-label {
+    color: #64b5f6;
+}
+
+body.dark-mode .quarter-content,
+body.dark-mode .term-content {
+    color: var(--text-gray-dark);
+}
+
+body.dark-mode .term1 .term-label {
+    color: #81c784;
+}
+
+body.dark-mode .term2 .term-label {
+    color: #ffb74d;
+}
+
+body.dark-mode .term3 .term-label {
+    color: #e57373;
+}
+
+body.dark-mode .enrichment-block {
+    background: linear-gradient(135deg, #c62828 0%, #f57f17 100%);
+}
+
+body.dark-mode .comparison-footer {
+    border-top-color: #333;
+}
+
+body.dark-mode .footer-note {
+    color: var(--text-gray-dark);
+}
+
+body.dark-mode .arrow-text {
+    color: #e57373;
+}
+
+body.dark-mode .calendar-container {
+    background: var(--card-dark);
+    border-color: #333;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+body.dark-mode .calendar-container iframe {
+    filter: invert(0.9) hue-rotate(180deg) contrast(0.9);
+}
+
+body.dark-mode .calendar-footer {
+    color: var(--text-gray-dark);
+}
+
