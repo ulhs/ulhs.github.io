@@ -439,6 +439,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'transparency.html':
                     loadTransparencyPage(dataPath);
                     break;
+                case 'alumni-stories.html':
+                    loadAlumniStoriesPage(dataPath);
+                    break;
                 case 'enrollment.html':
                     loadEnrollmentHub(dataPath);
                     break;
@@ -1010,6 +1013,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
             initScrollReveal();
         } catch (err) { console.error("Error loading transparency page data:", err); }
+    }
+
+    async function loadAlumniStoriesPage(dataPath) {
+        try {
+            const res = await fetch(`${dataPath}pages/alumni-stories.json`);
+            const data = await res.json();
+
+            // Load intro section
+            const alumniIntro = document.getElementById('alumni-intro');
+            if (alumniIntro) {
+                alumniIntro.innerHTML = `
+                    <h2 class="section-title reveal reveal-bottom delay-1">${data.title}</h2>
+                    <p class="section-subtitle reveal reveal-bottom delay-2">${data.description}</p>
+                `;
+            }
+
+            // Load alumni stories
+            const alumniGrid = document.getElementById('alumni-grid');
+            if (alumniGrid && data.stories) {
+                alumniGrid.innerHTML = data.stories.map((story, index) => `
+                    <div class="alumni-card reveal reveal-bottom delay-${(index + 3)}">
+                        <img src="${story.image}" alt="Alumni" class="alumni-photo" loading="lazy">
+                        <span class="tag">${story.batch}</span>
+                        <h3>${story.name}</h3>
+                        <p>"${story.quote}"</p>
+                    </div>
+                `).join('');
+            }
+
+            initScrollReveal();
+        } catch (err) { console.error("Error loading alumni stories page data:", err); }
     }
 
     async function loadAcademicsPage(dataPath) {
