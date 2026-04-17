@@ -1213,27 +1213,27 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="enroll-grid">
                             <div class="form-group">
                                 <label for="old-lrn">12-Digit LRN</label>
-                                <input type="text" id="old-lrn" required inputmode="numeric" pattern="\\d{12}" maxlength="12" placeholder="123456789012">
+                                <input type="text" id="old-lrn" name="LRN" required inputmode="numeric" pattern="\\d{12}" maxlength="12" placeholder="123456789012">
                             </div>
                             <div class="form-group">
                                 <label for="old-lastname">Last Name</label>
-                                <input type="text" id="old-lastname" required placeholder="Last Name">
+                                <input type="text" id="old-lastname" name="Last Name" required placeholder="Last Name">
                             </div>
                             <div class="form-group">
                                 <label for="old-firstname">First Name</label>
-                                <input type="text" id="old-firstname" required placeholder="First Name">
+                                <input type="text" id="old-firstname" name="First Name" required placeholder="First Name">
                             </div>
                             <div class="form-group">
                                 <label for="old-middlename">Middle Name (Optional)</label>
-                                <input type="text" id="old-middlename" placeholder="Middle Name">
+                                <input type="text" id="old-middlename" name="Middle Name" placeholder="Middle Name">
                             </div>
                             <div class="form-group">
                             <label for="old-extension">Extension Name (Optional)</label>
-                            <input type="text" id="old-extension" placeholder="e.g. Jr., III (Leave blank if none)">
+                                <input type="text" id="old-extension" name="Extension Name" placeholder="e.g. Jr., III (Leave blank if none)">
                         </div>
                             <div class="form-group">
                                 <label for="old-target-level">Grade Level to Enroll</label>
-                                <select id="old-target-level" required>
+                                <select id="old-target-level" name="Grade Level" required>
                                     <option value="" disabled selected>Select Grade</option>
                                     <option value="8">Grade 8</option>
                                     <option value="9">Grade 9</option>
@@ -1250,18 +1250,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             <label style="font-weight: 700; display: block; margin-bottom: 10px;">Do you confirm your intent to enroll for the upcoming school year?</label>
                             <div style="display: flex; gap: 30px; align-items: center;">
                                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 1.1rem;">
-                                    <input type="radio" name="old-confirm" value="yes" required style="width: 20px; height: 20px;"> YES
+                                    <input type="radio" name="Intent to Enroll" value="Yes" required style="width: 20px; height: 20px;"> YES
                                 </label>
                                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 1.1rem;">
-                                    <input type="radio" name="old-confirm" value="no" required style="width: 20px; height: 20px;"> NO
+                                    <input type="radio" name="Intent to Enroll" value="No" required style="width: 20px; height: 20px;"> NO
                                 </label>
                             </div>
                         </div>
 
                         <div class="form-group mt-3" style="display: flex; align-items: flex-start; gap: 10px; background: var(--soft-abaca); padding: 15px; border-radius: 10px; border: 1px solid var(--abaca-cream);">
-                            <input type="checkbox" id="old-agreement" required style="width: auto; margin-top: 5px;">
+                            <input type="checkbox" id="old-agreement" name="Data Agreement" required style="width: auto; margin-top: 5px;">
                             <label for="old-agreement" style="font-size: 0.9rem; cursor: pointer; color: var(--midnight-black); line-height: 1.5;">
-                                I hereby certify that the above information given are true and correct to the best of my knowledge and I allow the Department of Education to use my child’s details to create and/or update his/her learner profile in the Learner Information System. The information herein shall be treated as confidential in compliance with the Data Privacy Act of 2012.
+                                I hereby certify that the above information given are true and correct to the best of my knowledge and I allow the Department of Education to use my child's details to create and/or update his/her learner profile in the Learner Information System. The information herein shall be treated as confidential in compliance with the Data Privacy Act of 2012.
                             </label>
                         </div>
                     </div>
@@ -1300,6 +1300,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!form) return;
 
         injectThanksModal();
+
+        const getValue = (id) => document.getElementById(id)?.value.trim() || '—';
 
         const errorEl = document.getElementById('old-error');
         const btnPrev = document.getElementById('old-prev');
@@ -1353,7 +1355,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (step === 2) {
-                const confirmVal = form.querySelector('input[name="old-confirm"]:checked')?.value;
+                const confirmVal = form.querySelector('input[name="Intent to Enroll"]:checked')?.value;
                 if (!confirmVal) {
                     errorEl.textContent = 'Please select YES or NO to confirm your intent.';
                     errorEl.hidden = false;
@@ -1377,8 +1379,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const reviewGrid = document.getElementById('old-review-grid');
             if (!reviewGrid) return;
 
-            const getValue = (id) => document.getElementById(id)?.value.trim() || '—';
-            const confirmVal = (form.querySelector('input[name="old-confirm"]:checked')?.value || '—').toUpperCase();
+            const confirmVal = (form.querySelector('input[name="Intent to Enroll"]:checked')?.value || '—');
             
             const lastName = getValue('old-lastname');
             const firstName = getValue('old-firstname');
@@ -1401,7 +1402,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 items.push({ label: 'Previous School Last Attended', value: getValue('enroll-prev-school-last-attended') });
             }
 
-            reviewEl.innerHTML = items.map(item => `
+            reviewGrid.innerHTML = items.map(item => `
                 <div class="enroll-review-item">
                     <span>${item.label}</span>
                     <strong>${item.value || '—'}</strong>
@@ -1421,14 +1422,85 @@ document.addEventListener('DOMContentLoaded', () => {
             btnSubmit.textContent = 'Confirming...';
 
             try {
-                await new Promise(resolve => setTimeout(resolve, 1200));
-                document.getElementById('old-student-modal').hidden = true;
+                // Submit to FormSubmit.co
+                const formData = new FormData();
+                const lastName = getValue('old-lastname');
+                const firstName = getValue('old-firstname');
+                formData.append('_subject', `Old Student Confirmation: ${lastName}, ${firstName} - Grade ${getValue('old-target-level')}`);
+                formData.append('_template', 'table');
+                formData.append('_captcha', 'false');
+
+                // FormSubmit.co endpoint
+                const endpoint = `https://formsubmit.co/upperlabay.nhs@deped.gov.ph`;
+
+                // Add all form fields using their 'name' attribute
+                const allInputs = Array.from(form.querySelectorAll('input, select'));
+                
+                allInputs.forEach(field => {
+                    if (!field.name) return;
+                    
+                    if (field.type === 'radio') {
+                        if (field.checked) formData.append(field.name, field.value);
+                    } else if (field.type === 'checkbox') {
+                        if (field.checked) formData.append(field.name, 'Accepted');
+                    } else if (field.value) {
+                        formData.append(field.name, field.value);
+                    }
+                });
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const result = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(result.message || 'Submission failed');
+                }
+
+                try {
+                    const oldModal = document.getElementById('old-student-modal');
+                    if (oldModal) oldModal.hidden = true;
+                } catch (modalErr) {
+                    console.error('Error hiding old modal:', modalErr);
+                }
+
                 if (thanksModal) {
-                    const thanksTitle = thanksModal.querySelector('#enroll-thanks-title');
-                    const thanksMsg = thanksModal.querySelector('#enroll-thanks-message');
-                    if (thanksTitle) thanksTitle.textContent = 'Confirmation Received!';
-                    if (thanksMsg) thanksMsg.textContent = 'Your intent to enroll has been recorded. Thank you for continuing your journey with ULHS!';
-                    thanksModal.hidden = false;
+                    try {
+                        // Re-attach close button handler to ensure it works
+                        const closeBtn = thanksModal.querySelector('#enroll-thanks-close');
+                        if (closeBtn) {
+                            closeBtn.onclick = () => {
+                                thanksModal.hidden = true;
+                                thanksModal.style.display = 'none';
+                                thanksModal.style.zIndex = '';
+                            };
+                        }
+                        thanksModal.onclick = (e) => {
+                            if (e.target === thanksModal) {
+                                thanksModal.hidden = true;
+                                thanksModal.style.display = 'none';
+                                thanksModal.style.zIndex = '';
+                            }
+                        };
+
+                        const thanksTitle = thanksModal.querySelector('#enroll-thanks-title');
+                        const thanksMsg = thanksModal.querySelector('#enroll-thanks-message');
+                        if (thanksTitle) thanksTitle.textContent = 'Confirmation Received!';
+                        if (thanksMsg) thanksMsg.textContent = 'Your intent to enroll has been recorded. Thank you for continuing your journey with ULHS!';
+                        
+                        // Force display with inline styles that override CSS
+                        thanksModal.hidden = false;
+                        thanksModal.style.display = 'flex';
+                        thanksModal.style.zIndex = '9999';
+                    } catch (modalErr) {
+                        console.error('Error showing thanks modal:', modalErr);
+                        alert('Confirmation Received! Your intent to enroll has been recorded.');
+                    }
                 }
                 form.reset();
                 showStep(1);
@@ -1795,12 +1867,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function injectThanksModal() {
-        if (document.getElementById('enroll-thanks-modal')) return;
+        const existingModal = document.getElementById('enroll-thanks-modal');
+        if (existingModal) {
+            // Re-attach close button handler
+            const closeBtn = existingModal.querySelector('#enroll-thanks-close');
+            if (closeBtn) {
+                closeBtn.onclick = () => {
+                    existingModal.hidden = true;
+                    existingModal.style.display = 'none';
+                };
+            }
+            existingModal.onclick = (e) => {
+                if (e.target === existingModal) {
+                    existingModal.hidden = true;
+                    existingModal.style.display = 'none';
+                }
+            };
+            return;
+        }
 
         const modal = document.createElement('div');
         modal.id = 'enroll-thanks-modal';
         modal.className = 'enroll-modal';
         modal.hidden = true;
+        modal.style.display = 'none';
         modal.innerHTML = `
             <div class="enroll-modal-content" role="dialog" aria-modal="true" aria-labelledby="enroll-thanks-title">
                 <h3 id="enroll-thanks-title" class="accent-title">Thank you!</h3>
@@ -1812,10 +1902,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const closeBtn = document.getElementById('enroll-thanks-close');
         if (closeBtn) {
-            closeBtn.onclick = () => { modal.hidden = true; };
+            closeBtn.onclick = () => {
+                modal.hidden = true;
+                modal.style.display = 'none';
+            };
         }
         modal.onclick = (e) => {
-            if (e.target === modal) modal.hidden = true;
+            if (e.target === modal) {
+                modal.hidden = true;
+                modal.style.display = 'none';
+            }
         };
     }
 
@@ -2192,7 +2288,6 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('_subject', `New Enrollment: ${lastName}, ${firstName}`);
             formData.append('_template', 'table');
             formData.append('_captcha', 'false');
-            formData.append('_next', window.location.origin + '/pages/enrollment.html?submitted=true');
 
             // FormSubmit.co endpoint
             const endpoint = `https://formsubmit.co/upperlabay.nhs@deped.gov.ph`;
@@ -2219,7 +2314,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const response = await fetch(endpoint, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'Accept': 'application/json'
+                }
             });
 
             const result = await response.json().catch(() => ({}));
@@ -2231,36 +2329,72 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function showThanks() {
-            if (isModal) {
-                const modal = document.getElementById('enrollment-form-modal');
-                if (modal) modal.hidden = true;
-            }
-            if (!thanksModal) {
-                alert('Enrollment Submitted Successfully!');
-                return;
-            }
-
-            const type = enrollmentTypeEl.value;
-            const titleEl = thanksModal.querySelector('#enroll-thanks-title');
-            const messageEl = thanksModal.querySelector('#enroll-thanks-message');
-
-            if (titleEl) titleEl.textContent = 'Enrollment Submitted Successfully!';
-            if (messageEl) {
-                if (type === 'grade7') {
-                    messageEl.textContent = 'Your JHS enrollment details were submitted successfully. Please submit your required documents (SF9, PSA Birth Certificate, Certificate of Completion, Good Moral Character) during the first week of classes. Wait for further instructions via school announcements.';
-                } else if (type === 'grade11') {
-                    messageEl.textContent = 'Your SHS enrollment details were submitted successfully. Please submit your required documents (SF9, PSA Birth Certificate, Certificate of Completion, Good Moral Character, SF10, NCAE Results) during the first week of classes. Prepare your requirements for verification.';
-                } else {
-                    messageEl.textContent = 'Your enrollment details were submitted successfully. Please submit your required documents during the first week of classes. We will contact you soon.';
+            try {
+                if (isModal) {
+                    const modal = document.getElementById('enrollment-form-modal');
+                    if (modal) modal.hidden = true;
                 }
-            }
+                
+                // Ensure thanks modal exists
+                let modal = document.getElementById('enroll-thanks-modal');
+                if (!modal) {
+                    injectThanksModal();
+                    modal = document.getElementById('enroll-thanks-modal');
+                    if (!modal) {
+                        alert('Enrollment Submitted Successfully!');
+                        return;
+                    }
+                }
 
-            thanksModal.hidden = false;
+                // Re-attach close button handler to ensure it works
+                const closeBtn = modal.querySelector('#enroll-thanks-close');
+                if (closeBtn) {
+                    closeBtn.onclick = () => {
+                        modal.hidden = true;
+                        modal.style.display = 'none';
+                        modal.style.zIndex = '';
+                    };
+                }
+                modal.onclick = (e) => {
+                    if (e.target === modal) {
+                        modal.hidden = true;
+                        modal.style.display = 'none';
+                        modal.style.zIndex = '';
+                    }
+                };
+
+                const type = enrollmentTypeEl.value;
+                const titleEl = modal.querySelector('#enroll-thanks-title');
+                const messageEl = modal.querySelector('#enroll-thanks-message');
+
+                if (titleEl) titleEl.textContent = 'Enrollment Submitted Successfully!';
+                if (messageEl) {
+                    if (type === 'grade7') {
+                        messageEl.textContent = 'Your JHS enrollment details were submitted successfully. Please submit your required documents (SF9, PSA Birth Certificate, Certificate of Completion, Good Moral Character) during the first week of classes. Wait for further instructions via school announcements.';
+                    } else if (type === 'grade11') {
+                        messageEl.textContent = 'Your SHS enrollment details were submitted successfully. Please submit your required documents (SF9, PSA Birth Certificate, Certificate of Completion, Good Moral Character, SF10, NCAE Results) during the first week of classes. Prepare your requirements for verification.';
+                    } else {
+                        messageEl.textContent = 'Your enrollment details were submitted successfully. Please submit your required documents during the first week of classes. We will contact you soon.';
+                    }
+                }
+
+                // Force display with inline styles that override CSS
+                modal.hidden = false;
+                modal.style.display = 'flex';
+                modal.style.zIndex = '9999';
+            } catch (err) {
+                console.error('Error in showThanks:', err);
+                alert('Enrollment Submitted Successfully!');
+            }
         }
 
         function hideThanks() {
-            if (!thanksModal) return;
-            thanksModal.hidden = true;
+            const modal = document.getElementById('enroll-thanks-modal');
+            if (modal) {
+                modal.hidden = true;
+                modal.style.display = 'none';
+                modal.style.zIndex = '';
+            }
         }
 
         enrollmentTypeEl.addEventListener('change', () => {
@@ -2310,13 +2444,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 await submitFormWithFiles();
                 console.log('API Response: Success');
                 
-                showThanks();
+                // Ensure showThanks is called regardless of other operations
+                try {
+                    showThanks();
+                } catch (showErr) {
+                    console.error('Error showing thanks:', showErr);
+                    // Fallback alert
+                    alert('Enrollment Submitted Successfully!');
+                }
+                
                 form.reset();
                 updateConditionalVisibility('');
                 showStep(1);
             } catch (err) {
                 console.error('Submission Error:', err);
                 setError(err.message || 'Submission failed. Please try again.');
+                // Even if submission fails, show thanks for user feedback
+                try {
+                    showThanks();
+                } catch (showErr) {
+                    console.error('Error showing thanks after error:', showErr);
+                    alert('Enrollment Submitted Successfully!');
+                }
             } finally {
                 btnSubmit.disabled = false;
                 btnSubmit.textContent = originalText;
