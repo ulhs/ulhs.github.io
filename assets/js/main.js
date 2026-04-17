@@ -1869,13 +1869,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
                                     <li><strong>SF9 (Report Card)</strong> - Latest report card from previous level</li>
                                     <li><strong>PSA Birth Certificate</strong> - Original or certified true copy</li>
-                                    <li><strong>Certificate of Completion</strong> - For Grade 7 students</li>
+                                    <li><strong>SF10 (Permanent Record)</strong> - For Grade 11 students</li>
                                     <li><strong>Good Moral Character</strong> - From previous school</li>
                                 </ul>
                                 
                                 <h4 style="margin: 20px 0 15px 0; color: var(--primary-color);">📚 Additional Documents (if applicable):</h4>
                                 <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
-                                    <li><strong>SF10 (Permanent Record)</strong> - For Grade 11 students</li>
+                                    <li><strong>Certificate of Completion</strong> - For Grade 7 students</li>
                                     <li><strong>NCAE Results</strong> - For Grade 11 students</li>
                                     <li><strong>4Ps ID</strong> - If applicable</li>
                                 </ul>
