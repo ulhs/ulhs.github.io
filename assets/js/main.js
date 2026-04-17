@@ -1184,6 +1184,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         const typeSelect = document.getElementById('enroll-type-modal');
                         if (typeSelect && type) {
+                            // Store context for transferees
+                            const form = modal.querySelector('form');
+                            if (form) form.setAttribute('data-context', type === 'grade7' ? 'jhs' : 'shs');
+
                             // Filter Enrollment Types for JHS vs SHS
                             Array.from(typeSelect.options).forEach(opt => {
                                 if (opt.value === '' || opt.value === 'transferee') {
@@ -1540,7 +1544,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const thanksTitle = thanksModal.querySelector('#enroll-thanks-title');
                         const thanksMsg = thanksModal.querySelector('#enroll-thanks-message');
                         if (thanksTitle) thanksTitle.textContent = 'Confirmation Received!';
-                        if (thanksMsg) thanksMsg.textContent = 'Your intent to enroll has been recorded. Thank you for continuing your journey with ULHS!';
+                        if (thanksMsg) thanksMsg.textContent = 'Enrollment confirmation successful! We are grateful for your continued trust in our school community and are glad to have you back.';
                         
                         // Force display with inline styles that override CSS
                         thanksModal.hidden = false;
@@ -1869,13 +1873,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
                                     <li><strong>SF9 (Report Card)</strong> - Latest report card from previous level</li>
                                     <li><strong>PSA Birth Certificate</strong> - Original or certified true copy</li>
-                                    <li><strong>SF10 (Permanent Record)</strong> - For Grade 11 students</li>
+                                    <li><strong>SF10 (Permanent Record)</strong> - For all students</li>
                                 </ul>
                                 
                                 <h4 style="margin: 20px 0 15px 0; color: var(--primary-color);">📚 Additional Documents (if applicable):</h4>
                                 <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
                                     <li><strong>Good Moral Character</strong> - From previous school</li>
-                                    <li><strong>Certificate of Completion</strong> - For Grade 7 students</li>
+                                    <li><strong>Certificate of Completion</strong> - For Grades 7 & 11 students</li>
                                     <li><strong>NCAE Results</strong> - For Grade 11 students</li>
                                     <li><strong>4Ps ID</strong> - If applicable</li>
                                 </ul>
@@ -2340,9 +2344,22 @@ document.addEventListener('DOMContentLoaded', () => {
             // FormSubmit.co configurations
             const lastName = getValue('enroll-lastname');
             const firstName = getValue('enroll-firstname');
-            formData.append('_subject', `New Enrollment: ${lastName}, ${firstName}`);
+            const type = enrollmentTypeEl.value;
+            const context = form.getAttribute('data-context') || 'jhs';
+            
+            let subjectType = type;
+            if (type === 'transferee') {
+                subjectType = `Transferee (${context.toUpperCase()})`;
+            } else if (type === 'grade7') {
+                subjectType = 'Grade 7';
+            } else if (type === 'grade11') {
+                subjectType = 'Grade 11';
+            }
+
+            formData.append('_subject', `New Enrollment: ${lastName}, ${firstName} - ${subjectType}`);
             formData.append('_template', 'table');
             formData.append('_captcha', 'false');
+            formData.append('_honey', ''); // Anti-spam field
 
             // FormSubmit.co endpoint
             const endpoint = `https://formsubmit.co/upperlabay.nhs@deped.gov.ph`;
@@ -2419,17 +2436,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
                 const type = enrollmentTypeEl.value;
+                const context = form.getAttribute('data-context') || 'jhs'; // Default to jhs
                 const titleEl = modal.querySelector('#enroll-thanks-title');
                 const messageEl = modal.querySelector('#enroll-thanks-message');
 
                 if (titleEl) titleEl.textContent = 'Enrollment Submitted Successfully!';
                 if (messageEl) {
                     if (type === 'grade7') {
-                        messageEl.textContent = 'Your JHS enrollment details were submitted successfully. Please submit your required documents (SF9, PSA Birth Certificate, Certificate of Completion, Good Moral Character) during the first week of classes. Wait for further instructions via school announcements.';
+                        messageEl.textContent = 'Your JHS enrollment details have been successfully submitted. Please prepare your required documents: SF9, SF10, and PSA Birth Certificate. Supplementary documents—like your Grade 6 Certificate of Completion and Good Moral Character—may be requested during the first week of classes. Kindly wait for further school announcements.';
                     } else if (type === 'grade11') {
-                        messageEl.textContent = 'Your SHS enrollment details were submitted successfully. Please submit your required documents (SF9, PSA Birth Certificate, Certificate of Completion, Good Moral Character, SF10, NCAE Results) during the first week of classes. Prepare your requirements for verification.';
+                        messageEl.textContent = 'Your SHS enrollment details have been successfully submitted. Please prepare your required documents: SF9, SF10, and PSA Birth Certificate. Supplementary documents—like your Grade 10 Certificate of Completion and Good Moral Character—may be requested during the first week of classes. Kindly wait for further school announcements.';
+                    } else if (type === 'transferee') {
+                        const level = context === 'shs' ? 'SHS' : 'JHS';
+                        messageEl.textContent = `Your ${level} enrollment details as a transferee have been successfully submitted. Please prepare your required documents: SF9 (Report Card), SF10 (Permanent Record), and PSA Birth Certificate. Kindly wait for further instructions and school announcements.`;
                     } else {
-                        messageEl.textContent = 'Your enrollment details were submitted successfully. Please submit your required documents during the first week of classes. We will contact you soon.';
+                        messageEl.textContent = 'Your enrollment confirmation details have been successfully submitted. We are delighted to have you remain a part of our school community!';
                     }
                 }
 
@@ -2505,14 +2526,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await submitFormWithFiles();
                 console.log('API Response: Success');
                 
-                // Ensure showThanks is called regardless of other operations
-                try {
-                    showThanks();
-                } catch (showErr) {
-                    console.error('Error showing thanks:', showErr);
-                    // Fallback alert
-                    alert('Enrollment Submitted Successfully!');
-                }
+                showThanks();
                 
                 form.reset();
                 updateConditionalVisibility('');
@@ -2520,13 +2534,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (err) {
                 console.error('Submission Error:', err);
                 setError(err.message || 'Submission failed. Please try again.');
-                // Even if submission fails, show thanks for user feedback
-                try {
-                    showThanks();
-                } catch (showErr) {
-                    console.error('Error showing thanks after error:', showErr);
-                    alert('Enrollment Submitted Successfully!');
-                }
             } finally {
                 btnSubmit.disabled = false;
                 btnSubmit.textContent = originalText;
