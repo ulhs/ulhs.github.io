@@ -1141,14 +1141,36 @@ document.addEventListener('DOMContentLoaded', () => {
                     const modal = document.getElementById('old-student-modal');
                     if (modal) {
                         modal.hidden = false;
+                        // Auto-scroll to top when modal opens
+                        const scrollTarget = modal.querySelector('.enroll-module') || modal;
+                        scrollTarget.scrollTo({ top: 0 });
+                        
                         const targetLevel = document.getElementById('old-target-level');
                         if (targetLevel) {
                             const isSHS = type === 'old-student-shs';
                             Array.from(targetLevel.options).forEach(opt => {
                                 if (opt.value === '') return;
                                 const val = parseInt(opt.value);
-                                opt.hidden = isSHS ? (val < 11) : (val >= 11);
+                                if (isSHS) {
+                                    // For Grade 12 Confirmation, hide Grade 11
+                                    opt.hidden = val !== 12;
+                                } else {
+                                    // For JHS Confirmation, show Grades 8-10
+                                    opt.hidden = val >= 11;
+                                }
                             });
+
+                            if (isSHS) {
+                                targetLevel.value = '12';
+                                targetLevel.classList.add('is-locked');
+                                targetLevel.style.pointerEvents = 'none';
+                                targetLevel.style.background = 'rgba(0,0,0,0.05)';
+                            } else {
+                                targetLevel.value = '';
+                                targetLevel.classList.remove('is-locked');
+                                targetLevel.style.pointerEvents = 'auto';
+                                targetLevel.style.background = '';
+                            }
                         }
                     }
                 } else {
@@ -1156,6 +1178,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const modal = document.getElementById('enrollment-form-modal');
                     if (modal) {
                         modal.hidden = false;
+                        // Auto-scroll to top when modal opens
+                        const scrollTarget = modal.querySelector('.enroll-module') || modal;
+                        scrollTarget.scrollTo({ top: 0 });
+
                         const typeSelect = document.getElementById('enroll-type-modal');
                         if (typeSelect && type) {
                             // Filter Enrollment Types for JHS vs SHS
@@ -1314,6 +1340,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalSteps = steps.length;
         let currentStep = 1;
 
+        function setError(message) {
+            if (!errorEl) return;
+            errorEl.textContent = message;
+            errorEl.hidden = false;
+            // Scroll to top of modal/form to show the error
+            const scrollTarget = form.closest('.enroll-module') || form;
+            scrollTarget.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         function showStep(step) {
             currentStep = step;
             steps.forEach(s => s.classList.toggle('active', Number(s.getAttribute('data-step')) === step));
@@ -1332,6 +1367,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (isLastStep) updateReview();
+
+            // Auto-scroll to top of form/modal
+            const scrollTarget = form.closest('.enroll-module') || form;
+            scrollTarget.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function validateStep(step) {
@@ -1342,14 +1381,12 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const input of inputs) {
                 if (input.required && !input.value && input.type !== 'radio') {
                     input.focus();
-                    errorEl.textContent = 'Please fill out all required fields.';
-                    errorEl.hidden = false;
+                    setError('Please fill out all required fields.');
                     return false;
                 }
                 if (input.id === 'old-lrn' && !/^\d{12}$/.test(input.value.trim())) {
                     input.focus();
-                    errorEl.textContent = 'LRN must be exactly 12 digits.';
-                    errorEl.hidden = false;
+                    setError('LRN must be exactly 12 digits.');
                     return false;
                 }
             }
@@ -1357,15 +1394,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (step === 2) {
                 const confirmVal = form.querySelector('input[name="Intent to Enroll"]:checked')?.value;
                 if (!confirmVal) {
-                    errorEl.textContent = 'Please select YES or NO to confirm your intent.';
-                    errorEl.hidden = false;
+                    setError('Please select YES or NO to confirm your intent.');
                     return false;
                 }
                 if (step === 3) {
-                    const agreeCb = document.getElementById(`enroll-agreement`);
+                    const agreeCb = document.getElementById(`old-agreement`);
                     if (agreeCb && !agreeCb.checked) {
                         agreeCb.focus();
-                        errorEl.textContent = 'Please certify that the information provided is true and correct to proceed.';
+                        setError('Please certify that the information provided is true and correct to proceed.');
                         return false;
                     }
                 }
@@ -1412,6 +1448,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         btnPrev.addEventListener('click', () => { if (currentStep > 1) showStep(currentStep - 1); });
         btnNext.addEventListener('click', () => { if (validateStep(currentStep)) showStep(currentStep + 1); });
+
+        // Auto-check agreement if "YES" is selected
+        const intentRadios = form.querySelectorAll('input[name="Intent to Enroll"]');
+        const agreementCheckbox = document.getElementById('old-agreement');
+        if (intentRadios && agreementCheckbox) {
+            intentRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    if (radio.value === 'Yes' && radio.checked) {
+                        agreementCheckbox.checked = true;
+                    }
+                });
+            });
+        }
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1505,8 +1554,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 form.reset();
                 showStep(1);
             } catch (err) {
-                errorEl.textContent = 'Submission failed. Please try again.';
-                errorEl.hidden = false;
+                setError('Submission failed. Please try again.');
             } finally {
                 btnSubmit.disabled = false;
                 btnSubmit.textContent = originalText;
@@ -2092,6 +2140,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!errorEl) return;
             errorEl.textContent = message;
             errorEl.hidden = false;
+            // Scroll to top of modal/form to show the error
+            const scrollTarget = form.closest('.enroll-module') || form;
+            scrollTarget.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function clearError() {
@@ -2166,6 +2217,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isLastStep) {
                 updateReview();
             }
+
+            // Auto-scroll to top of form/modal
+            const scrollTarget = form.closest('.enroll-module') || form;
+            scrollTarget.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function validateStep(step) {
@@ -2400,6 +2455,12 @@ document.addEventListener('DOMContentLoaded', () => {
         enrollmentTypeEl.addEventListener('change', () => {
             updateConditionalVisibility(enrollmentTypeEl.value);
             if (currentStep === totalSteps) updateReview();
+
+            // Auto-check agreement when enrollment type is selected (shows intent)
+            const agreementCheckbox = document.getElementById(`enroll-agreement${suffix}`);
+            if (agreementCheckbox && enrollmentTypeEl.value) {
+                agreementCheckbox.checked = true;
+            }
         });
 
         btnPrev.addEventListener('click', () => {
