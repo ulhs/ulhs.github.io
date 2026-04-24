@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Access | Upper Labay High School</title>
+    <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Magic Nav Icons -->
+    <link rel="stylesheet" href="../../assets/vendor/font-awesome/css/all.min.css">
+    <script src="../../assets/lib/tailwind.min.js"></script>
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <script src="../../assets/js/admin-nav.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+    <script>
+        // Security check
+        const userAccessStr = sessionStorage.getItem('userAccess');
+        const userAccess = userAccessStr ? JSON.parse(userAccessStr) : null;
+        const userRole = sessionStorage.getItem('userRole');
+
+        if (sessionStorage.getItem('adminLoggedIn') !== 'true' || !userAccess) {
+            // Admin page defaults to admin login, but respects last role if it was faculty
+            const lastRole = localStorage.getItem('lastUserRole');
+            window.location.href = lastRole === 'faculty' ? 'faculty.html' : 'admin.html';
+        } else if (userRole !== 'admin') {
+            // All faculty kick back to faculty login page if they try to access Admin-only Manage Access
+            window.location.href = 'faculty.html';
+        }
+    </script>
+
+    <!-- Admin Header -->
+    <header>
+        <div class="branding">
+            <a href="../../index.html" class="logo-link">
+                <img src="../../assets/images/school-logo.webp" alt="Logo" id="main-logo">
+                <div class="name-container">
+                    <span class="school-name">UPPER LABAY</span>
+                    <span class="school-sub">HIGH SCHOOL</span>
+                </div>
+            </a>
+        </div>
+
+        <div class="user-greeting">
+            <script>
+                const userName = sessionStorage.getItem('userName');
+                if (userName) {
+                    document.write('<span class="user-name">' + userName + '</span>');
+                }
+            </script>
+        </div>
+        <input type="checkbox" id="nav-toggle" class="nav-toggle">
+        <label for="nav-toggle" class="nav-toggle-label">
+            <span></span>
+        </label>
+        <nav class="nav-links magic-nav">
+            <ul>
+                    <li class="list active" data-page="access.html">
+                        <a href="access.html">
+                            <span class="icon"><i class="fa-solid fa-users-gear"></i></span>
+                            <span class="text">ACCESS</span>
+                        </a>
+                    </li>
+                    <li class="list" data-page="id-gen.html">
+                        <a href="id-gen.html">
+                            <span class="icon"><i class="fa-solid fa-id-card"></i></span>
+                            <span class="text">ID GEN</span>
+                        </a>
+                    </li>
+                    <li class="list" data-page="attendance.html">
+                        <a href="attendance.html">
+                            <span class="icon"><i class="fa-solid fa-clipboard-user"></i></span>
+                            <span class="text">ATTENDANCE</span>
+                        </a>
+                    </li>
+                    <li class="list" data-page="admin-dashboard.html">
+                        <a href="admin-dashboard.html">
+                            <span class="icon"><i class="fa-solid fa-chart-line"></i></span>
+                            <span class="text">DASHBOARD</span>
+                        </a>
+                    </li>
+                    <li class="list">
+                        <a href="admin.html" onclick="sessionStorage.clear()">
+                            <span class="icon"><i class="fa-solid fa-right-from-bracket"></i></span>
+                            <span class="text">LOGOUT</span>
+                        </a>
+                    </li>
+                    <div class="indicator"></div>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 pb-12 max-w-5xl mt-8">
+        <div class="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h2 class="text-3xl font-black text-gray-900 uppercase tracking-tight">Manage System Access</h2>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Granular Tool-Based Control</p>
+                </div>
+                <div class="bg-blue-100 p-3 rounded-2xl">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+            </div>
+
+            <!-- Permission Legend -->
+            <div class="flex gap-4 mb-8 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                    <span class="text-[10px] font-black uppercase text-gray-500 tracking-wider">Attendance (🕒)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-purple-500"></span>
+                    <span class="text-[10px] font-black uppercase text-gray-500 tracking-wider">ID Gen (🆔)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                    <span class="text-[10px] font-black uppercase text-gray-500 tracking-wider">Stats (📊)</span>
+                </div>
+            </div>
+
+            <!-- Matrix Table -->
+            <div class="overflow-hidden rounded-3xl border border-gray-100">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-900 text-white">
+                            <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Faculty Member</th>
+                            <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">🕒</th>
+                            <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">🆔</th>
+                            <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">📊</th>
+                        </tr>
+                    </thead>
+                    <tbody id="access-matrix-body" class="divide-y divide-gray-100">
+                        <!-- School Head -->
+                        <tr class="bg-blue-50/50">
+                            <td class="px-6 py-4">
+                                <p class="text-sm font-black uppercase tracking-tight text-blue-900">Jeffry Kapawan</p>
+                                <p class="text-[9px] text-blue-600 font-bold uppercase">School Head</p>
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                <input type="checkbox" id="sh-attendance" class="sh-toggle sr-only peer">
+                                <div onclick="document.getElementById('sh-attendance').click()" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-blue-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                <input type="checkbox" id="sh-idgen" class="sh-toggle sr-only peer">
+                                <div onclick="document.getElementById('sh-idgen').click()" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-purple-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                <input type="checkbox" id="sh-stats" class="sh-toggle sr-only peer">
+                                <div onclick="document.getElementById('sh-stats').click()" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-green-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                            </td>
+                        </tr>
+                        <!-- Teachers will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Bulk Actions -->
+            <div class="mt-6 flex justify-end gap-4">
+                <button id="btn-enable-all" class="text-[10px] font-black uppercase tracking-widest text-blue-600 border border-blue-200 px-4 py-2 rounded-xl hover:bg-blue-50 transition-all">Enable All Tools</button>
+                <button id="btn-disable-all" class="text-[10px] font-black uppercase tracking-widest text-red-600 border border-red-200 px-4 py-2 rounded-xl hover:bg-red-50 transition-all">Disable All Access</button>
+            </div>
+
+            <!-- Sync Notice -->
+            <div id="sync-notice" class="hidden mt-10 p-6 bg-yellow-50 border-2 border-dashed border-yellow-200 rounded-3xl flex flex-col items-center text-center gap-4">
+                <div class="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center animate-bounce">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </div>
+                <div>
+                    <h4 class="text-sm font-black text-yellow-800 uppercase tracking-widest">Changes Pending Sync</h4>
+                    <p class="text-[11px] text-yellow-700 font-bold uppercase mt-1">Copy the token below and send it to your Assistant to update the master system.</p>
+                </div>
+                <button id="btn-gen-sync-token" class="bg-yellow-400 text-yellow-900 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-yellow-300 transition-all shadow-lg hover:shadow-yellow-200/50">Generate Sync Token</button>
+            </div>
+        </div>
+
+        <!-- System Credit Container -->
+        <div class="mt-8 flex justify-center">
+            <div class="bg-white/50 px-6 py-3 rounded-full border border-gray-200 shadow-sm backdrop-blur-sm">
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">&copy; 2026 SirChris. <strong class="text-gray-500 not-italic ml-1">Bong sàlamàt!</strong></p>
+            </div>
+        </div>
+    </main>
+
+    <script src="../../assets/js/main.js"></script>
+    <script>
+        // Access Management Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const matrixBody = document.getElementById('access-matrix-body');
+            const shAttendance = document.getElementById('sh-attendance');
+            const shIdGen = document.getElementById('sh-idgen');
+            const shStats = document.getElementById('sh-stats');
+            const btnEnableAll = document.getElementById('btn-enable-all');
+            const btnDisableAll = document.getElementById('btn-disable-all');
+            const syncNotice = document.getElementById('sync-notice');
+            const btnSyncToken = document.getElementById('btn-gen-sync-token');
+
+            if (typeof SYSTEM_CONFIG === 'undefined') return;
+
+            // 1. Initialize School Head
+            const shAccess = SYSTEM_CONFIG.ACCESS_CONTROL.SCHOOL_HEAD.access;
+            shAttendance.checked = shAccess.attendance;
+            shIdGen.checked = shAccess.idGen;
+            shStats.checked = shAccess.stats;
+
+            // 2. Generate Teacher Rows
+            SYSTEM_CONFIG.ACCESS_CONTROL.TEACHERS.forEach((teacher, index) => {
+                const row = document.createElement('tr');
+                row.className = "hover:bg-blue-50/30 transition-colors group";
+                row.innerHTML = `
+                    <td class="px-6 py-4">
+                        <p class="text-sm font-black uppercase tracking-tight text-gray-900 group-hover:text-blue-700">${teacher.name}</p>
+                        <p class="text-[9px] text-gray-400 font-bold uppercase">Faculty Member</p>
+                    </td>
+                    <td class="px-4 py-4 text-center">
+                        <input type="checkbox" id="t-att-${index}" class="teacher-toggle sr-only peer" data-index="${index}" data-tool="attendance" ${teacher.access.attendance ? 'checked' : ''}>
+                        <div onclick="document.getElementById('t-att-${index}').click()" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-blue-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                    </td>
+                    <td class="px-4 py-4 text-center">
+                        <input type="checkbox" id="t-id-${index}" class="teacher-toggle sr-only peer" data-index="${index}" data-tool="idGen" ${teacher.access.idGen ? 'checked' : ''}>
+                        <div onclick="document.getElementById('t-id-${index}').click()" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-purple-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                    </td>
+                    <td class="px-4 py-4 text-center">
+                        <input type="checkbox" id="t-st-${index}" class="teacher-toggle sr-only peer" data-index="${index}" data-tool="stats" ${teacher.access.stats ? 'checked' : ''}>
+                        <div onclick="document.getElementById('t-st-${index}').click()" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-green-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                    </td>
+                `;
+                matrixBody.appendChild(row);
+            });
+
+            // 3. Handle Any Change
+            document.addEventListener('change', (e) => {
+                if (e.target.classList.contains('teacher-toggle') || e.target.classList.contains('sh-toggle')) {
+                    syncNotice.classList.remove('hidden');
+                }
+            });
+
+            // 4. Bulk Actions
+            btnEnableAll.addEventListener('click', () => {
+                document.querySelectorAll('input[type="checkbox"]').forEach(i => i.checked = true);
+                syncNotice.classList.remove('hidden');
+            });
+            btnDisableAll.addEventListener('click', () => {
+                document.querySelectorAll('input[type="checkbox"]').forEach(i => i.checked = false);
+                syncNotice.classList.remove('hidden');
+            });
+
+            // 5. Generate Sync Token
+            btnSyncToken.addEventListener('click', () => {
+                const updatedTeachers = SYSTEM_CONFIG.ACCESS_CONTROL.TEACHERS.map((t, idx) => ({
+                    name: t.name,
+                    hash: t.hash,
+                    access: {
+                        attendance: document.getElementById(`t-att-${idx}`).checked,
+                        idGen: document.getElementById(`t-id-${idx}`).checked,
+                        stats: document.getElementById(`t-st-${idx}`).checked
+                    }
+                }));
+
+                const config = {
+                    SCHOOL_HEAD: {
+                        name: SYSTEM_CONFIG.ACCESS_CONTROL.SCHOOL_HEAD.name,
+                        hash: SYSTEM_CONFIG.ACCESS_CONTROL.SCHOOL_HEAD.hash,
+                        access: {
+                            attendance: shAttendance.checked,
+                            idGen: shIdGen.checked,
+                            stats: shStats.checked
+                        }
+                    },
+                    TEACHERS: updatedTeachers
+                };
+                
+                const token = btoa(JSON.stringify(config));
+                prompt("SYNC TOKEN GENERATED. Copy this code and send it to your Assistant to update the master system:", token);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -6,20 +6,35 @@
     <title>ID Generator | Upper Labay High School</title>
     <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Magic Nav Icons -->
+    <link rel="stylesheet" href="../../assets/vendor/font-awesome/css/all.min.css">
     <link rel="stylesheet" href="../../assets/css/typography.css">
     <link rel="stylesheet" href="../../assets/css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
-    <!-- MediaPipe Selfie Segmentation -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
-    <!-- Cropper.js -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <!-- Offline Support: Local Libraries -->
+    <script src="../../assets/lib/qrcode.min.js"></script>
+    <script src="../../assets/lib/selfie_segmentation.js"></script>
+    <link rel="stylesheet" href="../../assets/lib/cropper.min.css">
+    <script src="../../assets/lib/cropper.min.js"></script>
+    <script src="../../assets/js/admin-nav.js"></script>
 </head>
 <body>
     <script>
         // Security check
-        if (sessionStorage.getItem('adminLoggedIn') !== 'true') {
-            window.location.href = 'admin.html';
+        const userAccessStr = sessionStorage.getItem('userAccess');
+        const userAccess = userAccessStr ? JSON.parse(userAccessStr) : null;
+        const userRole = sessionStorage.getItem('userRole');
+
+        if (sessionStorage.getItem('adminLoggedIn') !== 'true' || !userAccess) {
+            // Kick back to correct login page based on role
+            const lastRole = localStorage.getItem('lastUserRole');
+            window.location.href = lastRole === 'admin' ? 'admin.html' : 'faculty.html';
+        } else if (!userAccess.idGen) {
+            // Redirect based on role if tool is disabled
+            if (userRole === 'admin') {
+                window.location.href = 'access.html';
+            } else {
+                window.location.href = 'faculty.html';
+            }
         }
     </script>
 
@@ -33,8 +48,79 @@
                 </div>
             </a>
         </div>
-        <div class="nav-links">
-            <a href="admin.html" onclick="sessionStorage.removeItem('adminLoggedIn')">Logout</a>
+
+        <div class="user-greeting">
+            <script>
+                const userName = sessionStorage.getItem('userName');
+                if (userName) {
+                    document.write('<span class="user-name">' + userName + '</span>');
+                }
+            </script>
+        </div>
+        <input type="checkbox" id="nav-toggle" class="nav-toggle">
+        <label for="nav-toggle" class="nav-toggle-label">
+            <span></span>
+        </label>
+        <nav class="nav-links magic-nav">
+            <ul id="dynamic-nav-list">
+                    <script>
+                        const role = sessionStorage.getItem('userRole');
+                        const access = JSON.parse(sessionStorage.getItem('userAccess') || '{}');
+                        
+                        let html = '';
+                        
+                        if (role === 'admin') {
+                            html += `
+                                <li class="list" data-page="access.html">
+                                    <a href="access.html">
+                                        <span class="icon"><i class="fa-solid fa-users-gear"></i></span>
+                                        <span class="text">ACCESS</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        if (role === 'admin' || access.idGen) {
+                            html += `
+                                <li class="list" data-page="id-gen.html">
+                                    <a href="id-gen.html">
+                                        <span class="icon"><i class="fa-solid fa-id-card"></i></span>
+                                        <span class="text">ID GEN</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        html += `
+                            <li class="list" data-page="attendance.html">
+                                <a href="attendance.html">
+                                    <span class="icon"><i class="fa-solid fa-clipboard-user"></i></span>
+                                    <span class="text">ATTENDANCE</span>
+                                </a>
+                            </li>`;
+                        
+                        if (role === 'admin' || role === 'school_head') {
+                            html += `
+                                <li class="list" data-page="admin-dashboard.html">
+                                    <a href="admin-dashboard.html">
+                                        <span class="icon"><i class="fa-solid fa-chart-line"></i></span>
+                                        <span class="text">DASHBOARD</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        const logoutUrl = role === 'admin' ? 'admin.html' : 'faculty.html';
+                        html += `
+                            <li class="list">
+                                <a href="${logoutUrl}" onclick="sessionStorage.clear()">
+                                    <span class="icon"><i class="fa-solid fa-right-from-bracket"></i></span>
+                                    <span class="text">LOGOUT</span>
+                                </a>
+                            </li>`;
+                        
+                        html += '<div class="indicator"></div>';
+                        document.write(html);
+                    </script>
+                </ul>
+            </nav>
         </div>
     </header>
 
@@ -171,6 +257,45 @@
             </div>
         </div>
     </main>
+
+    <!-- Data Privacy Notice (DPA 2012 Compliance) - Cultural Style -->
+    <footer style="margin-top: 80px; padding: 40px 20px; max-width: 900px; margin-left: auto; margin-right: auto;">
+        <div style="background: var(--soft-abaca); border: 2px solid var(--accent-gold); border-radius: 20px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+            <div style="display: flex; flex-direction: column; gap: 20px; align-items: center; text-align: center;">
+                <div style="background: var(--white); padding: 12px; border-radius: 15px; border: 1px solid var(--accent-gold);">
+                    <img src="../../assets/images/school-logo.webp" alt="ULHS" style="width: 50px; height: 50px; opacity: 0.8;">
+                </div>
+                <div>
+                    <h4 style="font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 700; color: var(--madder-red); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                        <svg style="width: 20px; height: 20px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        Privacy & Data Security Notice
+                    </h4>
+                    <p style="font-size: 13px; line-height: 1.6; color: var(--text-main); font-weight: 600; margin-bottom: 20px; max-width: 700px;">
+                        In compliance with the <b>Philippines Data Privacy Act of 2012 (RA 10173)</b>, this ID Generator operates locally. All student names, LRNs, and photos are processed <b>entirely</b> within the administrator's local browser memory and are never uploaded online.
+                    </p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div style="background: var(--white); padding: 15px; border-radius: 12px; border: 1px solid var(--accent-gold);">
+                            <p style="font-size: 10px; font-weight: 700; color: var(--madder-red); text-transform: uppercase; margin-bottom: 5px;">Zero Persistence</p>
+                            <p style="font-size: 10px; color: var(--text-gray); font-weight: 600;">Closing this tab wipes all sensitive information immediately.</p>
+                        </div>
+                        <div style="background: var(--white); padding: 15px; border-radius: 12px; border: 1px solid var(--accent-gold);">
+                            <p style="font-size: 10px; font-weight: 700; color: var(--madder-red); text-transform: uppercase; margin-bottom: 5px;">Local Processing</p>
+                            <p style="font-size: 10px; color: var(--text-gray); font-weight: 600;">All rendering occurs on administrator's device. No data is stored externally.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Credit Container -->
+        <div style="margin-top: 25px; display: flex; justify-content: center;">
+            <div style="background: var(--soft-abaca); border: 1px solid var(--accent-gold); padding: 10px 25px; border-radius: 50px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                <p style="font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700; color: var(--accent-gold); text-transform: uppercase; letter-spacing: 2px; font-style: italic; margin: 0;">
+                    &copy; 2026 SirChris. <span style="font-style: normal; color: var(--madder-red); margin-left: 5px;">Bong sàlamàt!</span>
+                </p>
+            </div>
+        </div>
+    </footer>
 
     <script src="../../assets/js/main.js"></script>
 </body>

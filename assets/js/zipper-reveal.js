@@ -43,7 +43,7 @@ class ZipperReveal {
         // Check if GSAP is loaded, if not, wait for it or load it
         if (typeof gsap === 'undefined') {
             const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js';
+            script.src = 'assets/lib/gsap.min.js';
             script.onload = () => this.startAnimation();
             document.head.appendChild(script);
         } else {

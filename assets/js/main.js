@@ -1,3 +1,138 @@
+/* --- SYSTEM CONFIGURATION (RBAC) --- */
+const SYSTEM_CONFIG = {
+    ACCESS_CONTROL: {
+        SCHOOL_HEAD: { 
+            name: "Jeffry Kapawan", 
+            hash: "5efb436d7c08e03aa3d3db05095e86b1bb15acb32007ccc15625482eb3249f6f", 
+            access: { attendance: false, idGen: false, stats: true } 
+        },
+        TEACHERS: [
+            { name: "Allan Acera", hash: "a18743d668937eac630cc23f0f9fde93085ad2cd7b77850c162bcc833593b0ca", access: { attendance: false, idGen: false, stats: false } },
+            { name: "John Vincent Aguas", hash: "0f3186ef429e48c7ff921d9527921efe7a4abde750e4936895834b8408b4fbf4", access: { attendance: false, idGen: false, stats: false } },
+            { name: "Hannah Marian Balunto", hash: "eef993a799cccc682752c49516b4016c5258116212dc7da68aac5d6e4d1a1677", access: { attendance: false, idGen: false, stats: false } },
+            { name: "Juvy Balunto", hash: "95ac2f90fb7f50a3ef5a89a5fadbbf6cd067a92a4299311d895d0bdac9921087", access: { attendance: false, idGen: false, stats: false } },
+            { name: "John Alfred Capili", hash: "31f4a11327c8c0a6cb50624acbaa6a36ec4548963fdc35ca980d509e84478b42", access: { attendance: false, idGen: false, stats: false } },
+            { name: "Melanie Castro", hash: "1b014181a8a51f22578e3d137473b234cffeb3a1ec2552001241a98759a67e7d", access: { attendance: false, idGen: false, stats: false } },
+            { name: "Arvin Benedict Cuachon", hash: "281011dd1d2d8fd8f9d9558b91ef2dfe903209931e2b61e314bc13f342ea415a", access: { attendance: false, idGen: false, stats: false } },
+            { name: "Editha Diaz", hash: "8a7308937881f1beab9f15dbd4b5a5369cc24bf55f3b5d1110438983440bd169", access: { attendance: false, idGen: false, stats: false } },
+            { name: "Joylene Mirasol", hash: "4e9f3b1a332aae54e6c498d2e754da5ee101678883719951fae6f8ceb8c1e26b", access: { attendance: false, idGen: false, stats: false } },
+            { name: "Imee Rafal", hash: "5f0ff83128a6654311585ed7457b840362b7a80fde96e0dbd794778dfbb7f2f2", access: { attendance: false, idGen: false, stats: false } },
+            { name: "Raylin Salazar", hash: "174dccf67e4c822b5361d4f4b67abb8a8c2d911d714853026f43d84ab4af7c74", access: { attendance: false, idGen: false, stats: false } },
+            { name: "Jonathan Tatualla", hash: "d8c7cb9d4720ba5dfc533fb79bb0f63f535bcc43fb8b03873ba85e91940b1c73", access: { attendance: false, idGen: false, stats: false } },
+            { name: "Rowena Tumandan", hash: "3bdf32cf04ce951214655a4997d1dbb0ae5cc5d1b63756da26e1b101269ba122", access: { attendance: false, idGen: false, stats: false } },
+            { name: "Kerry Cawadi", hash: "c18b18b0324ddc1d389ec1dc07f57b66e514f63760e0e373c1a85a0b0dcc08dd", access: { attendance: true, idGen: false, stats: true } },
+            { name: "Helario Gadiale", hash: "0bf8a4ff055316393e01661f3fc70cb4b690259357f5b20d1ee1cd8eeff91510", access: { attendance: true, idGen: false, stats: false } }
+        ]
+    },
+    HASHES: {
+        ADMIN: '60fe74406e7f353ed979f350f2fbb6a2e8690a5fa7d1b0c32983d1d8b3f95f67' // Admin1234
+    }
+};
+
+/* --- SHA-256 HELPER --- */
+async function sha256(message) {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/* --- AUTHENTICATION LOGIC --- */
+document.addEventListener('DOMContentLoaded', () => {
+    const userRole = sessionStorage.getItem('userRole');
+    const adminLoggedIn = sessionStorage.getItem('adminLoggedIn');
+
+    // 1. Admin Login (admin.html)
+    const adminForm = document.getElementById('login-form');
+    if (adminForm) {
+        // If already logged in as admin, go to access.html
+        if (adminLoggedIn === 'true' && userRole === 'admin') {
+            window.location.href = 'access.html';
+            return;
+        }
+
+        adminForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pwd = document.getElementById('password').value.trim();
+            const hash = await sha256(pwd);
+            const errorMsg = document.getElementById('error-msg');
+
+            if (hash === SYSTEM_CONFIG.HASHES.ADMIN) {
+                sessionStorage.setItem('adminLoggedIn', 'true');
+                sessionStorage.setItem('userRole', 'admin');
+                localStorage.setItem('lastUserRole', 'admin');
+                sessionStorage.setItem('userAccess', JSON.stringify({ attendance: true, idGen: true, stats: true }));
+                sessionStorage.setItem('userName', 'SIRCHRIS');
+                window.location.href = 'access.html';
+            } else {
+                errorMsg.style.display = 'block';
+            }
+        });
+    }
+
+    // 2. Faculty Login (faculty.html)
+    const facultyForm = document.getElementById('faculty-login-form');
+    if (facultyForm) {
+        if (adminLoggedIn === 'true' && userRole === 'school_head') {
+            window.location.href = 'admin-dashboard.html';
+            return;
+        } else if (adminLoggedIn === 'true' && userRole === 'teacher') {
+            window.location.href = 'attendance.html';
+            return;
+        }
+
+        facultyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pwd = document.getElementById('faculty-password').value.trim();
+            const hash = await sha256(pwd);
+            const errorMsg = document.getElementById('faculty-error-msg');
+
+            // Find user in config
+            let facultyUser = null;
+            let role = '';
+
+            if (hash === SYSTEM_CONFIG.ACCESS_CONTROL.SCHOOL_HEAD.hash) {
+                facultyUser = SYSTEM_CONFIG.ACCESS_CONTROL.SCHOOL_HEAD;
+                role = 'school_head';
+            } else {
+                facultyUser = SYSTEM_CONFIG.ACCESS_CONTROL.TEACHERS.find(t => t.hash === hash);
+                role = 'teacher';
+            }
+
+            if (facultyUser) {
+                // Check if user has ANY permissions enabled
+                const hasAnyAccess = Object.values(facultyUser.access).some(v => v === true);
+                
+                if (!hasAnyAccess) {
+                    errorMsg.textContent = "Your account is active but has no permissions enabled. Please contact the Admin.";
+                    errorMsg.style.display = 'block';
+                    return;
+                }
+
+                sessionStorage.setItem('adminLoggedIn', 'true');
+                sessionStorage.setItem('userRole', role);
+                localStorage.setItem('lastUserRole', 'faculty'); // Remember for redirect
+                sessionStorage.setItem('userAccess', JSON.stringify(facultyUser.access));
+                sessionStorage.setItem('userName', facultyUser.name);
+
+                // Redirect based on role and permissions
+                if (role === 'school_head') {
+                    window.location.href = 'admin-dashboard.html';
+                } else if (facultyUser.access.attendance) {
+                    window.location.href = 'attendance.html';
+                } else if (facultyUser.access.idGen) {
+                    window.location.href = 'id-gen.html';
+                } else {
+                    window.location.href = 'attendance.html';
+                }
+            } else {
+                errorMsg.textContent = "Invalid access key or session not yet authorized by Admin.";
+                errorMsg.style.display = 'block';
+            }
+        });
+    }
+});
+
 /* --- HELPER: GET ROOT PATH --- */
 function getRootPath() {
     const pathParts = window.location.pathname.split('/').filter(p => p !== '');
@@ -516,15 +651,43 @@ document.addEventListener('DOMContentLoaded', () => {
         const pathParts = window.location.pathname.split('/');
         const lastPart = pathParts.pop() || 'index.html';
         const currentPage = lastPart.endsWith('.html') ? lastPart : lastPart + '.html';
+        
+        // Handle both Classic and Magic Nav
         const navItems = document.querySelectorAll('.nav-links a');
+        const listItems = document.querySelectorAll('.nav-links .list');
+
         navItems.forEach(item => {
-            const itemPage = item.getAttribute('data-page');
+            const itemPage = item.getAttribute('data-page') || item.closest('.list')?.getAttribute('data-page');
             if (itemPage === currentPage) {
                 item.classList.add('active');
+                if (item.closest('.list')) item.closest('.list').classList.add('active');
             } else {
                 item.classList.remove('active');
+                if (item.closest('.list')) item.closest('.list').classList.remove('active');
             }
         });
+
+        // Add hover effect logic for Magic Nav if enabled
+        if (navLinks && navLinks.classList.contains('magic-nav')) {
+            listItems.forEach((item) => {
+                item.addEventListener('mouseenter', function() {
+                    listItems.forEach((li) => li.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // Revert to current page on mouse leave of the whole nav
+            navLinks.addEventListener('mouseleave', () => {
+                listItems.forEach(item => {
+                    const itemPage = item.getAttribute('data-page');
+                    if (itemPage === currentPage) {
+                        item.classList.add('active');
+                    } else {
+                        item.classList.remove('active');
+                    }
+                });
+            });
+        }
 
         // Sync theme toggle UI after header loads
         const themeBtn = document.getElementById('theme-toggle');
@@ -2853,6 +3016,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loadDynamicContent();
+    const idForm = document.getElementById('id-form');
+    if (idForm) initIDGenerator();
 });
 
 /* --- OPEN CALENDAR IN NEW TAB --- */
@@ -2861,40 +3026,6 @@ function openFullscreen() {
     const root = getRootPath();
     const fileUrl = root + "assets/documents/school-calendar.webp";
     window.open(fileUrl, '_blank');
-}
-
-/* --- ADMIN & ID GENERATOR LOGIC --- */
-function setupAdminLogic() {
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) initAdminLogin();
-
-    const idForm = document.getElementById('id-form');
-    if (idForm) initIDGenerator();
-}
-
-async function initAdminLogin() {
-    async function sha256(message) {
-        const msgBuffer = new TextEncoder().encode(message);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    const targetHash = 'ac9689e2272427085e35b9d3e3e8bed88cb3434828b43b86fc0596cad4c6e270'; //password_hash
-
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const pwd = document.getElementById('password').value.trim();
-        const hash = await sha256(pwd);
-
-        if (hash === targetHash) {
-            sessionStorage.setItem('adminLoggedIn', 'true');
-            window.location.href = 'id-gen.html';
-        } else {
-            const errorMsg = document.getElementById('error-msg');
-            if (errorMsg) errorMsg.style.display = 'block';
-        }
-    });
 }
 
 async function initIDGenerator() {
@@ -3227,7 +3358,12 @@ async function initIDGenerator() {
                 const qrX = 178.29, qrY = 689.10, qrW = 420.99 - 178.29, qrH = 932.58 - 689.10;
                 const qrData = `NAME: ${firstname} ${mi} ${lastname}\nLRN: ${lrn}`;
                 try {
-                    const qrUrl = await QRCode.toDataURL(qrData, { margin: 1, width: 300 });
+                    // Optimized for digital scanning: High error correction + larger base size
+                    const qrUrl = await QRCode.toDataURL(qrData, { 
+                        margin: 1, 
+                        width: 400,
+                        errorCorrectionLevel: 'H' 
+                    });
                     const qrImg = new Image();
                     qrImg.onload = () => {
                         ctxFront.drawImage(qrImg, qrX, qrY, qrW, qrH);
@@ -3308,6 +3444,3 @@ async function initIDGenerator() {
         });
     }
 }
-
-// Call setup on load
-document.addEventListener('DOMContentLoaded', setupAdminLogic);

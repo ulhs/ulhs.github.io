@@ -1,3 +1,6 @@
+<!-- Font Awesome for Magic Nav Icons -->
+<link rel="stylesheet" href="{root}assets/vendor/font-awesome/css/all.min.css">
+
 <div class="branding">
     <a href="{root}index.html" class="logo-link">
         <img src="{root}assets/images/school-logo.webp" alt="Upper Labay High School Logo" id="main-logo">
@@ -13,13 +16,52 @@
     <span></span>
 </label>
 
-<nav class="nav-links">
-    <a href="{root}index.html" data-page="index.html">HOME</a>
-    <a href="{root}pages/about-dumu.html" data-page="about-dumu.html">ABOUT</a>
-    <a href="{root}pages/academics-gnare.html" data-page="academics-gnare.html">ACADEMICS</a>
-    <a href="{root}pages/calendar.html" data-page="calendar.html">CALENDAR</a>
-    <a href="{root}pages/community-tlogan.html" data-page="community-tlogan.html">COMMUNITY</a>
-    <a href="{root}pages/contact.html" data-page="contact.html">CONTACT US</a>
-    <a href="{root}pages/enrollment.html" class="btn-enroll" data-page="enrollment.html">ENROLL NOW</a>
+<!-- To switch back to classic behavior, remove the 'magic-nav' class below -->
+<nav class="nav-links magic-nav">
+    <ul>
+        <li class="list" data-page="index.html">
+            <a href="{root}index.html">
+                <span class="icon"><i class="fa-solid fa-house"></i></span>
+                <span class="text">HOME</span>
+            </a>
+        </li>
+        <li class="list" data-page="about-dumu.html">
+            <a href="{root}pages/about-dumu.html">
+                <span class="icon"><i class="fa-solid fa-circle-info"></i></span>
+                <span class="text">ABOUT</span>
+            </a>
+        </li>
+        <li class="list" data-page="academics-gnare.html">
+            <a href="{root}pages/academics-gnare.html">
+                <span class="icon"><i class="fa-solid fa-book-open"></i></span>
+                <span class="text">ACADEMICS</span>
+            </a>
+        </li>
+        <li class="list" data-page="calendar.html">
+            <a href="{root}pages/calendar.html">
+                <span class="icon"><i class="fa-solid fa-calendar-days"></i></span>
+                <span class="text">CALENDAR</span>
+            </a>
+        </li>
+        <li class="list" data-page="community-tlogan.html">
+            <a href="{root}pages/community-tlogan.html">
+                <span class="icon"><i class="fa-solid fa-users"></i></span>
+                <span class="text">COMMUNITY</span>
+            </a>
+        </li>
+        <li class="list" data-page="contact.html">
+            <a href="{root}pages/contact.html">
+                <span class="icon"><i class="fa-solid fa-envelope"></i></span>
+                <span class="text">CONTACT</span>
+            </a>
+        </li>
+        <li class="list" data-page="enrollment.html">
+            <a href="{root}pages/enrollment.html" class="btn-enroll-magic">
+                <span class="icon"><i class="fa-solid fa-graduation-cap"></i></span>
+                <span class="text">ENROLL</span>
+            </a>
+        </li>
+        <div class="indicator"></div>
+    </ul>
     <div id="theme-toggle" class="theme-toggle" data-tooltip="Switch to Dark">🌙</div>
 </nav>

@@ -119,15 +119,162 @@ header {
     align-items: center;
 }
 
+.nav-links ul {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-links:not(.magic-nav) .list {
+    margin-left: 18px;
+}
+
+.nav-links:not(.magic-nav) .icon {
+    display: none; /* Hide icons in classic mode */
+}
+
 .nav-links a {
     color: var(--white);
     text-decoration: none;
-    margin-left: 18px;
     font-weight: 600;
     transition: color 0.3s;
 }
 
-.nav-links a:hover, .nav-links a.active {
+.user-greeting {
+    display: flex;
+    align-items: center;
+    padding-right: 15px;
+    border-right: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.user-greeting .user-name {
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--accent-gold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+/* --- MAGIC NAV STYLES (Enabled by .magic-nav class) --- */
+.nav-links.magic-nav {
+    position: relative;
+    height: 70px;
+    background: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 10px;
+}
+
+.nav-links.magic-nav ul {
+    position: relative;
+    display: flex;
+    width: auto;
+}
+
+.nav-links.magic-nav ul li {
+    position: relative;
+    width: 80px;
+    height: 70px;
+    z-index: 1;
+}
+
+.nav-links.magic-nav ul li a {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    width: 100%;
+    text-align: center;
+    font-weight: 600;
+}
+
+.nav-links.magic-nav ul li a .icon {
+    position: relative;
+    display: block;
+    line-height: 75px;
+    font-size: 1.5em;
+    transition: 0.5s;
+    color: var(--white);
+}
+
+.nav-links.magic-nav ul li.active a .icon {
+    transform: translateY(-32px);
+    color: var(--white);
+}
+
+.nav-links.magic-nav ul li a .text {
+    position: absolute;
+    color: var(--white);
+    font-weight: 700;
+    font-size: 0.6em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: 0.5s;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.nav-links.magic-nav ul li.active a .text {
+    opacity: 1;
+    transform: translateY(10px);
+    color: var(--accent-gold);
+}
+
+.nav-links.magic-nav .indicator {
+    position: absolute;
+    top: -50%;
+    width: 80px;
+    height: 80px;
+    background: var(--madder-red);
+    border-radius: 50%;
+    border: 6px solid rgba(26, 26, 26, 1); /* Matches header bg */
+    transition: 0.5s;
+    display: block;
+}
+
+.nav-links:not(.magic-nav) .indicator {
+    display: none;
+}
+
+.nav-links.magic-nav .indicator::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -22px;
+    width: 20px;
+    height: 20px;
+    background: transparent;
+    border-top-right-radius: 20px;
+    box-shadow: 1px -10px 0 0 rgba(26, 26, 26, 1);
+}
+
+.nav-links.magic-nav .indicator::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -22px;
+    width: 20px;
+    height: 20px;
+    background: transparent;
+    border-top-left-radius: 20px;
+    box-shadow: -1px -10px 0 0 rgba(26, 26, 26, 1);
+}
+
+/* Precise translations for 7 items in magic mode */
+.nav-links.magic-nav ul li:nth-child(1).active ~ .indicator { transform: translateX(calc(80px * 0)); }
+.nav-links.magic-nav ul li:nth-child(2).active ~ .indicator { transform: translateX(calc(80px * 1)); }
+.nav-links.magic-nav ul li:nth-child(3).active ~ .indicator { transform: translateX(calc(80px * 2)); }
+.nav-links.magic-nav ul li:nth-child(4).active ~ .indicator { transform: translateX(calc(80px * 3)); }
+.nav-links.magic-nav ul li:nth-child(5).active ~ .indicator { transform: translateX(calc(80px * 4)); }
+.nav-links.magic-nav ul li:nth-child(6).active ~ .indicator { transform: translateX(calc(80px * 5)); }
+.nav-links.magic-nav ul li:nth-child(7).active ~ .indicator { transform: translateX(calc(80px * 6)); }
+
+.nav-links:not(.magic-nav) a:hover, .nav-links:not(.magic-nav) a.active {
     color: var(--accent-gold);
 }
 
@@ -345,6 +492,18 @@ footer h4, footer h5 {
 
 /* 7. RESPONSIVE DESIGN (MOBILE/TABLET) */
 @media screen and (max-width: 1100px) {
+    header {
+        flex-wrap: wrap;
+        position: relative;
+        z-index: 1000;
+    }
+    .branding {
+        z-index: 100;
+    }
+    .user-greeting {
+        z-index: 100;
+        margin-left: auto;
+    }
     .nav-toggle-label {
         display: flex;
         align-items: center;
@@ -353,9 +512,10 @@ footer h4, footer h5 {
         height: 40px;
         cursor: pointer;
         position: relative;
-        z-index: 10000; /* Must be higher than .nav-links (9999) */
+        z-index: 10001;
+        order: 99;
     }
-    
+
     .nav-toggle-label span,
     .nav-toggle-label span::before,
     .nav-toggle-label span::after {
@@ -367,19 +527,19 @@ footer h4, footer h5 {
         position: relative;
         transition: 0.3s;
     }
-    
+
     .nav-toggle-label span::before,
     .nav-toggle-label span::after {
         content: '';
         position: absolute;
-        left: 0; /* Ensure they align with the parent span */
+        left: 0;
         background: var(--white);
         height: 2px;
         width: 30px;
         border-radius: 2px;
         transition: 0.3s;
     }
-    
+
     .nav-toggle-label span::before { top: -10px; }
     .nav-toggle-label span::after { bottom: -10px; }
     
@@ -404,8 +564,8 @@ footer h4, footer h5 {
         left: 0;
         width: 100vw;
         height: 100vh;
-        background: #0f0f0f !important; /* Ensure solid background */
-        display: none; /* Let JS or checked state handle display */
+        background: #0f0f0f !important;
+        display: none;
         flex-direction: column;
         align-items: center;
         justify-content: center;
@@ -414,7 +574,35 @@ footer h4, footer h5 {
         transition: opacity 0.4s ease;
         visibility: hidden;
     }
-    
+
+    .nav-links.magic-nav {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: #0f0f0f !important;
+        z-index: 9999;
+        display: none !important;
+        opacity: 0;
+        visibility: hidden;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        padding-top: 70px;
+        overflow-y: auto !important;
+    }
+
+    .nav-toggle:checked ~ .nav-links.magic-nav {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        justify-content: flex-start !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        padding-top: 70px;
+    }
+
     .nav-links.active,
     .nav-toggle:checked ~ .nav-links { 
         display: flex !important;
@@ -455,14 +643,31 @@ footer h4, footer h5 {
     .nav-links a:nth-child(7) { animation-delay: 0.4s; }
     .nav-links a:nth-child(8) { animation-delay: 0.45s; }
 
+    /* Magic Nav mobile: make ul vertical */
+    .nav-toggle:checked ~ .nav-links.magic-nav ul {
+        flex-direction: column !important;
+        height: auto !important;
+        overflow: visible !important;
+        background: transparent !important;
+        position: relative !important;
+        width: 100% !important;
+    }
+    .nav-toggle:checked ~ .nav-links.magic-nav ul li {
+        width: 100% !important;
+        height: auto !important;
+    }
+
     /* Theme toggle inside mobile menu */
     .nav-links .theme-toggle {
-        margin-top: 30px;
+        margin: 30px auto !important;
         font-size: 2.5rem;
         cursor: pointer;
         opacity: 0;
-        display: flex !important; /* Ensure it's flex for centering */
+        display: flex !important;
         color: #ffffff !important;
+        position: relative !important;
+        width: 60px !important;
+        height: 60px !important;
     }
 
     .nav-links.active .theme-toggle,
