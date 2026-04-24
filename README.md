@@ -19,13 +19,6 @@ Welcome to the official website for **Upper Labay High School**. This project is
 
 ## 🚀 Deployment Instructions
 
-This website is ready for deployment on **GitHub Pages**:
+The website is already deployed on **GitHub Pages**:
 
-1. Create a new repository on your GitHub account named **`ulhs.github.io`**.
-2. Push the contents of this project to the `main` branch.
-3. Go to **Settings > Pages** in your repository.
-4. Set the source to "Deploy from a branch" and select `main`.
-5. Your website will be live at: **`https://ulhs.github.io/`** (the shortest possible URL).
-
----
 *Rooted in Heritage, Aiming for Excellence.*

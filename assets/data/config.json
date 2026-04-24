@@ -20,7 +20,7 @@
     ],
     "announcement": {
         "enabled": true,
-        "text": "Our website is undergoing exciting improvements! We are currently making constant changes to the site content and planning to roll out new tools like the <span style=\"text-shadow: -1px -1px 0 white-blue, 1px -1px 0 white-blue, -1px 1px 0 white-blue, 1px 1px 0 white-blue;color:yellow;\">Student ID Generator</span> and <span style=\"text-shadow: -1px -1px 0 white-blue, 1px -1px 0 white-blue, -1px 1px 0 white-blue, 1px 1px 0 white-blue;color:#0096FF;\">Student Attendance System via QR Code</span> to better serve the Upper Labay community. Thank you for your patience during this rollout. For comments, suggestions, or feedback, please reach out to us on Facebook.",
+        "text": "🚀 New tools (Student ID & QR Attendance) launching this June as classes begin.",
         "button_text": "Ask SirChris",
         "link": "https://facebook.com/sirchrisperegrino"
     }
