@@ -84,7 +84,7 @@
                                 <li class="list" data-page="id-gen.html">
                                     <a href="id-gen.html">
                                         <span class="icon"><i class="fa-solid fa-id-card"></i></span>
-                                        <span class="text">ID GEN</span>
+                                        <span class="text">ID GENERATOR</span>
                                     </a>
                                 </li>`;
                         }
@@ -149,15 +149,26 @@
             </div>
         </div>
 
-        <h2 class="accent-title">Student ID Generator</h2>
-        <p>Complete the form below to generate a student ID card.</p>
+        <h2 class="accent-title" id="gen-title">ID Generator</h2>
+        <p id="gen-subtitle">Complete the form below to generate an ID card.</p>
+
+        <!-- ID TYPE TOGGLE -->
+        <div class="id-type-toggle-container">
+            <div class="id-type-toggle">
+                <input type="radio" id="type-student" name="id-type" value="student" checked>
+                <label for="type-student">Student</label>
+                <input type="radio" id="type-personnel" name="id-type" value="personnel">
+                <label for="type-personnel">Personnel</label>
+                <div class="toggle-slider"></div>
+            </div>
+        </div>
 
         <div class="gen-grid">
             <!-- FORM SECTION -->
             <div class="form-section">
                 <form id="id-form" class="main-form">
                     <div class="form-group">
-                        <label>Student Photo</label>
+                        <label id="photo-label">Photo</label>
                         <div class="webcam-box">
                             <video id="webcam-video" autoplay playsinline></video>
                             <img id="captured-photo" src="" alt="Captured">
@@ -181,6 +192,15 @@
                         </div>
                     </div>
 
+                    <!-- PERSONNEL SPECIFIC: Employment Type -->
+                    <div id="personnel-type-group" class="form-group" style="display:none">
+                        <label for="employment-type">Employment Type</label>
+                        <select id="employment-type">
+                            <option value="regular" selected>Regular (Red ID)</option>
+                            <option value="contractual">Contractual (Yellow ID)</option>
+                        </select>
+                    </div>
+
                     <div class="form-row-three">
                         <div class="form-group">
                             <label for="firstname">First Name</label>
@@ -196,9 +216,22 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
+                    <!-- STUDENT SPECIFIC: LRN -->
+                    <div id="student-lrn-group" class="form-group">
                         <label for="lrn">12-Digit LRN</label>
                         <input type="text" id="lrn" required pattern="\d{12}" maxlength="12" placeholder="123456789012">
+                    </div>
+
+                    <!-- PERSONNEL SPECIFIC: Employee Number & Position -->
+                    <div id="personnel-fields" style="display:none">
+                        <div class="form-group">
+                            <label for="emp-number">Employee Number</label>
+                            <input type="text" id="emp-number" placeholder="EMP-2026-001">
+                        </div>
+                        <div class="form-group">
+                            <label for="position">Position</label>
+                            <input type="text" id="position" placeholder="TEACHER III">
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -207,8 +240,60 @@
                         <span id="birthdate-error" class="error-msg" style="display:none; color: var(--madder-red); font-size: 0.8rem; margin-top: 5px;">Invalid date format or value.</span>
                     </div>
 
+                    <!-- PERSONNEL SPECIFIC: Extra Info -->
+                    <div id="personnel-extra-fields" style="display:none">
+                        <div class="form-row-two">
+                            <div class="form-group">
+                                <label for="blood-type">Blood Type</label>
+                                <input type="text" id="blood-type" placeholder="O+">
+                            </div>
+                            <div class="form-group">
+                                <label for="gsis">GSIS BP #</label>
+                                <input type="text" id="gsis" placeholder="2001234567">
+                            </div>
+                        </div>
+                        <div class="form-row-two">
+                            <div class="form-group">
+                                <label for="pagibig">Pag-ibig #</label>
+                                <input type="text" id="pagibig" placeholder="1211-1234-5678">
+                            </div>
+                            <div class="form-group">
+                                <label for="philhealth">PhilHealth #</label>
+                                <input type="text" id="philhealth" placeholder="12-123456789-1">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="tin">TIN</label>
+                            <input type="text" id="tin" placeholder="123-456-789-000">
+                        </div>
+                        
+                        <!-- SIGNATURE UPLOAD -->
+                        <div class="form-group">
+                            <label>Signature Image (Optional)</label>
+                            <div class="signature-upload-box">
+                                <img id="signature-preview" src="" alt="Signature" style="display:none">
+                                <div id="signature-placeholder" class="placeholder-box">
+                                    <i class="fa-solid fa-pen-nib"></i>
+                                    <span>Upload Signature</span>
+                                </div>
+                            </div>
+                            <div class="btn-group">
+                                <button type="button" id="btn-upload-sig" class="btn btn-small btn-secondary">Upload Signature</button>
+                                <input type="file" id="sig-input" accept="image/*" style="display:none">
+                                <button type="button" id="btn-remove-sig" class="btn btn-small btn-secondary" style="display:none">Remove</button>
+                            </div>
+                            <div class="form-group bg-remove-toggle">
+                                <label class="checkbox-container">
+                                    <input type="checkbox" id="remove-sig-bg-toggle">
+                                    <span class="checkmark"></span>
+                                    Remove Signature Background
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="form-group">
-                        <label for="guardian">Name of Father/Mother/Guardian</label>
+                        <label for="guardian" id="guardian-label">Name of Father/Mother/Guardian</label>
                         <input type="text" id="guardian" required placeholder="Maria Dela Cruz">
                     </div>
 
@@ -230,9 +315,15 @@
                         <input type="text" id="address-manual" class="address-manual" placeholder="Enter full address manually">
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group" id="mobile-group">
                         <label for="parent-mobile">Parent's Mobile Number (Optional)</label>
                         <input type="tel" id="parent-mobile" placeholder="09123456789">
+                    </div>
+
+                    <!-- PERSONNEL SPECIFIC: Emergency Contact Number -->
+                    <div id="personnel-mobile-group" class="form-group" style="display:none">
+                        <label for="emergency-mobile">Contact Number</label>
+                        <input type="tel" id="emergency-mobile" placeholder="09123456789">
                     </div>
 
                     <button type="button" id="btn-generate" class="btn btn-full">Generate Preview</button>

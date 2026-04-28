@@ -2178,16 +2178,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const isModal = formId === 'modal-enrollment-form';
         const suffix = isModal ? '-modal' : '';
 
-        /*
-        Google Forms mapping guide:
-        1) Open your Google Form in a browser.
-        2) Click Preview (eye icon) and open DevTools.
-        3) Inspect each form input element and look for its "name" attribute in the submitted payload.
-           It will look like: entry.1234567890
-        4) Copy those entry IDs into ENTRY below so each website field maps to the right Google Sheet column.
-        5) Use the form "formResponse" URL:
-           https://docs.google.com/forms/d/e/<FORM_ID>/formResponse
-        */
         const GOOGLE_FORM_ACTION_URL = '';
         const ENTRY = {
             enrollmentType: '',
@@ -3293,6 +3283,122 @@ async function initIDGenerator() {
         });
     }
 
+    // ID Type Toggle Logic
+    const typeStudent = document.getElementById('type-student');
+    const typePersonnel = document.getElementById('type-personnel');
+    const studentLrnGroup = document.getElementById('student-lrn-group');
+    const personnelFields = document.getElementById('personnel-fields');
+    const personnelExtraFields = document.getElementById('personnel-extra-fields');
+    const personnelTypeGroup = document.getElementById('personnel-type-group');
+    const guardianLabel = document.getElementById('guardian-label');
+    const mobileGroup = document.getElementById('mobile-group');
+    const personnelMobileGroup = document.getElementById('personnel-mobile-group');
+    const genTitle = document.getElementById('gen-title');
+    const genSubtitle = document.getElementById('gen-subtitle');
+    const photoLabel = document.getElementById('photo-label');
+
+    if (typeStudent && typePersonnel) {
+        const toggleFields = (isPersonnel) => {
+            studentLrnGroup.style.display = isPersonnel ? 'none' : 'block';
+            personnelFields.style.display = isPersonnel ? 'block' : 'none';
+            personnelExtraFields.style.display = isPersonnel ? 'block' : 'none';
+            personnelTypeGroup.style.display = isPersonnel ? 'block' : 'none';
+            personnelMobileGroup.style.display = isPersonnel ? 'block' : 'none';
+            mobileGroup.style.display = isPersonnel ? 'none' : 'block';
+            
+            // Update labels
+            guardianLabel.textContent = isPersonnel ? 'Emergency Contact Name' : 'Name of Father/Mother/Guardian';
+            genTitle.textContent = isPersonnel ? 'Personnel ID Generator' : 'ID Generator';
+            genSubtitle.textContent = isPersonnel ? 'Complete the form to generate a Personnel ID.' : 'Complete the form below to generate an ID card.';
+            photoLabel.textContent = isPersonnel ? 'Personnel Photo' : 'Photo';
+
+            // Update requirements
+            document.getElementById('lrn').required = !isPersonnel;
+            document.getElementById('emp-number').required = isPersonnel;
+            document.getElementById('position').required = isPersonnel;
+            
+            // Reset preview
+            ctxFront.clearRect(0, 0, canvasFront.width, canvasFront.height);
+            ctxBack.clearRect(0, 0, canvasBack.width, canvasBack.height);
+            document.getElementById('btn-download-front').disabled = true;
+            document.getElementById('btn-download-back').disabled = true;
+        };
+
+        typeStudent.addEventListener('change', () => toggleFields(false));
+        typePersonnel.addEventListener('change', () => toggleFields(true));
+    }
+
+    // Signature Upload Logic
+    const btnUploadSig = document.getElementById('btn-upload-sig');
+    const sigInput = document.getElementById('sig-input');
+    const sigPreview = document.getElementById('signature-preview');
+    const sigPlaceholder = document.getElementById('signature-placeholder');
+    const btnRemoveSig = document.getElementById('btn-remove-sig');
+    const removeSigBgToggle = document.getElementById('remove-sig-bg-toggle');
+
+    if (btnUploadSig && sigInput) {
+        btnUploadSig.addEventListener('click', () => sigInput.click());
+        
+        sigInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    let result = event.target.result;
+                    
+                    if (removeSigBgToggle.checked) {
+                        result = await removeBackgroundFromImage(result);
+                    }
+                    
+                    sigPreview.src = result;
+                    sigPreview.style.display = 'block';
+                    sigPlaceholder.style.display = 'none';
+                    btnRemoveSig.style.display = 'inline-block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        btnRemoveSig.addEventListener('click', () => {
+            sigInput.value = '';
+            sigPreview.src = '';
+            sigPreview.style.display = 'none';
+            sigPlaceholder.style.display = 'flex';
+            btnRemoveSig.style.display = 'none';
+        });
+    }
+
+    async function removeBackgroundFromImage(dataUrl) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                
+                // Simple color-based background removal (assuming white/light background)
+                // In a real app, we might use the selfie segmentation for this too, 
+                // but for signatures, simple thresholding often works better.
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i], g = data[i+1], b = data[i+2];
+                    // If pixel is very bright (near white), make it transparent
+                    if (r > 200 && g > 200 && b > 200) {
+                        data[i+3] = 0;
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+                resolve(canvas.toDataURL());
+            };
+            img.src = dataUrl;
+        });
+    }
+
     initWebcam();
 
     // Canvas Generation
@@ -3302,23 +3408,37 @@ async function initIDGenerator() {
 
     const ctxFront = canvasFront.getContext('2d');
     const ctxBack = canvasBack.getContext('2d');
-    const imgFront = new Image();
-    const imgBack = new Image();
-    imgFront.src = '../../assets/admin/id-front.webp';
-    imgBack.src = '../../assets/admin/id-back.webp';
+    
+    // Load all templates
+    const templates = {
+        studentFront: new Image(),
+        studentBack: new Image(),
+        personnelRedFront: new Image(),
+        personnelYellowFront: new Image(),
+        personnelBack: new Image()
+    };
+    
+    templates.studentFront.src = '../../assets/admin/id-gen/id-front.webp';
+    templates.studentBack.src = '../../assets/admin/id-gen/id-back.webp';
+    templates.personnelRedFront.src = '../../assets/admin/id-gen/emp-red-id-front.webp';
+    templates.personnelYellowFront.src = '../../assets/admin/id-gen/emp-yellow-id-front.webp';
+    templates.personnelBack.src = '../../assets/admin/id-gen/emp-id-back.webp';
 
     const btnGenerate = document.getElementById('btn-generate');
     if (btnGenerate) {
         btnGenerate.addEventListener('click', async () => {
             const form = document.getElementById('id-form');
             if (!form.checkValidity()) { form.reportValidity(); return; }
-            if (capturedPhoto.style.display === 'none') { alert("Please capture a student photo first."); return; }
+            if (capturedPhoto.style.display === 'none') { 
+                alert(typePersonnel.checked ? "Please capture a personnel photo first." : "Please capture a student photo first."); 
+                return; 
+            }
 
+            const isPersonnel = typePersonnel.checked;
             const firstname = document.getElementById('firstname').value.toUpperCase();
             const miVal = document.getElementById('mi').value.trim();
             const mi = miVal ? (miVal.endsWith('.') ? miVal.toUpperCase() : miVal.toUpperCase() + '.') : "";
             const lastname = document.getElementById('lastname').value.toUpperCase();
-            const lrn = document.getElementById('lrn').value;
             const birthdate = birthdateInput.value;
 
             if (!isValidDate(birthdate)) {
@@ -3329,65 +3449,201 @@ async function initIDGenerator() {
                 return;
             }
 
-            const colorName = "#0ff184", colorLRN = "#a52a2a", colorBirthdate = "#2980b9";
-            const fontIdDetails = "Acme", baseFontSize = 28;
-
-            ctxFront.drawImage(imgFront, 0, 0, 600, 960);
-            const photoX = 8.09, photoY = 312.99, photoW = 272.54 - 8.09, photoH = 646.68 - 312.99;
-            const photoImg = new Image();
-            photoImg.onload = async () => {
-                const borderRadius = 15, borderWidth = 6, borderColor = "#2980b9";
-                ctxFront.save();
-                ctxFront.beginPath(); ctxFront.roundRect(photoX, photoY, photoW, photoH, borderRadius); ctxFront.clip();
-                ctxFront.drawImage(photoImg, photoX, photoY, photoW, photoH);
-                ctxFront.restore();
-                ctxFront.strokeStyle = borderColor; ctxFront.lineWidth = borderWidth;
-                ctxFront.beginPath(); ctxFront.roundRect(photoX, photoY, photoW, photoH, borderRadius); ctxFront.stroke();
-
-                ctxFront.textAlign = "left"; ctxFront.strokeStyle = "black"; ctxFront.lineWidth = 10; ctxFront.lineJoin = "round";
-                const maxWidthFront = 280;
-                ctxFront.fillStyle = colorName;
-                const nameFontSize = drawAutoScaledText(ctxFront, firstname, 280.89, 367.15, maxWidthFront, baseFontSize, fontIdDetails, "bold", true);
-                drawAutoScaledText(ctxFront, mi, 284.03, 401.71, maxWidthFront, nameFontSize, fontIdDetails, "bold", true);
-                drawAutoScaledText(ctxFront, lastname, 285.61, 439.05, maxWidthFront, nameFontSize, fontIdDetails, "bold", true);
-                ctxFront.fillStyle = colorLRN;
-                drawAutoScaledText(ctxFront, lrn, 348.44, 540.73, maxWidthFront, baseFontSize, fontIdDetails, "bold", true);
-                ctxFront.fillStyle = colorBirthdate;
-                drawAutoScaledText(ctxFront, birthdate, 346.08, 633.41, maxWidthFront, baseFontSize, fontIdDetails, "bold", true);
-
-                const qrX = 178.29, qrY = 689.10, qrW = 420.99 - 178.29, qrH = 932.58 - 689.10;
-                const qrData = `NAME: ${firstname} ${mi} ${lastname}\nLRN: ${lrn}`;
-                try {
-                    // Optimized for digital scanning: High error correction + larger base size
-                    const qrUrl = await QRCode.toDataURL(qrData, { 
-                        margin: 1, 
-                        width: 400,
-                        errorCorrectionLevel: 'H' 
-                    });
-                    const qrImg = new Image();
-                    qrImg.onload = () => {
-                        ctxFront.drawImage(qrImg, qrX, qrY, qrW, qrH);
-                        const btnDownloadFront = document.getElementById('btn-download-front');
-                        if (btnDownloadFront) btnDownloadFront.disabled = false;
-                    };
-                    qrImg.src = qrUrl;
-                } catch (err) { console.error("QR Error:", err); }
-            };
-            photoImg.src = capturedPhoto.src;
-
-            ctxBack.drawImage(imgBack, 0, 0, 600, 960);
-            ctxBack.fillStyle = "#000"; ctxBack.textAlign = "left"; 
-            const backFont = "bold 24px Acme";
-            ctxBack.font = backFont;
-            ctxBack.fillText(document.getElementById('guardian').value, 185, 552);
-            const address = addressSelect.value === 'others' ? addressManual.value : addressSelect.value;
-            wrapText(ctxBack, address, 185, 627, 350, 28, backFont);
-            const mobile = document.getElementById('parent-mobile').value || "N/A";
-            ctxBack.font = backFont;
-            ctxBack.fillText(mobile, 185, 719);
-            const btnDownloadBack = document.getElementById('btn-download-back');
-            if (btnDownloadBack) btnDownloadBack.disabled = false;
+            if (isPersonnel) {
+                renderPersonnelID(firstname, mi, lastname, birthdate);
+            } else {
+                renderStudentID(firstname, mi, lastname, birthdate);
+            }
         });
+    }
+
+    async function renderStudentID(firstname, mi, lastname, birthdate) {
+        const lrn = document.getElementById('lrn').value;
+        const colorName = "#0ff184", colorLRN = "#ee4141ff", colorBirthdate = "#2980b9";
+        const fontIdDetails = "Acme", baseFontSize = 28;
+
+        // Set canvas size for student
+        canvasFront.width = 600;
+        canvasFront.height = 960;
+        canvasBack.width = 600;
+        canvasBack.height = 960;
+
+        ctxFront.drawImage(templates.studentFront, 0, 0, 600, 960);
+        const photoX = 8.09, photoY = 312.99, photoW = 272.54 - 8.09, photoH = 646.68 - 312.99;
+        
+        const photoImg = new Image();
+        photoImg.onload = async () => {
+            const borderRadius = 15, borderWidth = 6, borderColor = "#2980b9";
+            ctxFront.save();
+            ctxFront.beginPath(); ctxFront.roundRect(photoX, photoY, photoW, photoH, borderRadius); ctxFront.clip();
+            ctxFront.drawImage(photoImg, photoX, photoY, photoW, photoH);
+            ctxFront.restore();
+            ctxFront.strokeStyle = borderColor; ctxFront.lineWidth = borderWidth;
+            ctxFront.beginPath(); ctxFront.roundRect(photoX, photoY, photoW, photoH, borderRadius); ctxFront.stroke();
+
+            ctxFront.textAlign = "left"; ctxFront.strokeStyle = "black"; ctxFront.lineWidth = 10; ctxFront.lineJoin = "round";
+            const maxWidthFront = 280;
+            ctxFront.fillStyle = colorName;
+            const nameFontSize = drawAutoScaledText(ctxFront, firstname, 280.89, 367.15, maxWidthFront, baseFontSize, fontIdDetails, "bold", true);
+            drawAutoScaledText(ctxFront, mi, 284.03, 401.71, maxWidthFront, nameFontSize, fontIdDetails, "bold", true);
+            drawAutoScaledText(ctxFront, lastname, 285.61, 439.05, maxWidthFront, nameFontSize, fontIdDetails, "bold", true);
+            ctxFront.fillStyle = colorLRN;
+            drawAutoScaledText(ctxFront, lrn, 348.44, 540.73, maxWidthFront, baseFontSize, fontIdDetails, "bold", true);
+            ctxFront.fillStyle = colorBirthdate;
+            drawAutoScaledText(ctxFront, birthdate, 346.08, 633.41, maxWidthFront, baseFontSize, fontIdDetails, "bold", true);
+
+            const qrX = 178.29, qrY = 689.10, qrW = 420.99 - 178.29, qrH = 932.58 - 689.10;
+            const qrData = `NAME: ${firstname} ${mi} ${lastname}\nLRN: ${lrn}`;
+            try {
+                const qrUrl = await QRCode.toDataURL(qrData, { margin: 1, width: 400, errorCorrectionLevel: 'H' });
+                const qrImg = new Image();
+                qrImg.onload = () => {
+                    ctxFront.drawImage(qrImg, qrX, qrY, qrW, qrH);
+                    document.getElementById('btn-download-front').disabled = false;
+                };
+                qrImg.src = qrUrl;
+            } catch (err) { console.error("QR Error:", err); }
+        };
+        photoImg.src = capturedPhoto.src;
+
+        ctxBack.drawImage(templates.studentBack, 0, 0, 600, 960);
+        ctxBack.fillStyle = "#000"; ctxBack.textAlign = "left"; 
+        const backFont = "bold 24px Acme";
+        ctxBack.font = backFont;
+        ctxBack.fillText(document.getElementById('guardian').value, 185, 552);
+        const address = addressSelect.value === 'others' ? addressManual.value : addressSelect.value;
+        wrapText(ctxBack, address, 185, 627, 350, 28, backFont);
+        const mobile = document.getElementById('parent-mobile').value || "N/A";
+        ctxBack.font = backFont;
+        ctxBack.fillText(mobile, 185, 719);
+        document.getElementById('btn-download-back').disabled = false;
+    }
+
+    async function renderPersonnelID(firstname, mi, lastname, birthdate) {
+        const empType = document.getElementById('employment-type').value;
+        const empNumber = document.getElementById('emp-number').value.toUpperCase();
+        const position = document.getElementById('position').value.toUpperCase();
+        const bloodType = document.getElementById('blood-type').value.toUpperCase() || "N/A";
+        const gsis = document.getElementById('gsis').value || "N/A";
+        const pagibig = document.getElementById('pagibig').value || "N/A";
+        const philhealth = document.getElementById('philhealth').value || "N/A";
+        const tin = document.getElementById('tin').value || "N/A";
+        const emergencyName = document.getElementById('guardian').value.toUpperCase();
+        const emergencyMobile = document.getElementById('emergency-mobile').value || "N/A";
+        const address = addressSelect.value === 'others' ? addressManual.value : addressSelect.value;
+
+        const frontTemplate = empType === 'regular' ? templates.personnelRedFront : templates.personnelYellowFront;
+        
+        // Personnel templates are 720x1080 based on the coordinates provided
+        canvasFront.width = frontTemplate.naturalWidth || 720;
+        canvasFront.height = frontTemplate.naturalHeight || 1080;
+        canvasBack.width = templates.personnelBack.naturalWidth || 720;
+        canvasBack.height = templates.personnelBack.naturalHeight || 1080;
+
+        // --- FRONT PORTION ---
+        ctxFront.drawImage(frontTemplate, 0, 0, canvasFront.width, canvasFront.height);
+        
+        // Photo: Upper-left (343, 680) to Lower-right (636, 1014)
+        const photoX = 343, photoY = 680, photoW = 636 - 343, photoH = 1014 - 680;
+        const photoImg = new Image();
+        
+        photoImg.onload = () => {
+            // Scale by width and crop excess height from bottom only
+            const imgRatio = photoImg.width / photoImg.height;
+            const targetRatio = photoW / photoH;
+            
+            let sx, sy, sw, sh;
+            if (imgRatio > targetRatio) {
+                // Image is wider - crop the sides equally
+                sh = photoImg.height;
+                sw = photoImg.height * targetRatio;
+                sx = (photoImg.width - sw) / 2;
+                sy = 0;
+            } else {
+                // Image is taller - scale to fill width, crop excess from BOTTOM only
+                sw = photoImg.width;
+                sh = photoImg.width / targetRatio;
+                sx = 0;
+                sy = 0; // Keep top aligned, crop bottom only
+            }
+
+            ctxFront.drawImage(photoImg, sx, sy, sw, sh, photoX, photoY, photoW, photoH);
+            
+            ctxFront.fillStyle = "white";
+            ctxFront.textAlign = "left";
+            ctxFront.textBaseline = "alphabetic";
+            
+            // Surname - 59px Arial Bold White (X: 33, Y: 383)
+            ctxFront.font = "bold 59px Arial";
+            ctxFront.fillText(lastname, 33, 383);
+            
+            // GIVEN NAME & M.I. - 45px Arial Bold White (X: 33, Y: 436)
+            ctxFront.font = "bold 45px Arial";
+            ctxFront.fillText(`${firstname} ${mi}`, 33, 436);
+            
+            // EMPLOYEE NUMBER - 29px Arial Bold White (X: 278, Y: 665)
+            ctxFront.font = "bold 29px Arial";
+            ctxFront.fillText(empNumber, 278, 665);
+
+            // POSITION - 102px Arial Bold White, read upward (bottom-to-top) (X: 606, Y: 660)
+            ctxFront.save();
+            ctxFront.translate(606, 660);
+            ctxFront.rotate(-Math.PI / 2);
+            ctxFront.font = "bold 102px Arial";
+            ctxFront.fillText(position, 0, 0);
+            ctxFront.restore();
+
+            document.getElementById('btn-download-front').disabled = false;
+        };
+        photoImg.src = capturedPhoto.src;
+
+        // --- BACK PORTION ---
+        ctxBack.drawImage(templates.personnelBack, 0, 0, canvasBack.width, canvasBack.height);
+        ctxBack.fillStyle = "black";
+        ctxBack.textAlign = "left";
+        ctxBack.textBaseline = "alphabetic";
+
+        // Emergency Contact - Name: X: 318, Y: 414; Contact Number: X: 318, Y: 438
+        ctxBack.textAlign = "center";
+        ctxBack.font = "bold 28px Arial";
+        ctxBack.fillText(emergencyName, 318, 420);
+        ctxBack.font = "28px Arial";
+        ctxBack.fillText(emergencyMobile, 318, 444);
+        
+        // Reset alignment for other fields
+        ctxBack.textAlign = "left";
+        
+        // Address - X: 237, Y: 530
+        wrapText(ctxBack, address, 237, 541, 420, 25, "20px Arial");
+        
+        // Other fields (X: 237)
+        ctxBack.fillText(birthdate, 237, 596);
+        ctxBack.fillText(bloodType, 237, 645);
+        ctxBack.fillText(gsis, 237, 695);
+        ctxBack.fillText(pagibig, 237, 745);
+        ctxBack.fillText(philhealth, 237, 796);
+        ctxBack.fillText(tin, 237, 849);
+
+        // ID Owner Name (GivenName M.I. Surname) - X: 320, Y: 955
+        ctxBack.textAlign = "center";
+        ctxBack.font = "bold 30px Arial";
+        const fullName = `${firstname} ${mi} ${lastname}`;
+        ctxBack.fillText(fullName, 320, 955);
+
+        // Signature - X: 320, Y: 912 (mapped on top of ID Owner)
+        if (sigPreview.style.display !== 'none') {
+            const sigImg = new Image();
+            sigImg.onload = () => {
+                const sigW = 220; // Appropriate width for signature
+                const sigH = (sigImg.height / sigImg.width) * sigW;
+                // Center signature horizontally at X: 320, place bottom at Y: 980
+                ctxBack.drawImage(sigImg, 320 - (sigW / 2), 980 - sigH, sigW, sigH);
+                document.getElementById('btn-download-back').disabled = false;
+            };
+            sigImg.src = sigPreview.src;
+        } else {
+            document.getElementById('btn-download-back').disabled = false;
+        }
     }
 
     function drawAutoScaledText(ctx, text, x, y, maxWidth, baseSize, font, weight = "normal", stroke = false) {
