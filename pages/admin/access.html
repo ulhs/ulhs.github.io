@@ -178,14 +178,19 @@
         </div>
 
         <!-- System Credit Container -->
-        <div class="mt-8 flex justify-center">
+        <div class="mt-8 flex flex-col items-center gap-4">
             <div class="bg-white/50 px-6 py-3 rounded-full border border-gray-200 shadow-sm backdrop-blur-sm">
                 <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">&copy; 2026 SirChris. <strong class="text-gray-500 not-italic ml-1">Bong sàlamàt!</strong></p>
+            </div>
+            <div class="visitor-counter text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <i class="fa-solid fa-eye" style="color: var(--accent-gold);"></i>
+                <span>Visitors: <span id="visitor-count">...</span></span>
             </div>
         </div>
     </main>
 
     <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/visitor-counter.js"></script>
     <script>
         // Access Management Logic
         document.addEventListener('DOMContentLoaded', () => {

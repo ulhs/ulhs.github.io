@@ -606,6 +606,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
             }
         }
+        
+        // Always initialize visitor counter regardless of page type
+        initVisitorCounter();
+    }
+
+    async function initVisitorCounter() {
+        const counterEl = document.getElementById('visitor-count');
+        if (!counterEl) return;
+
+        try {
+            // Using counterapi.dev - a free, reliable visitor counter API
+            const response = await fetch('https://api.counterapi.dev/v1/ulhs-website/visits/up');
+            const data = await response.json();
+            
+            if (data && data.count) {
+                counterEl.textContent = data.count.toLocaleString();
+            } else {
+                counterEl.textContent = '---';
+            }
+        } catch (err) {
+            console.warn("Visitor counter failed:", err);
+            counterEl.textContent = '---';
+        }
     }
 
     async function loadSharedComponents(path, root) {
@@ -3032,6 +3055,31 @@ async function initIDGenerator() {
     const removeBgToggle = document.getElementById('remove-bg-toggle');
     const processingOverlay = document.getElementById('processing-overlay');
 
+    // Signature Elements
+    const btnUploadSig = document.getElementById('btn-upload-sig');
+    const sigInput = document.getElementById('sig-input');
+    const sigPreview = document.getElementById('signature-preview');
+    const sigPlaceholder = document.getElementById('signature-placeholder');
+    const btnRemoveSig = document.getElementById('btn-remove-sig');
+    const btnEditSig = document.getElementById('btn-edit-sig');
+    const removeSigBgToggle = document.getElementById('remove-sig-bg-toggle');
+    let originalSignatureData = null;
+
+    async function processSignature() {
+        if (!sigPreview || !sigPlaceholder || !btnRemoveSig) return;
+        let result = originalSignatureData;
+        
+        if (removeSigBgToggle && removeSigBgToggle.checked) {
+            result = await removeBackgroundFromImage(result);
+        }
+        
+        sigPreview.src = result;
+        sigPreview.style.display = 'block';
+        sigPlaceholder.style.display = 'none';
+        btnRemoveSig.style.display = 'inline-block';
+        if (btnEditSig) btnEditSig.style.display = 'inline-block';
+    }
+
     // Image Editor Elements
     const editorModal = document.getElementById('editor-modal');
     const editorImage = document.getElementById('editor-image');
@@ -3042,6 +3090,7 @@ async function initIDGenerator() {
     const btnCancelEdit = document.getElementById('btn-cancel-edit');
     const btnApplyEdit = document.getElementById('btn-apply-edit');
     let cropper;
+    let editorMode = 'photo'; // 'photo' or 'signature'
 
     // Initialize Selfie Segmentation
     let selfieSegmentation;
@@ -3109,7 +3158,7 @@ async function initIDGenerator() {
             tempCanvas.height = video.videoHeight;
             const tempCtx = tempCanvas.getContext('2d');
             tempCtx.drawImage(video, 0, 0);
-            openEditor(tempCanvas.toDataURL('image/webp'));
+            openEditor(tempCanvas.toDataURL('image/webp'), 'photo');
         });
     }
 
@@ -3122,18 +3171,19 @@ async function initIDGenerator() {
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = (event) => openEditor(event.target.result);
+            reader.onload = (event) => openEditor(event.target.result, 'photo');
             reader.readAsDataURL(file);
         });
     }
 
-    function openEditor(imageSrc) {
+    function openEditor(imageSrc, mode = 'photo') {
         if (!editorImage || !editorModal) return;
+        editorMode = mode;
         editorImage.src = imageSrc;
         editorModal.style.display = 'block';
         if (cropper) cropper.destroy();
-        cropper = new Cropper(editorImage, {
-            aspectRatio: 3/4,
+        
+        const cropperConfig = {
             viewMode: 1,
             dragMode: 'move',
             autoCropArea: 1,
@@ -3144,7 +3194,15 @@ async function initIDGenerator() {
             cropBoxMovable: true,
             cropBoxResizable: true,
             toggleDragModeOnDblclick: false,
-        });
+        };
+
+        if (mode === 'photo') {
+            cropperConfig.aspectRatio = 3/4;
+        } else {
+            cropperConfig.aspectRatio = NaN; // Free aspect ratio for signature
+        }
+
+        cropper = new Cropper(editorImage, cropperConfig);
         if (rotateArbitrary) rotateArbitrary.value = 0;
         if (rotateVal) rotateVal.textContent = 0;
     }
@@ -3169,15 +3227,26 @@ async function initIDGenerator() {
 
     if (btnApplyEdit) {
         btnApplyEdit.addEventListener('click', async () => {
-            const canvas = cropper.getCroppedCanvas({
-                width: 600,
-                height: 800,
+            const cropperOptions = {
                 imageSmoothingEnabled: true,
                 imageSmoothingQuality: 'high',
-            });
+            };
+
+            if (editorMode === 'photo') {
+                cropperOptions.width = 600;
+                cropperOptions.height = 800;
+            }
+
+            const canvas = cropper.getCroppedCanvas(cropperOptions);
             editorModal.style.display = 'none';
             if (cropper) cropper.destroy();
-            await processImage(canvas);
+            
+            if (editorMode === 'photo') {
+                await processImage(canvas);
+            } else {
+                originalSignatureData = canvas.toDataURL('image/png');
+                await processSignature();
+            }
         });
     }
 
@@ -3329,13 +3398,6 @@ async function initIDGenerator() {
     }
 
     // Signature Upload Logic
-    const btnUploadSig = document.getElementById('btn-upload-sig');
-    const sigInput = document.getElementById('sig-input');
-    const sigPreview = document.getElementById('signature-preview');
-    const sigPlaceholder = document.getElementById('signature-placeholder');
-    const btnRemoveSig = document.getElementById('btn-remove-sig');
-    const removeSigBgToggle = document.getElementById('remove-sig-bg-toggle');
-
     if (btnUploadSig && sigInput) {
         btnUploadSig.addEventListener('click', () => sigInput.click());
         
@@ -3344,27 +3406,242 @@ async function initIDGenerator() {
             if (file) {
                 const reader = new FileReader();
                 reader.onload = async (event) => {
-                    let result = event.target.result;
-                    
-                    if (removeSigBgToggle.checked) {
-                        result = await removeBackgroundFromImage(result);
-                    }
-                    
-                    sigPreview.src = result;
-                    sigPreview.style.display = 'block';
-                    sigPlaceholder.style.display = 'none';
-                    btnRemoveSig.style.display = 'inline-block';
+                    openEditor(event.target.result, 'signature');
                 };
                 reader.readAsDataURL(file);
             }
         });
 
+        if (removeSigBgToggle) {
+            removeSigBgToggle.addEventListener('change', async () => {
+                if (originalSignatureData) {
+                    await processSignature();
+                }
+            });
+        }
+
+        if (btnEditSig) {
+            btnEditSig.addEventListener('click', () => {
+                if (originalSignatureData) {
+                    openEditor(originalSignatureData, 'signature');
+                }
+            });
+        }
+
         btnRemoveSig.addEventListener('click', () => {
             sigInput.value = '';
             sigPreview.src = '';
+            originalSignatureData = null;
             sigPreview.style.display = 'none';
             sigPlaceholder.style.display = 'flex';
             btnRemoveSig.style.display = 'none';
+            if (btnEditSig) btnEditSig.style.display = 'none';
+        });
+    }
+
+    // Signature Draw Logic
+    const btnDrawSig = document.getElementById('btn-draw-sig');
+    const sigDrawModal = document.getElementById('sig-draw-modal');
+    const sigDrawCanvas = document.getElementById('sig-draw-canvas');
+    const sigModalClose = document.getElementById('sig-modal-close');
+    const sigBtnClear = document.getElementById('sig-btn-clear');
+    const sigBtnConfirm = document.getElementById('sig-btn-confirm');
+
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    let ctxDraw = null;
+
+    if (btnDrawSig && sigDrawModal && sigDrawCanvas) {
+        ctxDraw = sigDrawCanvas.getContext('2d');
+
+        btnDrawSig.addEventListener('click', () => {
+            sigDrawModal.style.display = 'block';
+            resizeDrawCanvas();
+        });
+
+        sigModalClose.addEventListener('click', () => {
+            sigDrawModal.style.display = 'none';
+        });
+
+        sigDrawModal.addEventListener('click', (e) => {
+            if (e.target === sigDrawModal) {
+                sigDrawModal.style.display = 'none';
+            }
+        });
+
+        sigBtnClear.addEventListener('click', () => {
+            ctxDraw.clearRect(0, 0, sigDrawCanvas.width, sigDrawCanvas.height);
+        });
+
+        sigBtnConfirm.addEventListener('click', async () => {
+            const dataUrl = sigDrawCanvas.toDataURL('image/png');
+            sigDrawModal.style.display = 'none';
+            ctxDraw.clearRect(0, 0, sigDrawCanvas.width, sigDrawCanvas.height);
+            openEditor(dataUrl, 'signature');
+        });
+
+        function resizeDrawCanvas() {
+            const container = sigDrawCanvas.parentElement;
+            sigDrawCanvas.width = container.clientWidth;
+            sigDrawCanvas.height = container.clientHeight;
+            ctxDraw.strokeStyle = '#000';
+            ctxDraw.lineWidth = 2;
+            ctxDraw.lineCap = 'round';
+            ctxDraw.lineJoin = 'round';
+        }
+
+        function getDrawPos(e) {
+            const rect = sigDrawCanvas.getBoundingClientRect();
+            const scaleX = sigDrawCanvas.width / rect.width;
+            const scaleY = sigDrawCanvas.height / rect.height;
+            if (e.touches) {
+                return {
+                    x: (e.touches[0].clientX - rect.left) * scaleX,
+                    y: (e.touches[0].clientY - rect.top) * scaleY
+                };
+            }
+            return {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
+            };
+        }
+
+        sigDrawCanvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            const pos = getDrawPos(e);
+            lastX = pos.x;
+            lastY = pos.y;
+        });
+
+        sigDrawCanvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            const pos = getDrawPos(e);
+            ctxDraw.beginPath();
+            ctxDraw.moveTo(lastX, lastY);
+            ctxDraw.lineTo(pos.x, pos.y);
+            ctxDraw.stroke();
+            lastX = pos.x;
+            lastY = pos.y;
+        });
+
+        sigDrawCanvas.addEventListener('mouseup', () => isDrawing = false);
+        sigDrawCanvas.addEventListener('mouseout', () => isDrawing = false);
+
+        sigDrawCanvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isDrawing = true;
+            const pos = getDrawPos(e);
+            lastX = pos.x;
+            lastY = pos.y;
+        });
+
+        sigDrawCanvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!isDrawing) return;
+            const pos = getDrawPos(e);
+            ctxDraw.beginPath();
+            ctxDraw.moveTo(lastX, lastY);
+            ctxDraw.lineTo(pos.x, pos.y);
+            ctxDraw.stroke();
+            lastX = pos.x;
+            lastY = pos.y;
+        });
+
+        sigDrawCanvas.addEventListener('touchend', () => isDrawing = false);
+    }
+
+    // Signature Capture via Webcam
+    const btnCaptureSig = document.getElementById('btn-capture-sig');
+    const sigCaptureModal = document.getElementById('sig-capture-modal');
+    const sigCaptureClose = document.getElementById('sig-capture-close');
+    const sigWebcamVideo = document.getElementById('sig-webcam-video');
+    const sigWebcamCapture = document.getElementById('sig-webcam-capture');
+    const sigBtnCapture = document.getElementById('sig-btn-capture');
+    const sigBtnRetake = document.getElementById('sig-btn-retake');
+    const sigBtnUse = document.getElementById('sig-btn-use');
+
+    let sigStream = null;
+    let sigCapturedData = null;
+
+    if (btnCaptureSig && sigCaptureModal) {
+        btnCaptureSig.addEventListener('click', async () => {
+            sigCaptureModal.style.display = 'block';
+            sigCapturedData = null;
+            sigWebcamVideo.style.display = 'block';
+            sigWebcamCapture.style.display = 'none';
+            sigBtnCapture.style.display = 'inline-block';
+            sigBtnRetake.style.display = 'none';
+            sigBtnUse.style.display = 'none';
+            try {
+                sigStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                sigWebcamVideo.srcObject = sigStream;
+            } catch (err) {
+                console.error('Error accessing webcam for signature:', err);
+                alert('Could not access webcam. Please check permissions.');
+                sigCaptureModal.style.display = 'none';
+            }
+        });
+
+        sigCaptureClose.addEventListener('click', () => {
+            sigCaptureModal.style.display = 'none';
+            if (sigStream) {
+                sigStream.getTracks().forEach(track => track.stop());
+                sigStream = null;
+            }
+        });
+
+        sigCaptureModal.addEventListener('click', (e) => {
+            if (e.target === sigCaptureModal) {
+                sigCaptureModal.style.display = 'none';
+                if (sigStream) {
+                    sigStream.getTracks().forEach(track => track.stop());
+                    sigStream = null;
+                }
+            }
+        });
+
+        sigBtnCapture.addEventListener('click', () => {
+            const ctxCap = sigWebcamCapture.getContext('2d');
+            sigWebcamCapture.width = sigWebcamVideo.videoWidth;
+            sigWebcamCapture.height = sigWebcamVideo.videoHeight;
+            ctxCap.drawImage(sigWebcamVideo, 0, 0);
+            sigCapturedData = sigWebcamCapture.toDataURL('image/png');
+            sigWebcamVideo.style.display = 'none';
+            sigWebcamCapture.style.display = 'block';
+            sigBtnCapture.style.display = 'none';
+            sigBtnRetake.style.display = 'inline-block';
+            sigBtnUse.style.display = 'inline-block';
+            if (sigStream) {
+                sigStream.getTracks().forEach(track => track.stop());
+                sigStream = null;
+            }
+        });
+
+        sigBtnRetake.addEventListener('click', async () => {
+            sigCapturedData = null;
+            sigWebcamCapture.style.display = 'none';
+            sigWebcamVideo.style.display = 'block';
+            sigBtnCapture.style.display = 'inline-block';
+            sigBtnRetake.style.display = 'none';
+            sigBtnUse.style.display = 'none';
+            try {
+                sigStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                sigWebcamVideo.srcObject = sigStream;
+            } catch (err) {
+                console.error('Error accessing webcam:', err);
+            }
+        });
+
+        sigBtnUse.addEventListener('click', async () => {
+            if (sigCapturedData) {
+                sigCaptureModal.style.display = 'none';
+                if (sigStream) {
+                    sigStream.getTracks().forEach(track => track.stop());
+                    sigStream = null;
+                }
+                openEditor(sigCapturedData, 'signature');
+            }
         });
     }
 
@@ -3381,13 +3658,14 @@ async function initIDGenerator() {
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const data = imageData.data;
                 
-                // Simple color-based background removal (assuming white/light background)
-                // In a real app, we might use the selfie segmentation for this too, 
-                // but for signatures, simple thresholding often works better.
+                // Enhanced color-based background removal
+                // We use a lower threshold to be more aggressive with off-white backgrounds
+                // common in JPG photos of signatures.
                 for (let i = 0; i < data.length; i += 4) {
                     const r = data[i], g = data[i+1], b = data[i+2];
-                    // If pixel is very bright (near white), make it transparent
-                    if (r > 200 && g > 200 && b > 200) {
+                    // If pixel is relatively bright (near white/light gray), make it transparent
+                    // Using 160 as threshold to catch grayish backgrounds in photos
+                    if (r > 160 && g > 160 && b > 160) {
                         data[i+3] = 0;
                     }
                 }

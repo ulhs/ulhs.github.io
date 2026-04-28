@@ -3687,6 +3687,99 @@ body.dark-mode .btn-small:hover {
 
 /* ==================== CALENDAR COMPARISON INFOGRAPHIC STYLES ==================== */
 
+/* Signature Draw Modal */
+.sig-modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.85);
+    overflow: auto;
+}
+.sig-modal-content {
+    background-color: var(--white);
+    margin: 5% auto;
+    padding: 25px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    border: 3px solid var(--accent-gold);
+}
+.sig-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--soft-abaca);
+}
+.sig-modal-header h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--madder-red);
+    margin: 0;
+}
+.sig-modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: var(--text-muted);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    transition: color 0.3s;
+}
+.sig-modal-close:hover {
+    color: var(--madder-red);
+}
+.sig-canvas-container {
+    width: 100%;
+    height: 200px;
+    background: var(--white);
+    border: 2px solid var(--accent-gold);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+#sig-draw-canvas {
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+    touch-action: none;
+}
+.sig-modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+.sig-capture-container {
+    width: 100%;
+    height: 250px;
+    background: #222;
+    border: 2px solid var(--accent-gold);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    position: relative;
+}
+#sig-webcam-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+#sig-webcam-capture {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+
 .calendar-comparison-wrapper {
     margin: 3rem 0;
     padding: 2rem;
@@ -4150,5 +4243,41 @@ body.dark-mode .calendar-container iframe {
 
 body.dark-mode .calendar-footer {
     color: var(--text-gray-dark);
+}
+
+/* --- VISITOR COUNTER STYLES --- */
+.visitor-counter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-gray);
+}
+
+.footer-bottom .visitor-counter {
+    margin-top: 15px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.visitor-counter i {
+    color: var(--accent-gold);
+    font-size: 0.9rem;
+}
+
+#visitor-count {
+    color: var(--madder-red);
+    font-weight: 700;
+}
+
+body.dark-mode .visitor-counter {
+    color: var(--text-gray-dark);
+}
+
+body.dark-mode #visitor-count {
+    color: var(--bead-yellow);
 }
 

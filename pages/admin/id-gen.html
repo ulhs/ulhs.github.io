@@ -283,11 +283,14 @@
                             <div class="btn-group">
                                 <button type="button" id="btn-upload-sig" class="btn btn-small btn-secondary">Upload Signature</button>
                                 <input type="file" id="sig-input" accept="image/*" style="display:none">
+                                <button type="button" id="btn-draw-sig" class="btn btn-small btn-secondary">Draw Signature</button>
+                                <button type="button" id="btn-capture-sig" class="btn btn-small btn-secondary">Capture via Webcam</button>
+                                <button type="button" id="btn-edit-sig" class="btn btn-small btn-secondary" style="display:none">Edit</button>
                                 <button type="button" id="btn-remove-sig" class="btn btn-small btn-secondary" style="display:none">Remove</button>
                             </div>
                             <div class="form-group bg-remove-toggle">
                                 <label class="checkbox-container">
-                                    <input type="checkbox" id="remove-sig-bg-toggle">
+                                    <input type="checkbox" id="remove-sig-bg-toggle" checked>
                                     <span class="checkmark"></span>
                                     Remove Signature Background
                                 </label>
@@ -382,14 +385,54 @@
         </div>
 
         <!-- System Credit Container -->
-        <div style="margin-top: 25px; display: flex; justify-content: center;">
+        <div style="margin-top: 25px; display: flex; flex-direction: column; align-items: center; gap: 15px;">
             <div style="background: var(--soft-abaca); border: 1px solid var(--accent-gold); padding: 10px 25px; border-radius: 50px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
                 <p style="font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700; color: var(--accent-gold); text-transform: uppercase; letter-spacing: 2px; font-style: italic; margin: 0;">
                     &copy; 2026 SirChris. <span style="font-style: normal; color: var(--madder-red); margin-left: 5px;">Bong sàlamàt!</span>
                 </p>
             </div>
+            <div class="visitor-counter" style="font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700; color: var(--text-gray); text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-eye" style="color: var(--accent-gold);"></i>
+                <span>Visitors: <span id="visitor-count">...</span></span>
+            </div>
         </div>
     </footer>
+
+    <!-- Signature Draw Modal -->
+    <div id="sig-draw-modal" class="sig-modal" style="display:none;">
+        <div class="sig-modal-content">
+            <div class="sig-modal-header">
+                <h3>Draw Your Signature</h3>
+                <button type="button" id="sig-modal-close" class="sig-modal-close">&times;</button>
+            </div>
+            <div class="sig-canvas-container">
+                <canvas id="sig-draw-canvas"></canvas>
+            </div>
+            <div class="sig-modal-actions">
+                <button type="button" id="sig-btn-clear" class="btn btn-small btn-secondary">Clear</button>
+                <button type="button" id="sig-btn-confirm" class="btn btn-small">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signature Capture Modal (Webcam) -->
+    <div id="sig-capture-modal" class="sig-modal" style="display:none;">
+        <div class="sig-modal-content">
+            <div class="sig-modal-header">
+                <h3>Capture Signature via Webcam</h3>
+                <button type="button" id="sig-capture-close" class="sig-modal-close">&times;</button>
+            </div>
+            <div class="sig-capture-container">
+                <video id="sig-webcam-video" autoplay playsinline></video>
+                <canvas id="sig-webcam-capture" style="display:none;"></canvas>
+            </div>
+            <div class="sig-modal-actions">
+                <button type="button" id="sig-btn-capture" class="btn btn-small">Capture</button>
+                <button type="button" id="sig-btn-retake" class="btn btn-small btn-secondary" style="display:none;">Retake</button>
+                <button type="button" id="sig-btn-use" class="btn btn-small" style="display:none;">Use Photo</button>
+            </div>
+        </div>
+    </div>
 
     <script src="../../assets/js/main.js"></script>
 </body>

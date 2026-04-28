@@ -444,13 +444,18 @@
         </div>
 
         <!-- System Credit Container -->
-        <div class="mt-6 flex justify-center">
+        <div class="mt-6 flex flex-col items-center gap-4">
             <div class="bg-white/50 px-6 py-3 rounded-full border border-blue-100/50 shadow-sm backdrop-blur-sm">
                 <p class="text-[10px] font-black text-blue-700 uppercase tracking-widest italic">&copy; 2026 SirChris. <strong class="text-blue-700 not-italic ml-1">Bong sàlamàt!</strong></p>
+            </div>
+            <div class="visitor-counter text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                <svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path></svg>
+                <span>Visitors: <span id="visitor-count">...</span></span>
             </div>
         </div>
     </footer>
 
     <script src="../../assets/admin/attendance/js/script.js"></script>
+    <script src="../../assets/js/visitor-counter.js"></script>
 </body>
 </html>
