@@ -75,13 +75,16 @@
                                 </li>`;
                         }
                         
-                        html += `
-                            <li class="list" data-page="attendance.html">
-                                <a href="attendance.html">
-                                    <span class="icon"><i class="fa-solid fa-clipboard-user"></i></span>
-                                    <span class="text">ATTENDANCE</span>
-                                </a>
-                            </li>`;
+                        // Attendance (Admin or Faculty with access)
+                        if (role === 'admin' || access.attendance) {
+                            html += `
+                                <li class="list" data-page="attendance.html">
+                                    <a href="attendance.html">
+                                        <span class="icon"><i class="fa-solid fa-clipboard-user"></i></span>
+                                        <span class="text">ATTENDANCE</span>
+                                    </a>
+                                </li>`;
+                        }
                         
                         if (role === 'admin' || role === 'school_head') {
                             html += `
