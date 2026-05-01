@@ -11,20 +11,37 @@
     <script src="../../assets/lib/tailwind.min.js"></script>
     <link rel="stylesheet" href="../../assets/css/typography.css">
     <link rel="stylesheet" href="../../assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
     <script src="../../assets/js/admin-nav.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
     <script>
-        const userAccessStr = sessionStorage.getItem('userAccess');
-        const userAccess = userAccessStr ? JSON.parse(userAccessStr) : null;
-        const userRole = sessionStorage.getItem('userRole');
+        // Security check: Real-time Cloud Permission Check
+        async function checkDashboardAccess() {
+            if (!window.supabaseClient) {
+                setTimeout(checkDashboardAccess, 100);
+                return;
+            }
 
-        if (sessionStorage.getItem('adminLoggedIn') !== 'true' || !userAccess) {
-            const lastRole = localStorage.getItem('lastUserRole');
-            window.location.href = lastRole === 'admin' ? 'admin.html' : 'faculty.html';
-        } else if (userRole !== 'admin' && userRole !== 'school_head') {
-            window.location.href = userRole === 'teacher' ? 'attendance.html' : 'faculty.html';
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = './login.html';
+                return;
+            }
+
+            const { data: profile } = await window.supabaseClient
+                .from('profiles')
+                .select('can_view_dashboard, role')
+                .eq('id', session.user.id)
+                .single();
+
+            if (!profile || (profile.role !== 'admin' && profile.role !== 'school_head' && !profile.can_view_dashboard)) {
+                alert("ACCESS DENIED: You do not have permission to view the Dashboard.");
+                window.location.href = profile?.role === 'teacher' ? './attendance.html' : './login.html';
+            }
         }
+        checkDashboardAccess();
     </script>
 
     <header>
@@ -66,6 +83,9 @@
                                         <span class="text">ACCESS</span>
                                     </a>
                                 </li>`;
+                        }
+                        
+                        if (role === 'admin' || access.idGen) {
                             html += `
                                 <li class="list" data-page="id-gen.html">
                                     <a href="id-gen.html">
@@ -86,7 +106,7 @@
                                 </li>`;
                         }
                         
-                        if (role === 'admin' || role === 'school_head') {
+                        if (role === 'admin' || role === 'school_head' || access.stats) {
                             html += `
                                 <li class="list" data-page="admin-dashboard.html">
                                     <a href="admin-dashboard.html">
@@ -96,10 +116,10 @@
                                 </li>`;
                         }
                         
-                        const logoutUrl = role === 'admin' ? 'admin.html' : 'faculty.html';
+                        // Logout
                         html += `
                             <li class="list">
-                                <a href="${logoutUrl}" onclick="sessionStorage.clear()">
+                                <a href="./login.html" onclick="sessionStorage.clear()">
                                     <span class="icon"><i class="fa-solid fa-right-from-bracket"></i></span>
                                     <span class="text">LOGOUT</span>
                                 </a>
@@ -125,14 +145,18 @@
                         </h2>
 
                         <div class="space-y-4">
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-3 gap-4">
                                 <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                    <p class="text-xs font-bold text-blue-600 uppercase">Campus Population</p>
+                                    <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Population</p>
                                     <p id="total-count" class="text-2xl font-black text-blue-800">0</p>
                                 </div>
                                 <div class="bg-green-50 p-4 rounded-xl border border-green-100">
-                                    <p class="text-xs font-bold text-green-600 uppercase">Campus Entries</p>
+                                    <p class="text-[10px] font-bold text-green-600 uppercase tracking-widest">Today</p>
                                     <p id="present-count" class="text-2xl font-black text-green-800">0</p>
+                                </div>
+                                <div class="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                                    <p class="text-[10px] font-bold text-purple-600 uppercase tracking-widest">Lifetime</p>
+                                    <p id="lifetime-count" class="text-2xl font-black text-purple-800">0</p>
                                 </div>
                             </div>
 
@@ -226,84 +250,131 @@
     </footer>
 
     <script>
-        function updateDashboardStats() {
-            const scannedToday = JSON.parse(sessionStorage.getItem('scannedToday') || '[]');
-            const presentCount = scannedToday.length;
-            const totalCount = parseInt(sessionStorage.getItem('totalStudentCount') || '0', 10);
-            
-            const totalEl = document.getElementById('total-count');
-            const presentEl = document.getElementById('present-count');
-            
-            if (totalEl) totalEl.textContent = totalCount;
-            if (presentEl) presentEl.textContent = presentCount;
-        }
+        let dashboardData = {
+            totalStudents: 0,
+            presentToday: [],
+            lifetimeLogs: 0,
+            lastScanned: null
+        };
 
-        function updateLastScannedCard() {
-            const lastStudent = JSON.parse(sessionStorage.getItem('lastStudent') || 'null');
-            const lastScannedCard = document.getElementById('last-scanned-card');
-            const lastPhoto = document.getElementById('last-student-photo');
-            const lastPhotoPlaceholder = document.getElementById('last-photo-placeholder');
-            const lastStudentName = document.getElementById('last-student-name');
-            const sectionName = document.getElementById('section-name');
-            const lastScanTime = document.getElementById('last-scan-time');
-
-            if (lastStudent) {
-                if (lastStudentName) lastStudentName.textContent = lastStudent.name || 'Unknown';
-                if (sectionName) sectionName.textContent = lastStudent.section || 'N/A';
-                if (lastScanTime) lastScanTime.textContent = lastStudent.time || '--:--:--';
-            }
-        }
-
-        function updateGateLogTable() {
-            const scannedToday = JSON.parse(sessionStorage.getItem('scannedToday') || '[]');
-            const tableBody = document.getElementById('scan-logs-table');
-            const logCount = document.getElementById('log-count');
-            const emptyMsg = document.getElementById('empty-log-msg');
-
-            if (!tableBody) return;
-
-            if (scannedToday.length === 0) {
-                tableBody.innerHTML = '';
-                if (emptyMsg) emptyMsg.style.display = 'block';
-                if (logCount) logCount.textContent = '0 STUDENTS';
+        async function initDashboard() {
+            if (!window.supabaseClient) {
+                setTimeout(initDashboard, 100);
                 return;
             }
 
-            if (emptyMsg) emptyMsg.style.display = 'none';
-            if (logCount) logCount.textContent = `${scannedToday.length} STUDENT${scannedToday.length !== 1 ? 'S' : ''}`;
+            try {
+                // 1. Fetch Total Students
+                const { count, error: countError } = await window.supabaseClient
+                    .from('students')
+                    .select('*', { count: 'exact', head: true });
+                
+                if (!countError) dashboardData.totalStudents = count;
 
-            tableBody.innerHTML = scannedToday.map(entry => `
-                <tr>
-                    <td class="px-4 py-3">
-                        <p class="font-bold text-gray-900">${entry.lrn || 'N/A'}</p>
-                        <p class="text-[10px] text-gray-400 uppercase">${entry.section || 'N/A'}</p>
-                    </td>
-                    <td class="px-4 py-3">
-                        <p class="font-semibold text-gray-800">${entry.name || 'Unknown'}</p>
-                    </td>
-                    <td class="px-4 py-3 text-right">
-                        <span class="text-xs font-bold text-gray-500">${entry.time || '--:--:--'}</span>
-                    </td>
-                </tr>
-            `).join('');
-        }
+                // 2. Fetch Lifetime Logs Count
+                const { count: lifeCount } = await window.supabaseClient
+                    .from('attendance_logs')
+                    .select('*', { count: 'exact', head: true });
+                dashboardData.lifetimeLogs = lifeCount || 0;
 
-        function refreshDashboard() {
-            updateDashboardStats();
-            updateLastScannedCard();
-            updateGateLogTable();
-        }
+                // 3. Fetch Today's Logs
+                const now = new Date();
+                const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+                
+                console.log("Fetching logs since:", startOfToday);
 
-        document.addEventListener('DOMContentLoaded', () => {
-            refreshDashboard();
-            setInterval(refreshDashboard, 2000);
-        });
+                const { data: logs, error: logsError } = await window.supabaseClient
+                    .from('attendance_logs')
+                    .select(`
+                        *,
+                        students (full_name, section)
+                    `)
+                    .gte('scanned_at', startOfToday)
+                    .order('scanned_at', { ascending: false });
 
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'scannedToday' || e.key === 'lastStudent' || e.key === 'totalStudentCount') {
-                refreshDashboard();
+                if (logsError) {
+                    console.error("Logs Fetch Error:", logsError.message);
+                }
+
+                if (logs) {
+                    console.log(`Found ${logs.length} logs for today.`);
+                    dashboardData.presentToday = logs;
+                    if (logs.length > 0) dashboardData.lastScanned = logs[0];
+                }
+
+                refreshUI();
+
+                // 3. Set up Real-time Subscription
+                window.supabaseClient
+                    .channel('any')
+                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'attendance_logs' }, async (payload) => {
+                        console.log('New scan detected:', payload.new);
+                        // Fetch the full record with student details
+                        const { data: newLog } = await window.supabaseClient
+                            .from('attendance_logs')
+                            .select(`
+                                *,
+                                students (full_name, section)
+                            `)
+                            .eq('id', payload.new.id)
+                            .single();
+                        
+                        if (newLog) {
+                            dashboardData.presentToday.unshift(newLog);
+                            dashboardData.lastScanned = newLog;
+                            refreshUI();
+                        }
+                    })
+                    .subscribe();
+
+            } catch (err) {
+                console.error("Dashboard Init Error:", err);
             }
-        });
+        }
+
+        function refreshUI() {
+            // Update Stats
+            document.getElementById('total-count').textContent = dashboardData.totalStudents;
+            document.getElementById('present-count').textContent = dashboardData.presentToday.length;
+            document.getElementById('lifetime-count').textContent = dashboardData.lifetimeLogs;
+            document.getElementById('log-count').textContent = `${dashboardData.presentToday.length} STUDENT${dashboardData.presentToday.length !== 1 ? 'S' : ''}`;
+
+            // Update Last Scanned Card
+            if (dashboardData.lastScanned) {
+                const student = dashboardData.lastScanned.students;
+                document.getElementById('last-student-name').textContent = student?.full_name || 'Unknown';
+                document.getElementById('section-name').textContent = student?.section || 'N/A';
+                const time = new Date(dashboardData.lastScanned.scanned_at).toLocaleTimeString();
+                document.getElementById('last-scan-time').textContent = time;
+            }
+
+            // Update Table
+            const tableBody = document.getElementById('scan-logs-table');
+            const emptyMsg = document.getElementById('empty-log-msg');
+
+            if (dashboardData.presentToday.length === 0) {
+                tableBody.innerHTML = '';
+                emptyMsg.style.display = 'block';
+            } else {
+                emptyMsg.style.display = 'none';
+                tableBody.innerHTML = dashboardData.presentToday.map(log => `
+                    <tr>
+                        <td class="px-4 py-3">
+                            <p class="font-bold text-gray-900">${log.student_lrn}</p>
+                            <p class="text-[10px] text-gray-400 uppercase">${log.students?.section || 'N/A'}</p>
+                        </td>
+                        <td class="px-4 py-3">
+                            <p class="font-semibold text-gray-800">${log.students?.full_name || 'Unknown'}</p>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <span class="text-xs font-bold text-gray-500">${new Date(log.scanned_at).toLocaleTimeString()}</span>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initDashboard);
     </script>
 </body>
 </html>

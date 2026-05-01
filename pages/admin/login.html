@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personnel Portal | Upper Labay High School</title>
+    <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <style>
+        .login-btn {
+            width: 100%; 
+            margin-top: 24px; 
+            padding: 14px; 
+            background: #1e3a8a; 
+            color: white; 
+            border-radius: 12px; 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .login-btn:hover {
+            background: #1e40af;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(30, 58, 138, 0.3);
+        }
+        .login-btn:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="login-container">
+        <div class="login-card text-center">
+            <img src="../../assets/images/school-logo.webp" alt="Logo" class="login-logo">
+            <h2 style="font-family: 'Acme', sans-serif; color: #1e3a8a;">Personnel Portal</h2>
+            <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Admin, Faculty & Staff Login</p>
+            
+            <form id="unified-login-form" class="login-form">
+                <div class="space-y-4">
+                    <input type="email" id="email" placeholder="School Email" required 
+                           style="width: 100%; padding: 14px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 0.9rem;">
+                    <input type="password" id="password" placeholder="System Password" required 
+                           style="width: 100%; padding: 14px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 0.9rem;">
+                </div>
+                <button type="submit" class="login-btn">
+                    Login to System
+                </button>
+            </form>
+
+            <div class="login-links" style="margin-top: 24px;">
+                <a href="../../index.html" class="back-link" style="font-size: 0.8rem; color: #6b7280; text-decoration: none; font-weight: 600;">&larr; Back to Homepage</a>
+            </div>
+            
+            <div id="login-error-msg" class="error-msg" style="display: none; background: #fff5f5; color: #c53030; padding: 12px; border-radius: 10px; font-size: 0.75rem; margin-top: 20px; border: 1px solid #feb2b2; font-weight: 700;">
+                Invalid credentials or unauthorized access.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('unified-login-form');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const errorMsg = document.getElementById('login-error-msg');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMsg.style.display = 'none';
+            
+            const email = emailInput.value;
+            const password = passwordInput.value;
+
+            try {
+                // 1. Authenticate with Supabase
+                const { data, error } = await window.supabaseClient.auth.signInWithPassword({
+                    email,
+                    password
+                });
+
+                if (error) throw error;
+
+                // 2. Fetch profile to determine role and access
+                const { data: profile, error: profileError } = await window.supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', data.user.id)
+                    .single();
+
+                if (profileError || !profile) {
+                    throw new Error("Profile not found. Please contact the administrator.");
+                }
+
+                const userRole = (profile.role || 'staff').toLowerCase();
+                
+                // 3. Setup Session Data for the whole site
+                sessionStorage.setItem('adminLoggedIn', 'true');
+                sessionStorage.setItem('userRole', userRole);
+                sessionStorage.setItem('userName', profile.full_name || email);
+                
+                // Map database columns to session access object
+                const access = {
+                    attendance: profile.can_scan || ['admin', 'school_head'].includes(userRole),
+                    idGen: profile.can_manage_ids || ['admin', 'school_head'].includes(userRole),
+                    stats: profile.can_view_dashboard || ['admin', 'school_head'].includes(userRole)
+                };
+                sessionStorage.setItem('userAccess', JSON.stringify(access));
+                localStorage.setItem('lastUserRole', userRole);
+
+                // 4. Smart Redirection based on permissions
+                console.log("Login success. Role:", userRole, "Access:", access);
+                
+                if (access.stats) {
+                    window.location.replace('./admin-dashboard.html');
+                } else if (access.attendance) {
+                    window.location.replace('./attendance.html');
+                } else if (access.idGen) {
+                    window.location.replace('./id-gen.html');
+                } else {
+                    // Authenticated but no tool permissions assigned yet
+                    throw new Error("Account verified, but no tool permissions are assigned to you. Please contact the School Head.");
+                }
+
+            } catch (err) {
+                console.error("Login Error:", err);
+                errorMsg.textContent = err.message || 'Invalid credentials.';
+                errorMsg.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

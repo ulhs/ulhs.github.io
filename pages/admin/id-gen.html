@@ -15,27 +15,38 @@
     <script src="../../assets/lib/selfie_segmentation.js"></script>
     <link rel="stylesheet" href="../../assets/lib/cropper.min.css">
     <script src="../../assets/lib/cropper.min.js"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
     <script src="../../assets/js/admin-nav.js"></script>
 </head>
 <body>
     <script>
-        // Security check
-        const userAccessStr = sessionStorage.getItem('userAccess');
-        const userAccess = userAccessStr ? JSON.parse(userAccessStr) : null;
-        const userRole = sessionStorage.getItem('userRole');
+        // Security check: Real-time Cloud Permission Check
+        async function checkIdGenAccess() {
+            if (!window.supabaseClient) {
+                setTimeout(checkIdGenAccess, 100);
+                return;
+            }
 
-        if (sessionStorage.getItem('adminLoggedIn') !== 'true' || !userAccess) {
-            // Kick back to correct login page based on role
-            const lastRole = localStorage.getItem('lastUserRole');
-            window.location.href = lastRole === 'admin' ? 'admin.html' : 'faculty.html';
-        } else if (!userAccess.idGen) {
-            // Redirect based on role if tool is disabled
-            if (userRole === 'admin') {
-                window.location.href = 'access.html';
-            } else {
-                window.location.href = 'faculty.html';
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = './login.html';
+                return;
+            }
+
+            const { data: profile } = await window.supabaseClient
+                .from('profiles')
+                .select('can_manage_ids, role')
+                .eq('id', session.user.id)
+                .single();
+
+            if (!profile || (profile.role !== 'admin' && !profile.can_manage_ids)) {
+                alert("ACCESS DENIED: You do not have permission to manage IDs.");
+                window.location.href = './login.html';
             }
         }
+        checkIdGenAccess();
     </script>
 
     <header>
@@ -100,7 +111,7 @@
                                 </li>`;
                         }
                         
-                        if (role === 'admin' || role === 'school_head') {
+                        if (role === 'admin' || role === 'school_head' || access.stats) {
                             html += `
                                 <li class="list" data-page="admin-dashboard.html">
                                     <a href="admin-dashboard.html">
@@ -110,10 +121,10 @@
                                 </li>`;
                         }
                         
-                        const logoutUrl = role === 'admin' ? 'admin.html' : 'faculty.html';
+                        // Logout
                         html += `
                             <li class="list">
-                                <a href="${logoutUrl}" onclick="sessionStorage.clear()">
+                                <a href="./login.html" onclick="sessionStorage.clear()">
                                     <span class="icon"><i class="fa-solid fa-right-from-bracket"></i></span>
                                     <span class="text">LOGOUT</span>
                                 </a>

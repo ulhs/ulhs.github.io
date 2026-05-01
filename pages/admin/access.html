@@ -11,23 +11,37 @@
     <script src="../../assets/lib/tailwind.min.js"></script>
     <link rel="stylesheet" href="../../assets/css/typography.css">
     <link rel="stylesheet" href="../../assets/css/style.css">
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
     <script src="../../assets/js/admin-nav.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
     <script>
-        // Security check
-        const userAccessStr = sessionStorage.getItem('userAccess');
-        const userAccess = userAccessStr ? JSON.parse(userAccessStr) : null;
-        const userRole = sessionStorage.getItem('userRole');
+        // Security check: Only Admins can access this Command Center
+        async function checkAdminAccess() {
+            if (!window.supabaseClient) {
+                setTimeout(checkAdminAccess, 100);
+                return;
+            }
 
-        if (sessionStorage.getItem('adminLoggedIn') !== 'true' || !userAccess) {
-            // Admin page defaults to admin login, but respects last role if it was faculty
-            const lastRole = localStorage.getItem('lastUserRole');
-            window.location.href = lastRole === 'faculty' ? 'faculty.html' : 'admin.html';
-        } else if (userRole !== 'admin') {
-            // All faculty kick back to faculty login page if they try to access Admin-only Manage Access
-            window.location.href = 'faculty.html';
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = './login.html';
+                return;
+            }
+
+            const { data: profile } = await window.supabaseClient
+                .from('profiles')
+                .select('role')
+                .eq('id', session.user.id)
+                .single();
+
+            if (!profile || profile.role !== 'admin') {
+                window.location.href = './login.html';
+            }
         }
+        checkAdminAccess();
     </script>
 
     <!-- Admin Header -->
@@ -81,7 +95,7 @@
                         </a>
                     </li>
                     <li class="list">
-                        <a href="admin.html" onclick="sessionStorage.clear()">
+                        <a href="./login.html" onclick="sessionStorage.clear()">
                             <span class="icon"><i class="fa-solid fa-right-from-bracket"></i></span>
                             <span class="text">LOGOUT</span>
                         </a>
@@ -128,52 +142,40 @@
                     <thead>
                         <tr class="bg-gray-900 text-white">
                             <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Faculty Member</th>
-                            <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">🕒 Attendance</th>
-                            <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">🆔 ID Generator</th>
-                            <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">📊 Attendance Statistics</th>
+                            <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">🕒 Scanner</th>
+                            <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">🆔 ID Gen</th>
+                            <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">📊 Dashboard</th>
                         </tr>
                     </thead>
                     <tbody id="access-matrix-body" class="divide-y divide-gray-100">
-                        <!-- School Head -->
-                        <tr class="bg-blue-50/50">
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-black uppercase tracking-tight text-blue-900">Jeffry Kapawan</p>
-                                <p class="text-[9px] text-blue-600 font-bold uppercase">School Head</p>
-                            </td>
-                            <td class="px-4 py-4 text-center">
-                                <input type="checkbox" id="sh-attendance" class="sh-toggle sr-only peer">
-                                <div onclick="document.getElementById('sh-attendance').click()" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-blue-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
-                            </td>
-                            <td class="px-4 py-4 text-center">
-                                <input type="checkbox" id="sh-idgen" class="sh-toggle sr-only peer">
-                                <div onclick="document.getElementById('sh-idgen').click()" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-purple-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
-                            </td>
-                            <td class="px-4 py-4 text-center">
-                                <input type="checkbox" id="sh-stats" class="sh-toggle sr-only peer">
-                                <div onclick="document.getElementById('sh-stats').click()" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-green-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                        <!-- Profiles will be injected here via Supabase -->
+                        <tr>
+                            <td colspan="4" class="px-6 py-12 text-center">
+                                <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+                                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-4">Syncing with Cloud Database...</p>
                             </td>
                         </tr>
-                        <!-- Teachers will be injected here -->
                     </tbody>
                 </table>
             </div>
 
             <!-- Bulk Actions -->
             <div class="mt-6 flex justify-end gap-4">
-                <button id="btn-enable-all" class="text-[10px] font-black uppercase tracking-widest text-blue-600 border border-blue-200 px-4 py-2 rounded-xl hover:bg-blue-50 transition-all">Enable All Tools</button>
-                <button id="btn-disable-all" class="text-[10px] font-black uppercase tracking-widest text-red-600 border border-red-200 px-4 py-2 rounded-xl hover:bg-red-50 transition-all">Disable All Access</button>
+                <p id="status-message" class="mr-auto self-center text-[10px] font-black uppercase tracking-widest text-green-600 opacity-0 transition-opacity">Database Updated!</p>
+                <button id="btn-refresh" class="text-[10px] font-black uppercase tracking-widest text-gray-600 border border-gray-200 px-4 py-2 rounded-xl hover:bg-gray-50 transition-all">Refresh List</button>
             </div>
 
-            <!-- Sync Notice -->
-            <div id="sync-notice" class="hidden mt-10 p-6 bg-yellow-50 border-2 border-dashed border-yellow-200 rounded-3xl flex flex-col items-center text-center gap-4">
-                <div class="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center animate-bounce">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            <!-- DPA Notice -->
+            <div class="mt-10 p-6 bg-blue-50/50 border border-blue-100 rounded-3xl flex items-start gap-4">
+                <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-shield-halved"></i>
                 </div>
                 <div>
-                    <h4 class="text-sm font-black text-yellow-800 uppercase tracking-widest">Changes Pending Sync</h4>
-                    <p class="text-[11px] text-yellow-700 font-bold uppercase mt-1">Copy the token below and send it to your Assistant to update the master system.</p>
+                    <h4 class="text-xs font-black text-blue-900 uppercase tracking-widest">DPA 2012 Compliance Center</h4>
+                    <p class="text-[10px] text-blue-700/70 font-bold uppercase mt-1 leading-relaxed">
+                        Access is granted based on the principle of "Least Privilege". Revoking access immediately terminates tool functionality for the selected user, ensuring data protection and accountability.
+                    </p>
                 </div>
-                <button id="btn-gen-sync-token" class="bg-yellow-400 text-yellow-900 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-yellow-300 transition-all shadow-lg hover:shadow-yellow-200/50">Generate Sync Token</button>
             </div>
         </div>
 
@@ -192,96 +194,110 @@
     <script src="../../assets/js/main.js"></script>
     <script src="../../assets/js/visitor-counter.js"></script>
     <script>
-        // Access Management Logic
-        document.addEventListener('DOMContentLoaded', () => {
-            const matrixBody = document.getElementById('access-matrix-body');
-            const shAttendance = document.getElementById('sh-attendance');
-            const shIdGen = document.getElementById('sh-idgen');
-            const shStats = document.getElementById('sh-stats');
-            const btnEnableAll = document.getElementById('btn-enable-all');
-            const btnDisableAll = document.getElementById('btn-disable-all');
-            const syncNotice = document.getElementById('sync-notice');
-            const btnSyncToken = document.getElementById('btn-gen-sync-token');
+        // --- Access Management: Cloud-Native ---
+        const matrixBody = document.getElementById('access-matrix-body');
+        const btnRefresh = document.getElementById('btn-refresh');
+        const statusMsg = document.getElementById('status-message');
 
-            if (typeof SYSTEM_CONFIG === 'undefined') return;
+        async function fetchProfiles() {
+            if (!window.supabaseClient) {
+                setTimeout(fetchProfiles, 100);
+                return;
+            }
 
-            // 1. Initialize School Head
-            const shAccess = SYSTEM_CONFIG.ACCESS_CONTROL.SCHOOL_HEAD.access;
-            shAttendance.checked = shAccess.attendance;
-            shIdGen.checked = shAccess.idGen;
-            shStats.checked = shAccess.stats;
+            try {
+                const { data: profiles, error } = await window.supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .order('full_name', { ascending: true });
 
-            // 2. Generate Teacher Rows
-            SYSTEM_CONFIG.ACCESS_CONTROL.TEACHERS.forEach((teacher, index) => {
+                if (error) throw error;
+                renderProfiles(profiles);
+            } catch (err) {
+                console.error("Fetch Error:", err);
+                matrixBody.innerHTML = `<tr><td colspan="4" class="px-6 py-4 text-center text-red-500 font-bold uppercase text-[10px]">Error loading profiles</td></tr>`;
+            }
+        }
+
+        function renderProfiles(profiles) {
+            matrixBody.innerHTML = '';
+            profiles.forEach((profile) => {
                 const row = document.createElement('tr');
                 row.className = "hover:bg-blue-50/30 transition-colors group";
                 row.innerHTML = `
                     <td class="px-6 py-4">
-                        <p class="text-sm font-black uppercase tracking-tight text-gray-900 group-hover:text-blue-700">${teacher.name}</p>
-                        <p class="text-[9px] text-gray-400 font-bold uppercase">Faculty Member</p>
+                        <p class="text-sm font-black uppercase tracking-tight text-gray-900 group-hover:text-blue-700">${profile.full_name || 'Unnamed User'}</p>
+                        <div class="flex items-center gap-2 mt-1">
+                            <p class="text-[9px] text-gray-400 font-bold uppercase">${profile.role || 'Staff'}</p>
+                            <span class="text-gray-200">•</span>
+                            <input type="text" placeholder="Assign Section" 
+                                   class="text-[9px] font-black uppercase tracking-widest text-blue-600 bg-transparent border-b border-transparent focus:border-blue-200 outline-none w-24 placeholder:text-gray-300 transition-all"
+                                   value="${profile.section_assigned || ''}"
+                                   onblur="updateAssignedSection('${profile.id}', this.value)">
+                        </div>
                     </td>
                     <td class="px-4 py-4 text-center">
-                        <input type="checkbox" id="t-att-${index}" class="teacher-toggle sr-only peer" data-index="${index}" data-tool="attendance" ${teacher.access.attendance ? 'checked' : ''}>
-                        <div onclick="document.getElementById('t-att-${index}').click()" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-blue-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                        <input type="checkbox" id="scan-${profile.id}" class="perm-toggle sr-only peer" 
+                               data-uid="${profile.id}" data-col="can_scan" ${profile.can_scan ? 'checked' : ''}>
+                        <div onclick="togglePermission('${profile.id}', 'can_scan')" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-blue-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
                     </td>
                     <td class="px-4 py-4 text-center">
-                        <input type="checkbox" id="t-id-${index}" class="teacher-toggle sr-only peer" data-index="${index}" data-tool="idGen" ${teacher.access.idGen ? 'checked' : ''}>
-                        <div onclick="document.getElementById('t-id-${index}').click()" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-purple-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                        <input type="checkbox" id="ids-${profile.id}" class="perm-toggle sr-only peer" 
+                               data-uid="${profile.id}" data-col="can_manage_ids" ${profile.can_manage_ids ? 'checked' : ''}>
+                        <div onclick="togglePermission('${profile.id}', 'can_manage_ids')" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-purple-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
                     </td>
                     <td class="px-4 py-4 text-center">
-                        <input type="checkbox" id="t-st-${index}" class="teacher-toggle sr-only peer" data-index="${index}" data-tool="stats" ${teacher.access.stats ? 'checked' : ''}>
-                        <div onclick="document.getElementById('t-st-${index}').click()" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-green-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                        <input type="checkbox" id="dash-${profile.id}" class="perm-toggle sr-only peer" 
+                               data-uid="${profile.id}" data-col="can_view_dashboard" ${profile.can_view_dashboard ? 'checked' : ''}>
+                        <div onclick="togglePermission('${profile.id}', 'can_view_dashboard')" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-green-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
                     </td>
                 `;
                 matrixBody.appendChild(row);
             });
+        }
 
-            // 3. Handle Any Change
-            document.addEventListener('change', (e) => {
-                if (e.target.classList.contains('teacher-toggle') || e.target.classList.contains('sh-toggle')) {
-                    syncNotice.classList.remove('hidden');
-                }
-            });
+        async function togglePermission(userId, column) {
+            const checkbox = document.querySelector(`input[data-uid="${userId}"][data-col="${column}"]`);
+            const newValue = !checkbox.checked;
 
-            // 4. Bulk Actions
-            btnEnableAll.addEventListener('click', () => {
-                document.querySelectorAll('input[type="checkbox"]').forEach(i => i.checked = true);
-                syncNotice.classList.remove('hidden');
-            });
-            btnDisableAll.addEventListener('click', () => {
-                document.querySelectorAll('input[type="checkbox"]').forEach(i => i.checked = false);
-                syncNotice.classList.remove('hidden');
-            });
+            try {
+                const { error } = await window.supabaseClient
+                    .from('profiles')
+                    .update({ [column]: newValue })
+                    .eq('id', userId);
 
-            // 5. Generate Sync Token
-            btnSyncToken.addEventListener('click', () => {
-                const updatedTeachers = SYSTEM_CONFIG.ACCESS_CONTROL.TEACHERS.map((t, idx) => ({
-                    name: t.name,
-                    hash: t.hash,
-                    access: {
-                        attendance: document.getElementById(`t-att-${idx}`).checked,
-                        idGen: document.getElementById(`t-id-${idx}`).checked,
-                        stats: document.getElementById(`t-st-${idx}`).checked
-                    }
-                }));
+                if (error) throw error;
 
-                const config = {
-                    SCHOOL_HEAD: {
-                        name: SYSTEM_CONFIG.ACCESS_CONTROL.SCHOOL_HEAD.name,
-                        hash: SYSTEM_CONFIG.ACCESS_CONTROL.SCHOOL_HEAD.hash,
-                        access: {
-                            attendance: shAttendance.checked,
-                            idGen: shIdGen.checked,
-                            stats: shStats.checked
-                        }
-                    },
-                    TEACHERS: updatedTeachers
-                };
-                
-                const token = btoa(JSON.stringify(config));
-                prompt("SYNC TOKEN GENERATED. Copy this code and send it to your Assistant to update the master system:", token);
-            });
-        });
+                checkbox.checked = newValue;
+                showStatus();
+            } catch (err) {
+                console.error("Update Error:", err);
+                alert("Failed to update permission. Please try again.");
+            }
+        }
+
+        async function updateAssignedSection(userId, sectionName) {
+            try {
+                const { error } = await window.supabaseClient
+                    .from('profiles')
+                    .update({ section_assigned: sectionName })
+                    .eq('id', userId);
+
+                if (error) throw error;
+                showStatus();
+            } catch (err) {
+                console.error("Update Error:", err);
+                alert("Failed to assign section. Please try again.");
+            }
+        }
+
+        function showStatus() {
+            statusMsg.style.opacity = '1';
+            setTimeout(() => statusMsg.style.opacity = '0', 2000);
+        }
+
+        btnRefresh.addEventListener('click', fetchProfiles);
+        document.addEventListener('DOMContentLoaded', fetchProfiles);
     </script>
 </body>
 </html>

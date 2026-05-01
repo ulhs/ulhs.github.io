@@ -33,3 +33,28 @@ _site/
 
 # Node.js dependencies (if you add package.json later)
 node_modules/
+
+# === School Data Security (DPA 2012 Compliance) ===
+
+# Ignore any filled SF2 forms or student lists
+*sf2_filled*
+*attendance_report*
+*student_data*
+*.xlsx
+*.csv
+*.pdf
+
+# Allow ONLY the blank template (example: assets/templates/SF2_Blank.xlsx)
+# This uses a "negation" rule: ignore all xlsx, but keep the template
+!assets/admin/attendance/templates/SF2_Blank.xlsx
+
+# Ignore local environment variables (where you store Supabase/Firebase API Keys)
+.env
+.env.local
+.env.*.local
+
+# Ignore any logs or temporary data exports
+logs/
+*.log
+tmp/
+dist/
