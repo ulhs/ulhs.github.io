@@ -49,9 +49,9 @@ async function initSupabaseSync() {
                 if (s.photo_url) {
                     studentPhotos.set(sLrn, s.photo_url);
                 } else {
-                    // Fallback: Construct it manually if it's missing in DB but exists in storage
-                    const manualUrl = `https://gqtsjaqlhbwmkxbrwsxh.supabase.co/storage/v1/object/public/student-photos/profiles/${sLrn}.webp`;
-                    studentPhotos.set(sLrn, manualUrl);
+                    // Fallback: Store the path for private bucket fetching
+                    const manualPath = `profiles/${sLrn}.webp`;
+                    studentPhotos.set(sLrn, manualPath);
                 }
 
                 return {
@@ -169,22 +169,14 @@ function renderLogTableFromSession(logs) {
     tableBody.innerHTML = sortedLogs.map(log => {
         // Try to find student in master database
         const student = masterStudentDatabase.find(s => String(s.lrn) === String(log.student_lrn));
-        
-        // Get Photo with fallbacks
         const lrnStr = String(log.student_lrn);
-        const projectUrl = 'https://gqtsjaqlhbwmkxbrwsxh.supabase.co';
-        const fallbackUrl = `${projectUrl}/storage/v1/object/public/student-photos/profiles/${lrnStr}.webp`;
-        const dataURL = studentPhotos.get(lrnStr) || student?.photo_url || fallbackUrl;
-        const finalUrl = dataURL + (dataURL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
 
         return `
             <tr class="hover:bg-gray-50 transition-colors">
                 <td class="px-4 py-3 text-center">
                     <div class="flex justify-center">
-                        <img src="${finalUrl}" class="w-10 h-10 rounded-lg object-cover border border-gray-100 shadow-sm" 
-                             style="display: block"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300" style="display:none">
+                        <img data-secure-lrn="${lrnStr}" class="w-10 h-10 rounded-lg object-cover border border-gray-100 shadow-sm" style="display: none">
+                        <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300">
                             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
                         </div>
                     </div>
@@ -205,6 +197,13 @@ function renderLogTableFromSession(logs) {
             </tr>
         `;
     }).join('');
+
+    // Securely load photos for each row
+    tableBody.querySelectorAll('img[data-secure-lrn]').forEach(img => {
+        const lrn = img.getAttribute('data-secure-lrn');
+        const placeholder = img.nextElementSibling;
+        loadStudentPhotoSecurely(lrn, img, placeholder);
+    });
 }
 
 function updateUIWithCloudData() {
@@ -867,6 +866,71 @@ function playBeep(type) {
     } catch(e) {}
 }
 
+/**
+ * Securely loads a student photo from multiple sources:
+ * 1. In-memory dataURL (from ZIP upload)
+ * 2. Supabase Private Storage (using authenticated download)
+ * 3. Supabase Public Storage (legacy fallback)
+ * 
+ * @param {string} lrn - The student's LRN
+ * @param {HTMLImageElement} imgElement - The <img> element to populate
+ * @param {HTMLElement} placeholderElement - The placeholder <div> to show on error
+ */
+async function loadStudentPhotoSecurely(lrn, imgElement, placeholderElement) {
+    if (!lrn || !imgElement) return;
+    
+    const lrnStr = String(lrn);
+    const student = masterStudentDatabase.find(s => String(s.lrn) === lrnStr);
+    
+    // PRIORITY 1: In-memory dataURL (from ZIP)
+    let dataURL = studentPhotos.get(lrnStr);
+    
+    // If not in memory, check student object or use default path
+    if (!dataURL) {
+        dataURL = student?.photo_url || `profiles/${lrnStr}.webp`;
+    }
+
+    // Determine if it's a private storage path (doesn't have full URL and not a data URL)
+    const isPrivatePath = dataURL && !dataURL.startsWith('http') && !dataURL.startsWith('data:');
+    
+    // Reset state before loading
+    imgElement.style.display = 'block';
+    imgElement.classList.remove('hidden');
+    if (placeholderElement) {
+        placeholderElement.style.display = 'none';
+        placeholderElement.classList.add('hidden');
+    }
+
+    try {
+        if (isPrivatePath && window.supabaseClient) {
+            // SECURE FETCH: Authenticated download from private bucket
+            const { data, error } = await window.supabaseClient.storage.from('student-photos').download(dataURL);
+            if (error) throw error;
+            
+            const blobUrl = URL.createObjectURL(data);
+            imgElement.src = blobUrl;
+            
+            // Clean up blob URL after load to prevent memory leaks
+            imgElement.onload = () => {
+                URL.revokeObjectURL(blobUrl);
+                console.log(`✅ Secure photo loaded for LRN ${lrnStr}`);
+            };
+        } else {
+            // PUBLIC OR DATA URL: Standard loading with cache-buster for public URLs
+            const finalUrl = dataURL.startsWith('data:') ? dataURL : (dataURL + (dataURL.includes('?') ? '&' : '?') + 't=' + Date.now());
+            imgElement.src = finalUrl;
+        }
+    } catch (err) {
+        console.error(`❌ Photo load failed for LRN ${lrnStr}:`, err.message);
+        imgElement.style.display = 'none';
+        imgElement.classList.add('hidden');
+        if (placeholderElement) {
+            placeholderElement.style.display = 'flex';
+            placeholderElement.classList.remove('hidden');
+        }
+    }
+}
+
 function updateDashboard(student, scanTime = null) {
     if (!student) return;
 
@@ -882,10 +946,9 @@ function updateDashboard(student, scanTime = null) {
 
     if (lastStudentName) {
         lastStudentName.textContent = student.parsedName;
-        lastStudentName.title = student.parsedName; // Show full name on hover if truncated
+        lastStudentName.title = student.parsedName;
     }
     
-    // Fix: Use the provided scanTime or default to current time
     const displayTime = scanTime ? new Date(scanTime) : new Date();
     if (lastScanTime) lastScanTime.textContent = `${displayTime.toLocaleTimeString()} (${student.section})`;
     if (presentCountDisplay) presentCountDisplay.textContent = attendanceSession.size;
@@ -900,50 +963,8 @@ function updateDashboard(student, scanTime = null) {
         statusBadge.textContent = "SUCCESS";
     }
     
-    // Get Photo with multiple fallbacks
-    const projectUrl = 'https://gqtsjaqlhbwmkxbrwsxh.supabase.co';
-    const fallbackUrl = `${projectUrl}/storage/v1/object/public/student-photos/profiles/${lrnStr}.webp`;
-    
-    // PRIORITY: 
-    // 1. In-memory dataURL (from ZIP)
-    // 2. Database photo_url
-    // 3. Fallback constructed URL
-    let dataURL = studentPhotos.get(lrnStr) || student.photo_url || fallbackUrl;
-    
-    // Ensure absolute URL for Supabase storage paths
-    if (dataURL && dataURL.startsWith('student-photos/')) {
-        dataURL = `${projectUrl}/storage/v1/object/public/${dataURL}`;
-    }
-
-    if (lastStudentPhoto) {
-        console.log(`Loading photo for LRN ${lrnStr}:`, dataURL);
-        
-        // Reset state before loading
-        lastStudentPhoto.style.display = 'block';
-        lastStudentPhoto.classList.remove('hidden');
-        if (lastPhotoPlaceholder) {
-            lastPhotoPlaceholder.style.display = 'none';
-            lastPhotoPlaceholder.classList.add('hidden');
-        }
-
-        // Final URL construction with cache-buster
-        const finalPhotoUrl = dataURL + (dataURL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
-        lastStudentPhoto.src = finalPhotoUrl;
-        
-        lastStudentPhoto.onload = () => {
-            console.log(`✅ Photo loaded successfully for LRN ${lrnStr}`);
-        };
-
-        lastStudentPhoto.onerror = () => {
-            console.error(`❌ Photo failed to load for LRN ${lrnStr}: ${finalPhotoUrl}`);
-            lastStudentPhoto.style.display = 'none';
-            lastStudentPhoto.classList.add('hidden');
-            if (lastPhotoPlaceholder) {
-                lastPhotoPlaceholder.style.display = 'flex';
-                lastPhotoPlaceholder.classList.remove('hidden');
-            }
-        };
-    }
+    // Use the new secure loader
+    loadStudentPhotoSecurely(lrnStr, lastStudentPhoto, lastPhotoPlaceholder);
 
     if (lastScannedCard) {
         lastScannedCard.classList.add('scale-[1.05]', 'ring-4', 'ring-blue-400/50');
@@ -967,37 +988,8 @@ function showScanOverlay(name, lrn, type, section, timeData) {
     overlayName.textContent = name;
     overlayLrn.textContent = `LRN: ${lrnStr} | ${section}`;
     
-    // PRIORITY: 
-    // 1. In-memory dataURL (from ZIP)
-    // 2. Database photo_url
-    // 3. Fallback constructed URL
-    let dataURL = studentPhotos.get(lrnStr) || student.photo_url || fallbackUrl;
-
-    if (overlayPhoto) {
-        // Use a small cache-buster to force reload if needed
-        const finalUrl = dataURL + (dataURL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
-        overlayPhoto.src = finalUrl;
-        overlayPhoto.style.display = 'block';
-        overlayPhoto.classList.remove('hidden');
-        if (overlayPhotoPlaceholder) {
-            overlayPhotoPlaceholder.style.display = 'none';
-            overlayPhotoPlaceholder.classList.add('hidden');
-        }
-
-        overlayPhoto.onload = () => {
-            console.log(`✅ Overlay photo loaded successfully for LRN ${lrnStr}`);
-        };
-
-        overlayPhoto.onerror = () => {
-            console.error(`❌ Overlay photo failed to load for LRN ${lrnStr}: ${finalUrl}`);
-            overlayPhoto.style.display = 'none';
-            overlayPhoto.classList.add('hidden');
-            if (overlayPhotoPlaceholder) {
-                overlayPhotoPlaceholder.style.display = 'flex';
-                overlayPhotoPlaceholder.classList.remove('hidden');
-            }
-        };
-    }
+    // Use the secure loader for the overlay photo
+    loadStudentPhotoSecurely(lrnStr, overlayPhoto, overlayPhotoPlaceholder);
 
     overlayTimeStatus.textContent = `${timeData.session} Session: ${timeData.status}`;
     overlayTimeStatus.className = "mt-4 inline-block px-6 py-2 rounded-full font-black text-xl uppercase tracking-widest shadow-lg ";
@@ -1043,22 +1035,10 @@ function addLog(lrn, name, section) {
     const lrnStr = String(lrn);
     const sessionType = getAttendanceStatus(lrnStr).session;
     
-    // Get Photo with fallbacks
-    const projectUrl = 'https://gqtsjaqlhbwmkxbrwsxh.supabase.co';
-    const fallbackUrl = `${projectUrl}/storage/v1/object/public/student-photos/profiles/${lrnStr}.webp`;
-    
-    // Find student in master DB for photo_url
-    const student = masterStudentDatabase.find(s => String(s.lrn) === lrnStr);
-    const dataURL = studentPhotos.get(lrnStr) || student?.photo_url || fallbackUrl;
-    const finalUrl = dataURL + (dataURL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
-
     const photoHTML = `
         <div class="flex justify-center">
-            <img src="${finalUrl}" class="w-10 h-10 rounded-lg object-cover border border-gray-100 shadow-sm" 
-                 style="display: block"
-                 onload="console.log('✅ Log table photo loaded for LRN ${lrnStr}')"
-                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'; console.error('❌ Log table photo failed for LRN ${lrnStr}: ${finalUrl}')">
-            <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300" style="display:none">
+            <img data-secure-lrn="${lrnStr}" class="w-10 h-10 rounded-lg object-cover border border-gray-100 shadow-sm" style="display: none">
+            <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300">
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
             </div>
         </div>`;
@@ -1078,6 +1058,12 @@ function addLog(lrn, name, section) {
         </td>
     `;
     scanLogsTable.prepend(row);
+    
+    // Securely load the photo for the new row
+    const newImg = row.querySelector('img[data-secure-lrn]');
+    const placeholder = newImg.nextElementSibling;
+    loadStudentPhotoSecurely(lrnStr, newImg, placeholder);
+
     if (logCount) logCount.textContent = `${attendanceSession.size} STUDENTS`;
 }
 
@@ -1779,19 +1765,10 @@ async function syncPhotosToSupabase() {
 
                 if (uploadError) throw uploadError;
 
-                // 3. Get Public URL
-                const { data: { publicUrl } } = window.supabaseClient
-                    .storage
-                    .from('student-photos')
-                    .getPublicUrl(filePath);
-
-                // Add cache-busting timestamp to the URL
-                const finalUrl = `${publicUrl}?t=${Date.now()}`;
-
-                // 4. Update Students Table
+                // 3. Update Students Table with the relative path (Private Bucket compatible)
                 const { error: updateError } = await window.supabaseClient
                     .from('students')
-                    .update({ photo_url: finalUrl })
+                    .update({ photo_url: filePath })
                     .eq('lrn', lrn);
 
                 if (updateError) throw updateError;
@@ -1815,6 +1792,27 @@ async function syncPhotosToSupabase() {
     }
 }
 
+// --- SECURITY: SESSION TIMEOUT ---
+let inactivityTimer;
+const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+function resetInactivityTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(logoutDueToInactivity, INACTIVITY_LIMIT);
+}
+
+function logoutDueToInactivity() {
+    console.warn("Security: Logging out due to 30 minutes of inactivity.");
+    sessionStorage.removeItem('adminLoggedIn');
+    alert("You have been logged out due to inactivity for security purposes.");
+    window.location.href = '../admin.html';
+}
+
+// Attach inactivity listeners
+['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
+    document.addEventListener(evt, resetInactivityTimer, true);
+});
+
 // Initialize on Load
 document.addEventListener('DOMContentLoaded', () => {
     // Check if user is logged in
@@ -1822,6 +1820,9 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '../admin.html';
         return;
     }
+    
+    // Start inactivity timer immediately
+    resetInactivityTimer();
     
     // Start Supabase Cloud Sync
     initSupabaseSync();

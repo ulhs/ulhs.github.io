@@ -334,6 +334,53 @@
             }
         }
 
+        async function loadStudentPhotoSecurely(lrn, photoUrl, imgElement, placeholderElement) {
+            if (!imgElement) return;
+
+            // Determine if it's a private storage path (doesn't have full URL and not a data URL)
+            // Or if it's the legacy public URL that is now private
+            const isLegacyPublic = photoUrl && photoUrl.includes('/storage/v1/object/public/student-photos/');
+            const isPrivatePath = photoUrl && !photoUrl.startsWith('http') && !photoUrl.startsWith('data:');
+            
+            // Extract the relative path if it's legacy public
+            let cleanPath = photoUrl;
+            if (isLegacyPublic) {
+                cleanPath = photoUrl.split('/public/student-photos/')[1];
+            } else if (!isPrivatePath && !photoUrl.startsWith('data:')) {
+                // If it's another type of URL, just use it
+            } else if (isPrivatePath) {
+                cleanPath = photoUrl;
+            }
+
+            // Reset state
+            imgElement.style.display = 'block';
+            imgElement.classList.remove('hidden');
+            if (placeholderElement) {
+                placeholderElement.style.display = 'none';
+                placeholderElement.classList.add('hidden');
+            }
+
+            try {
+                if ((isLegacyPublic || isPrivatePath) && window.supabaseClient) {
+                    const { data, error } = await window.supabaseClient.storage.from('student-photos').download(cleanPath);
+                    if (error) throw error;
+                    const url = URL.createObjectURL(data);
+                    imgElement.src = url;
+                    imgElement.onload = () => URL.revokeObjectURL(url);
+                } else {
+                    imgElement.src = photoUrl || `profiles/${lrn}.webp`;
+                }
+            } catch (err) {
+                console.error("Secure photo fetch failed:", err.message);
+                imgElement.style.display = 'none';
+                imgElement.classList.add('hidden');
+                if (placeholderElement) {
+                    placeholderElement.style.display = 'flex';
+                    placeholderElement.classList.remove('hidden');
+                }
+            }
+        }
+
         function refreshUI() {
             // Update Stats
             document.getElementById('total-count').textContent = dashboardData.totalStudents;
@@ -361,26 +408,9 @@
 
                 // Photo logic
                 if (lastPhoto) {
-                    // Try to get photo URL from student record or construct fallback
                     const projectUrl = 'https://gqtsjaqlhbwmkxbrwsxh.supabase.co';
-                    const photoUrl = student?.photo_url || `${projectUrl}/storage/v1/object/public/student-photos/profiles/${lrn}.webp`;
-                    
-                    lastPhoto.src = photoUrl;
-                    lastPhoto.style.display = 'block';
-                    lastPhoto.classList.remove('hidden');
-                    if (lastPlaceholder) {
-                        lastPlaceholder.style.display = 'none';
-                        lastPlaceholder.classList.add('hidden');
-                    }
-
-                    lastPhoto.onerror = () => {
-                        lastPhoto.style.display = 'none';
-                        lastPhoto.classList.add('hidden');
-                        if (lastPlaceholder) {
-                            lastPlaceholder.style.display = 'flex';
-                            lastPlaceholder.classList.remove('hidden');
-                        }
-                    };
+                    const photoUrl = student?.photo_url || `profiles/${lrn}.webp`;
+                    loadStudentPhotoSecurely(lrn, photoUrl, lastPhoto, lastPlaceholder);
                 }
 
                 if (lastCard) {
@@ -396,16 +426,13 @@
                     const student = log.students;
                     const lrn = log.student_lrn;
                     const time = new Date(log.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                    const projectUrl = 'https://gqtsjaqlhbwmkxbrwsxh.supabase.co';
-                    const photoUrl = student?.photo_url || `${projectUrl}/storage/v1/object/public/student-photos/profiles/${lrn}.webp`;
                     
                     return `
                         <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0">
                             <td class="px-4 py-3 text-center">
                                 <div class="flex justify-center">
-                                    <img src="${photoUrl}" class="w-10 h-10 rounded-lg object-cover border border-gray-100 shadow-sm" 
-                                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                    <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300" style="display:none">
+                                    <img data-secure-lrn="${lrn}" data-photo-url="${student?.photo_url || ''}" class="w-10 h-10 rounded-lg object-cover border border-gray-100 shadow-sm" style="display: none">
+                                    <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300">
                                         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
                                     </div>
                                 </div>
@@ -422,6 +449,14 @@
                         </tr>
                     `;
                 }).join('');
+
+                // Load secure photos for the table
+                tableBody.querySelectorAll('img[data-secure-lrn]').forEach(img => {
+                    const lrn = img.getAttribute('data-secure-lrn');
+                    const photoUrl = img.getAttribute('data-photo-url') || `profiles/${lrn}.webp`;
+                    const placeholder = img.nextElementSibling;
+                    loadStudentPhotoSecurely(lrn, photoUrl, img, placeholder);
+                });
             }
         }
 
