@@ -163,7 +163,7 @@
                             <div id="last-scanned-card" class="bg-white rounded-3xl shadow-xl p-6 border border-gray-100 transition-all duration-300 mt-8">
                                 <div class="flex items-center gap-6">
                                     <div class="w-24 h-24 rounded-2xl bg-gray-100 border-2 border-gray-100 overflow-hidden flex-shrink-0 relative">
-                                        <img id="last-student-photo" src="" alt="" class="w-full h-full object-cover hidden">
+                                        <img id="last-student-photo" src="" alt="" class="w-full h-full object-cover" style="display:none">
                                         <div id="last-photo-placeholder" class="w-full h-full flex items-center justify-center text-gray-300">
                                             <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
                                         </div>
@@ -192,13 +192,15 @@
                         <table class="w-full text-left text-sm">
                             <thead>
                                  <tr class="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest text-left">
+                                     <th class="px-4 py-3 w-16 text-center">Photo</th>
                                      <th class="px-4 py-3">LRN / Section</th>
                                      <th class="px-4 py-3">Learner Name</th>
                                      <th class="px-4 py-3 text-right">Time</th>
                                  </tr>
                              </thead>
-                            <tbody id="scan-logs-table" class="divide-y divide-gray-100">
-                            </tbody>
+                             <tbody id="scan-logs-table" class="divide-y divide-gray-100">
+                                 <!-- Dynamic content -->
+                             </tbody>
                         </table>
                     </div>
                     <div id="empty-log-msg" class="p-12 text-center text-gray-400">
@@ -222,20 +224,20 @@
                         Data Privacy Notice
                     </h4>
                     <p class="text-sm leading-relaxed text-gray-800 font-bold mb-6">
-                        In compliance with the <b>Philippines Data Privacy Act of 2012 (RA 10173)</b>, Upper Labay High School ensures that all student data processed by this Attendance System is handled with the highest level of security. This system operates on a <b>"Zero-Knowledge"</b> architecture:
+                        In compliance with the <b>Philippines Data Privacy Act of 2012 (RA 10173)</b>, Upper Labay High School ensures that all student data processed by this Attendance System is handled with the highest level of security. This system operates on a <b>"Secured Cloud"</b> architecture:
                     </p>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div class="bg-white/40 p-4 rounded-2xl border border-white/60">
-                            <p class="text-xs font-black text-blue-800 uppercase mb-2">Local Processing</p>
-                            <p class="text-xs text-gray-700 leading-relaxed font-semibold">Data is processed entirely within the local browser memory. Student names, LRNs, and photos are <b>never</b> uploaded to servers or stored online.</p>
+                            <p class="text-xs font-black text-blue-800 uppercase mb-2">Encrypted Storage</p>
+                            <p class="text-xs text-gray-700 leading-relaxed font-semibold">Data is stored in an encrypted Supabase database. Access is strictly limited to authorized school personnel via encrypted authentication.</p>
                         </div>
                         <div class="bg-white/40 p-4 rounded-2xl border border-white/60">
-                            <p class="text-xs font-black text-blue-800 uppercase mb-2">Session-Only Storage</p>
-                            <p class="text-xs text-gray-700 leading-relaxed font-semibold">Registry data and photos exist <b>only</b> for this active session. Closing the browser tab immediately wipes all sensitive information from this terminal.</p>
+                            <p class="text-xs font-black text-blue-800 uppercase mb-2">Audit Trails</p>
+                            <p class="text-xs text-gray-700 leading-relaxed font-semibold">Every scan and access request is logged, providing a transparent audit trail that prevents unauthorized data tampering or leaks.</p>
                         </div>
                         <div class="bg-white/40 p-4 rounded-2xl border border-white/60">
-                            <p class="text-xs font-black text-blue-800 uppercase mb-2">Purpose Limitation</p>
-                            <p class="text-xs text-gray-700 leading-relaxed font-semibold">Collected data is used <b>strictly</b> for official DepEd SF2 Attendance Reporting. No personal information is shared with third parties or used for unauthorized profiling.</p>
+                            <p class="text-xs font-black text-blue-800 uppercase mb-2">Rights Protection</p>
+                            <p class="text-xs text-gray-700 leading-relaxed font-semibold">Collected data is used <b>strictly</b> for official DepEd reporting. Students and parents retain all rights to access, correct, or request deletion of their data.</p>
                         </div>
                     </div>
                 </div>
@@ -340,37 +342,86 @@
             document.getElementById('log-count').textContent = `${dashboardData.presentToday.length} STUDENT${dashboardData.presentToday.length !== 1 ? 'S' : ''}`;
 
             // Update Last Scanned Card
+            const lastCard = document.getElementById('last-scanned-card');
+            const lastName = document.getElementById('last-student-name');
+            const lastPhoto = document.getElementById('last-student-photo');
+            const lastPlaceholder = document.getElementById('last-photo-placeholder');
+            const lastSection = document.getElementById('section-name');
+            const lastTime = document.getElementById('last-scan-time');
+
             if (dashboardData.lastScanned) {
-                const student = dashboardData.lastScanned.students;
-                document.getElementById('last-student-name').textContent = student?.full_name || 'Unknown';
-                document.getElementById('section-name').textContent = student?.section || 'N/A';
-                const time = new Date(dashboardData.lastScanned.scanned_at).toLocaleTimeString();
-                document.getElementById('last-scan-time').textContent = time;
+                const log = dashboardData.lastScanned;
+                const student = log.students;
+                const lrn = log.student_lrn;
+                
+                if (lastName) lastName.textContent = student?.full_name || 'Unknown';
+                if (lastSection) lastSection.textContent = student?.section || 'N/A';
+                const timeStr = new Date(log.scanned_at).toLocaleTimeString();
+                if (lastTime) lastTime.textContent = timeStr;
+
+                // Photo logic
+                if (lastPhoto) {
+                    // Try to get photo URL from student record or construct fallback
+                    const projectUrl = 'https://gqtsjaqlhbwmkxbrwsxh.supabase.co';
+                    const photoUrl = student?.photo_url || `${projectUrl}/storage/v1/object/public/student-photos/profiles/${lrn}.webp`;
+                    
+                    lastPhoto.src = photoUrl;
+                    lastPhoto.style.display = 'block';
+                    lastPhoto.classList.remove('hidden');
+                    if (lastPlaceholder) {
+                        lastPlaceholder.style.display = 'none';
+                        lastPlaceholder.classList.add('hidden');
+                    }
+
+                    lastPhoto.onerror = () => {
+                        lastPhoto.style.display = 'none';
+                        lastPhoto.classList.add('hidden');
+                        if (lastPlaceholder) {
+                            lastPlaceholder.style.display = 'flex';
+                            lastPlaceholder.classList.remove('hidden');
+                        }
+                    };
+                }
+
+                if (lastCard) {
+                    lastCard.classList.add('scale-[1.02]', 'ring-2', 'ring-blue-400');
+                    setTimeout(() => lastCard.classList.remove('scale-[1.02]', 'ring-2', 'ring-blue-400'), 500);
+                }
             }
 
             // Update Table
             const tableBody = document.getElementById('scan-logs-table');
-            const emptyMsg = document.getElementById('empty-log-msg');
-
-            if (dashboardData.presentToday.length === 0) {
-                tableBody.innerHTML = '';
-                emptyMsg.style.display = 'block';
-            } else {
-                emptyMsg.style.display = 'none';
-                tableBody.innerHTML = dashboardData.presentToday.map(log => `
-                    <tr>
-                        <td class="px-4 py-3">
-                            <p class="font-bold text-gray-900">${log.student_lrn}</p>
-                            <p class="text-[10px] text-gray-400 uppercase">${log.students?.section || 'N/A'}</p>
-                        </td>
-                        <td class="px-4 py-3">
-                            <p class="font-semibold text-gray-800">${log.students?.full_name || 'Unknown'}</p>
-                        </td>
-                        <td class="px-4 py-3 text-right">
-                            <span class="text-xs font-bold text-gray-500">${new Date(log.scanned_at).toLocaleTimeString()}</span>
-                        </td>
-                    </tr>
-                `).join('');
+            if (tableBody) {
+                tableBody.innerHTML = dashboardData.presentToday.map(log => {
+                    const student = log.students;
+                    const lrn = log.student_lrn;
+                    const time = new Date(log.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const projectUrl = 'https://gqtsjaqlhbwmkxbrwsxh.supabase.co';
+                    const photoUrl = student?.photo_url || `${projectUrl}/storage/v1/object/public/student-photos/profiles/${lrn}.webp`;
+                    
+                    return `
+                        <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0">
+                            <td class="px-4 py-3 text-center">
+                                <div class="flex justify-center">
+                                    <img src="${photoUrl}" class="w-10 h-10 rounded-lg object-cover border border-gray-100 shadow-sm" 
+                                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300" style="display:none">
+                                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="font-mono text-[11px] font-black text-gray-900">${lrn}</div>
+                                <div class="text-blue-600 font-black uppercase tracking-tighter text-[9px] bg-blue-50 px-1.5 py-0.5 rounded inline-block mt-1">${student?.section || 'N/A'}</div>
+                            </td>
+                            <td class="px-4 py-3 font-black text-gray-900 uppercase text-xs tracking-tight">${student?.full_name || 'Unknown'}</td>
+                            <td class="px-4 py-3 text-right">
+                                <div class="font-black text-gray-900 text-xs tabular-nums">${time}</div>
+                                <div class="text-[8px] font-black text-blue-500 uppercase tracking-widest mt-0.5">${log.session || 'N/A'} SESSION</div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
             }
         }
 

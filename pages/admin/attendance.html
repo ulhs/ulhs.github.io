@@ -189,7 +189,7 @@
                 <!-- Security: Student Photo Container -->
                 <div class="relative inline-block mb-6">
                     <div id="overlay-photo-container" class="w-48 h-48 md:w-64 md:h-64 rounded-2xl border-4 border-white shadow-2xl overflow-hidden bg-gray-200">
-                        <img id="overlay-student-photo" src="" alt="Student" class="w-full h-full object-cover hidden">
+                        <img id="overlay-student-photo" src="" alt="Student" class="w-full h-full object-cover" style="display:none">
                         <div id="overlay-photo-placeholder" class="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
                             <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
                         </div>
@@ -394,41 +394,42 @@
                             Attendance Dashboard
                         </h2>
 
-                        <div class="space-y-4">
-                            <!-- Statistics -->
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                    <p class="text-xs font-bold text-blue-600 uppercase">Campus Population</p>
-                                    <p id="total-count" class="text-2xl font-black text-blue-800">0</p>
-                                </div>
-                                <div class="bg-green-50 p-4 rounded-xl border border-green-100">
-                                    <p class="text-xs font-bold text-green-600 uppercase">Campus Entries</p>
-                                    <p id="present-count" class="text-2xl font-black text-green-800">0</p>
-                                </div>
-                            </div>
-
-                            <!-- Last Scanned Card (Upgraded with Photo) -->
-                            <div id="last-scanned-card" class="bg-white rounded-3xl shadow-xl p-6 border border-gray-100 transition-all duration-300 mt-8">
+                        <div class="space-y-6">
+                            <!-- Last Scanned Card (Prominent & Upgraded) -->
+                            <div id="last-scanned-card" class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl shadow-2xl p-6 text-white transition-all duration-500 transform hover:scale-[1.01] border border-blue-400/30">
                                 <div class="flex items-center gap-6">
-                                    <div class="w-24 h-24 rounded-2xl bg-gray-100 border-2 border-gray-100 overflow-hidden flex-shrink-0 relative">
-                                        <img id="last-student-photo" src="" alt="" class="w-full h-full object-cover hidden">
-                                        <div id="last-photo-placeholder" class="w-full h-full flex items-center justify-center text-gray-300">
-                                            <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                                    <div class="w-28 h-28 rounded-2xl bg-white/10 backdrop-blur-md border-2 border-white/20 overflow-hidden flex-shrink-0 relative shadow-inner">
+                                        <img id="last-student-photo" src="" alt="" class="w-full h-full object-cover" style="display:none">
+                                        <div id="last-photo-placeholder" class="w-full h-full flex items-center justify-center text-white/30">
+                                            <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
                                         </div>
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Last Scanned Learner</p>
-                                        <h3 id="last-student-name" class="text-2xl font-black text-gray-900 truncate leading-tight">Waiting for scan...</h3>
-                                        <div class="flex items-center gap-2 mt-1">
-                                            <span id="section-name" class="text-xs font-bold text-gray-400 truncate uppercase tracking-wider">No activity</span>
-                                            <span class="text-gray-300">•</span>
-                                            <span id="last-scan-time" class="text-xs font-bold text-gray-400">--:--:--</span>
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="px-2 py-0.5 bg-blue-400/30 rounded text-[9px] font-black uppercase tracking-widest text-blue-100">Last Scanned Learner</span>
+                                            <span id="last-scan-status-badge" class="hidden px-2 py-0.5 bg-green-400 text-green-950 rounded text-[9px] font-black uppercase tracking-widest">SUCCESS</span>
+                                        </div>
+                                        <h3 id="last-student-name" class="text-3xl font-black truncate leading-tight tracking-tighter">Waiting for scan...</h3>
+                                        <div class="flex items-center gap-2 mt-2">
+                                            <span id="section-name" class="text-xs font-bold text-blue-200 truncate uppercase tracking-wider">No activity</span>
+                                            <span class="text-blue-400/50">•</span>
+                                            <span id="last-scan-time" class="text-xs font-bold text-blue-200 tabular-nums">--:--:--</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Scanner Controls -->
+                            <!-- Statistics Grid -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Campus Population</p>
+                                    <p id="total-count" class="text-3xl font-black text-gray-900 tracking-tighter">0</p>
+                                </div>
+                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Campus Entries</p>
+                                    <p id="present-count" class="text-3xl font-black text-green-600 tracking-tighter">0</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -443,6 +444,7 @@
                         <table class="w-full text-left text-sm">
                             <thead>
                                  <tr class="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest text-left">
+                                     <th class="px-4 py-3 w-16 text-center">Photo</th>
                                      <th class="px-4 py-3">LRN / Section</th>
                                      <th class="px-4 py-3">Learner Name</th>
                                      <th class="px-4 py-3 text-right">Time</th>

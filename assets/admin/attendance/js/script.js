@@ -45,12 +45,17 @@ async function initSupabaseSync() {
                 const level = (gradeNum >= 11 || isSHSTrack) ? 'SHS' : 'JHS';
 
                 // Load cloud photo if it exists
+                const sLrn = String(s.lrn);
                 if (s.photo_url) {
-                    studentPhotos.set(s.lrn, s.photo_url);
+                    studentPhotos.set(sLrn, s.photo_url);
+                } else {
+                    // Fallback: Construct it manually if it's missing in DB but exists in storage
+                    const manualUrl = `https://gqtsjaqlhbwmkxbrwsxh.supabase.co/storage/v1/object/public/student-photos/profiles/${sLrn}.webp`;
+                    studentPhotos.set(sLrn, manualUrl);
                 }
 
                 return {
-                    lrn: s.lrn,
+                    lrn: sLrn,
                     excelName: s.full_name, 
                     parsedName: s.full_name.toUpperCase(),
                     section: s.section,
@@ -124,6 +129,17 @@ async function restoreAttendanceSession() {
             // 3. Update the Cloud Stats panel if it exists
             const logCountEl = document.getElementById('total-logs-count');
             if (logCountEl) logCountEl.textContent = attendanceSession.size;
+
+            // 4. SMART UPDATE: Show the last scanned learner from the logs
+            if (logs.length > 0) {
+                const sortedLogs = [...logs].sort((a, b) => new Date(b.scanned_at) - new Date(a.scanned_at));
+                const lastLog = sortedLogs[0];
+                const lastStudent = masterStudentDatabase.find(s => String(s.lrn) === String(lastLog.student_lrn));
+                if (lastStudent) {
+                    console.log("Auto-updating dashboard with last known log student:", lastStudent.parsedName);
+                    updateDashboard(lastStudent, lastLog.scanned_at);
+                }
+            }
         }
     } catch (err) {
         console.error("Session Restore System Error:", err);
@@ -154,8 +170,25 @@ function renderLogTableFromSession(logs) {
         // Try to find student in master database
         const student = masterStudentDatabase.find(s => String(s.lrn) === String(log.student_lrn));
         
+        // Get Photo with fallbacks
+        const lrnStr = String(log.student_lrn);
+        const projectUrl = 'https://gqtsjaqlhbwmkxbrwsxh.supabase.co';
+        const fallbackUrl = `${projectUrl}/storage/v1/object/public/student-photos/profiles/${lrnStr}.webp`;
+        const dataURL = studentPhotos.get(lrnStr) || student?.photo_url || fallbackUrl;
+        const finalUrl = dataURL + (dataURL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+
         return `
             <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-4 py-3 text-center">
+                    <div class="flex justify-center">
+                        <img src="${finalUrl}" class="w-10 h-10 rounded-lg object-cover border border-gray-100 shadow-sm" 
+                             style="display: block"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300" style="display:none">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                        </div>
+                    </div>
+                </td>
                 <td class="px-4 py-3">
                     <p class="font-bold text-gray-900">${log.student_lrn}</p>
                     <p class="text-[10px] text-gray-400 uppercase">${student?.section || 'N/A'}</p>
@@ -813,7 +846,7 @@ function onScanSuccess(decodedText, decodedResult) {
         // Async logging to cloud
         logAttendanceToSupabase(student, timeData);
 
-        updateDashboard(student);
+        updateDashboard(student, new Date());
         showScanFeedback(student, "Success!", "green");
         addLog(student.lrn, student.parsedName, student.section);
         showScanOverlay(student.parsedName, student.lrn, 'success', student.section, timeData);
@@ -834,104 +867,218 @@ function playBeep(type) {
     } catch(e) {}
 }
 
-function updateDashboard(student) {
-    lastStudentName.textContent = student.parsedName;
-    lastScanTime.textContent = `${new Date().toLocaleTimeString()} (${student.section})`;
-    presentCountDisplay.textContent = attendanceSession.size;
+function updateDashboard(student, scanTime = null) {
+    if (!student) return;
+
+    const lrnStr = String(student.lrn);
+    const lastStudentName = document.getElementById('last-student-name');
+    const lastStudentPhoto = document.getElementById('last-student-photo');
+    const lastPhotoPlaceholder = document.getElementById('last-photo-placeholder');
+    const lastScanTime = document.getElementById('last-scan-time');
+    const lastScannedCard = document.getElementById('last-scanned-card');
+    const presentCountDisplay = document.getElementById('present-count');
+    const sectionDisplay = document.getElementById('section-name');
+    const statusBadge = document.getElementById('last-scan-status-badge');
+
+    if (lastStudentName) {
+        lastStudentName.textContent = student.parsedName;
+        lastStudentName.title = student.parsedName; // Show full name on hover if truncated
+    }
     
-    // Update Cloud Stats Grid
+    // Fix: Use the provided scanTime or default to current time
+    const displayTime = scanTime ? new Date(scanTime) : new Date();
+    if (lastScanTime) lastScanTime.textContent = `${displayTime.toLocaleTimeString()} (${student.section})`;
+    if (presentCountDisplay) presentCountDisplay.textContent = attendanceSession.size;
+    
     const logCountEl = document.getElementById('total-logs-count');
     if (logCountEl) logCountEl.textContent = attendanceSession.size;
 
-    sectionDisplay.textContent = student.section;
+    if (sectionDisplay) sectionDisplay.textContent = student.section;
     
-    // Get Photo from Memory
-    const dataURL = studentPhotos.get(student.lrn);
-    if (lastStudentPhoto) {
-        if (dataURL) {
-            lastStudentPhoto.src = dataURL;
-            lastStudentPhoto.classList.remove('hidden');
-            if (lastPhotoPlaceholder) lastPhotoPlaceholder.classList.add('hidden');
-        } else {
-            lastStudentPhoto.classList.add('hidden');
-            if (lastPhotoPlaceholder) lastPhotoPlaceholder.classList.remove('hidden');
-        }
+    if (statusBadge) {
+        statusBadge.classList.remove('hidden');
+        statusBadge.textContent = "SUCCESS";
+    }
+    
+    // Get Photo with multiple fallbacks
+    const projectUrl = 'https://gqtsjaqlhbwmkxbrwsxh.supabase.co';
+    const fallbackUrl = `${projectUrl}/storage/v1/object/public/student-photos/profiles/${lrnStr}.webp`;
+    
+    // PRIORITY: 
+    // 1. In-memory dataURL (from ZIP)
+    // 2. Database photo_url
+    // 3. Fallback constructed URL
+    let dataURL = studentPhotos.get(lrnStr) || student.photo_url || fallbackUrl;
+    
+    // Ensure absolute URL for Supabase storage paths
+    if (dataURL && dataURL.startsWith('student-photos/')) {
+        dataURL = `${projectUrl}/storage/v1/object/public/${dataURL}`;
     }
 
-    lastScannedCard.classList.add('bg-blue-50', 'border-blue-200', 'scale-[1.02]');
-    setTimeout(() => {
-        lastScannedCard.classList.remove('scale-[1.02]');
-    }, 200);
+    if (lastStudentPhoto) {
+        console.log(`Loading photo for LRN ${lrnStr}:`, dataURL);
+        
+        // Reset state before loading
+        lastStudentPhoto.style.display = 'block';
+        lastStudentPhoto.classList.remove('hidden');
+        if (lastPhotoPlaceholder) {
+            lastPhotoPlaceholder.style.display = 'none';
+            lastPhotoPlaceholder.classList.add('hidden');
+        }
+
+        // Final URL construction with cache-buster
+        const finalPhotoUrl = dataURL + (dataURL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+        lastStudentPhoto.src = finalPhotoUrl;
+        
+        lastStudentPhoto.onload = () => {
+            console.log(`✅ Photo loaded successfully for LRN ${lrnStr}`);
+        };
+
+        lastStudentPhoto.onerror = () => {
+            console.error(`❌ Photo failed to load for LRN ${lrnStr}: ${finalPhotoUrl}`);
+            lastStudentPhoto.style.display = 'none';
+            lastStudentPhoto.classList.add('hidden');
+            if (lastPhotoPlaceholder) {
+                lastPhotoPlaceholder.style.display = 'flex';
+                lastPhotoPlaceholder.classList.remove('hidden');
+            }
+        };
+    }
+
+    if (lastScannedCard) {
+        lastScannedCard.classList.add('scale-[1.05]', 'ring-4', 'ring-blue-400/50');
+        setTimeout(() => {
+            lastScannedCard.classList.remove('scale-[1.05]', 'ring-4', 'ring-blue-400/50');
+        }, 500);
+    }
 }
 
 function showScanFeedback(student, status, color) {
+    if (!scanStatus) return;
     scanStatus.textContent = `${status}: ${student.parsedName || student.name}`;
     const colors = { green: "bg-green-500 text-white", red: "bg-red-500 text-white", yellow: "bg-yellow-500 text-white" };
     scanStatus.className = `px-3 py-1 ${colors[color]} rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse`;
 }
 
 function showScanOverlay(name, lrn, type, section, timeData) {
+    if (!scanOverlay) return;
+
+    const lrnStr = String(lrn);
     overlayName.textContent = name;
-    overlayLrn.textContent = `LRN: ${lrn} | ${section}`;
+    overlayLrn.textContent = `LRN: ${lrnStr} | ${section}`;
     
-    // Get Photo from Memory
-    const dataURL = studentPhotos.get(lrn);
-    if (dataURL) {
-        overlayPhoto.src = dataURL;
+    // PRIORITY: 
+    // 1. In-memory dataURL (from ZIP)
+    // 2. Database photo_url
+    // 3. Fallback constructed URL
+    let dataURL = studentPhotos.get(lrnStr) || student.photo_url || fallbackUrl;
+
+    if (overlayPhoto) {
+        // Use a small cache-buster to force reload if needed
+        const finalUrl = dataURL + (dataURL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+        overlayPhoto.src = finalUrl;
+        overlayPhoto.style.display = 'block';
         overlayPhoto.classList.remove('hidden');
-        overlayPhotoPlaceholder.classList.add('hidden');
-    } else {
-        overlayPhoto.classList.add('hidden');
-        overlayPhotoPlaceholder.classList.remove('hidden');
+        if (overlayPhotoPlaceholder) {
+            overlayPhotoPlaceholder.style.display = 'none';
+            overlayPhotoPlaceholder.classList.add('hidden');
+        }
+
+        overlayPhoto.onload = () => {
+            console.log(`✅ Overlay photo loaded successfully for LRN ${lrnStr}`);
+        };
+
+        overlayPhoto.onerror = () => {
+            console.error(`❌ Overlay photo failed to load for LRN ${lrnStr}: ${finalUrl}`);
+            overlayPhoto.style.display = 'none';
+            overlayPhoto.classList.add('hidden');
+            if (overlayPhotoPlaceholder) {
+                overlayPhotoPlaceholder.style.display = 'flex';
+                overlayPhotoPlaceholder.classList.remove('hidden');
+            }
+        };
     }
 
     overlayTimeStatus.textContent = `${timeData.session} Session: ${timeData.status}`;
     overlayTimeStatus.className = "mt-4 inline-block px-6 py-2 rounded-full font-black text-xl uppercase tracking-widest shadow-lg ";
     
-    if (timeData.status === 'LATE' || timeData.status.includes('TARDY')) overlayTimeStatus.classList.add('bg-red-600', 'text-white', 'animate-pulse');
-    else if (timeData.status === 'PRESENT') overlayTimeStatus.classList.add('bg-white', 'text-green-600');
-    else overlayTimeStatus.classList.add('bg-gray-800', 'text-white');
-
+    // Reset overlay classes
     scanOverlay.className = "fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md transition-opacity duration-300";
-    overlayIconContainer.className = "absolute -bottom-4 -right-4 bg-white rounded-full w-12 h-12 flex items-center justify-center shadow-xl animate-bounce";
     
     if (type === 'success') {
         scanOverlay.classList.add('bg-green-600/90');
         overlayIconContainer.classList.add('text-green-600');
         overlayStatus.textContent = "Access Granted";
         overlayIconContainer.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>';
+        overlayTimeStatus.classList.add('bg-white', 'text-green-600');
     } else if (type === 'warning') {
         scanOverlay.classList.add('bg-yellow-500/90');
         overlayIconContainer.classList.add('text-yellow-600');
         overlayStatus.textContent = "Already Scanned";
         overlayIconContainer.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>';
+        overlayTimeStatus.classList.add('bg-gray-800', 'text-white');
     } else {
         scanOverlay.classList.add('bg-red-600/90');
         overlayIconContainer.classList.add('text-red-600');
         overlayStatus.textContent = "Student Not Found";
         overlayIconContainer.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>';
+        overlayTimeStatus.classList.add('bg-red-800', 'text-white', 'animate-pulse');
     }
 
     scanOverlay.classList.remove('hidden');
-    setTimeout(() => scanOverlay.classList.add('hidden'), 3000);
+    
+    if (window.overlayTimeout) clearTimeout(window.overlayTimeout);
+    window.overlayTimeout = setTimeout(() => {
+        scanOverlay.classList.add('hidden');
+    }, 3000);
 }
 
 function addLog(lrn, name, section) {
     if (emptyLogMsg) emptyLogMsg.classList.add('hidden');
     const row = document.createElement('tr');
-    row.className = "hover:bg-gray-50 transition-colors group";
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    row.className = "hover:bg-gray-50 transition-colors group border-b border-gray-100 last:border-0";
     
+    const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+    const timeStr = new Date().toLocaleTimeString('en-PH', timeOptions);
+    const lrnStr = String(lrn);
+    const sessionType = getAttendanceStatus(lrnStr).session;
+    
+    // Get Photo with fallbacks
+    const projectUrl = 'https://gqtsjaqlhbwmkxbrwsxh.supabase.co';
+    const fallbackUrl = `${projectUrl}/storage/v1/object/public/student-photos/profiles/${lrnStr}.webp`;
+    
+    // Find student in master DB for photo_url
+    const student = masterStudentDatabase.find(s => String(s.lrn) === lrnStr);
+    const dataURL = studentPhotos.get(lrnStr) || student?.photo_url || fallbackUrl;
+    const finalUrl = dataURL + (dataURL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+
+    const photoHTML = `
+        <div class="flex justify-center">
+            <img src="${finalUrl}" class="w-10 h-10 rounded-lg object-cover border border-gray-100 shadow-sm" 
+                 style="display: block"
+                 onload="console.log('✅ Log table photo loaded for LRN ${lrnStr}')"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'; console.error('❌ Log table photo failed for LRN ${lrnStr}: ${finalUrl}')">
+            <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300" style="display:none">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+            </div>
+        </div>`;
+
     row.innerHTML = `
-        <td class="px-4 py-3 font-mono text-[10px] text-gray-500">
-            ${lrn}<br>
-            <span class="text-blue-600 font-black uppercase tracking-tighter text-[9px] bg-blue-50 px-1.5 py-0.5 rounded">${section}</span>
+        <td class="px-4 py-3 text-center">
+            ${photoHTML}
         </td>
-        <td class="px-4 py-3 font-black text-gray-900 uppercase text-xs">${name}</td>
-        <td class="px-4 py-3 text-right font-bold text-gray-400 text-xs">${timeStr}</td>
+        <td class="px-4 py-3">
+            <div class="font-mono text-[11px] font-black text-gray-900">${lrnStr}</div>
+            <div class="text-blue-600 font-black uppercase tracking-tighter text-[9px] bg-blue-50 px-1.5 py-0.5 rounded inline-block mt-1">${section}</div>
+        </td>
+        <td class="px-4 py-3 font-black text-gray-900 uppercase text-xs tracking-tight">${name}</td>
+        <td class="px-4 py-3 text-right">
+            <div class="font-black text-gray-900 text-xs tabular-nums">${timeStr}</div>
+            <div class="text-[8px] font-black text-blue-500 uppercase tracking-widest mt-0.5">${sessionType} SESSION</div>
+        </td>
     `;
     scanLogsTable.prepend(row);
-    logCount.textContent = `${attendanceSession.size} CAMPUS ENTRIES`;
+    if (logCount) logCount.textContent = `${attendanceSession.size} STUDENTS`;
 }
 
 // --- EXPORT (ZIP VERSION) ---
@@ -1606,20 +1753,28 @@ async function syncPhotosToSupabase() {
 
         for (const [lrn, dataURL] of studentPhotos.entries()) {
             try {
-                // 1. Convert DataURL to Blob
-                const res = await fetch(dataURL);
-                const blob = await res.blob();
-                const fileExt = blob.type.split('/')[1] || 'webp';
-                const fileName = `${lrn}.${fileExt}`;
+                // 1. Convert DataURL to a clean Image Blob
+                const parts = dataURL.split(',');
+                const byteString = atob(parts[1]);
+                const arrayBuffer = new ArrayBuffer(byteString.length);
+                const uint8Array = new Uint8Array(arrayBuffer);
+                
+                for (let i = 0; i < byteString.length; i++) {
+                    uint8Array[i] = byteString.charCodeAt(i);
+                }
+                
+                const blob = new Blob([uint8Array], { type: 'image/webp' });
+                const fileName = `${lrn}.webp`;
                 const filePath = `profiles/${fileName}`;
 
-                // 2. Upload to Supabase Storage
+                // 2. Upload to Supabase Storage with explicit metadata
                 const { data: uploadData, error: uploadError } = await window.supabaseClient
                     .storage
                     .from('student-photos')
                     .upload(filePath, blob, {
-                        cacheControl: '3600',
-                        upsert: true
+                        cacheControl: '0', // Disable cache during testing
+                        upsert: true,
+                        contentType: 'image/webp'
                     });
 
                 if (uploadError) throw uploadError;
@@ -1630,10 +1785,13 @@ async function syncPhotosToSupabase() {
                     .from('student-photos')
                     .getPublicUrl(filePath);
 
+                // Add cache-busting timestamp to the URL
+                const finalUrl = `${publicUrl}?t=${Date.now()}`;
+
                 // 4. Update Students Table
                 const { error: updateError } = await window.supabaseClient
                     .from('students')
-                    .update({ photo_url: publicUrl })
+                    .update({ photo_url: finalUrl })
                     .eq('lrn', lrn);
 
                 if (updateError) throw updateError;
@@ -1664,6 +1822,9 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '../admin.html';
         return;
     }
+    
+    // Start Supabase Cloud Sync
+    initSupabaseSync();
     
     // Attach Sync Listener
     const syncPhotosBtn = document.getElementById('sync-photos-btn');
