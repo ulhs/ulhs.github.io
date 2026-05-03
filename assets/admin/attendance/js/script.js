@@ -316,6 +316,8 @@ let isScannerActive = false;
 let scannerConfig = null;
 let activeCameraId = null;
 let isSwitchingCamera = false;  // Prevent scanning during camera switches
+let lastScannedLrn = null;      // To prevent rapid double scans
+let lastScanTimestamp = 0;      // Timestamp of the last successful scan
 
 // SF2 Mapping Configuration per Level (Indices converted for ExcelJS - 1-based)
 const SF2_MAPPINGS = {
@@ -793,7 +795,16 @@ async function logAttendanceToSupabase(student, timeData) {
 function onScanSuccess(decodedText, decodedResult) {
     // Critical: Only process scans if scanner is actively running and NOT switching cameras
     if (!isScannerActive || isSwitchingCamera || !html5QrCode || !html5QrCode.isScanning) {
-        console.log("Scan ignored: Scanner not active or switching cameras");
+        return;
+    }
+
+    const nowTimestamp = Date.now();
+    const scannedInput = decodedText.trim().toUpperCase();
+    const cleanLRN = scannedInput.replace(/[^0-9]/g, '');
+
+    // 1. SCAN COOLDOWN: Prevent double-scanning same LRN within 5 seconds
+    if (cleanLRN === lastScannedLrn && (nowTimestamp - lastScanTimestamp) < 5000) {
+        console.log(`Scan ignored: Cooldown active for LRN ${cleanLRN}`);
         return;
     }
     
@@ -806,9 +817,6 @@ function onScanSuccess(decodedText, decodedResult) {
         return;
     }
 
-    const scannedInput = decodedText.trim().toUpperCase();
-    const cleanLRN = scannedInput.replace(/[^0-9]/g, '');
-    
     let student = masterStudentDatabase.find(s => s.lrn === cleanLRN);
 
     if (!student) {
@@ -826,14 +834,24 @@ function onScanSuccess(decodedText, decodedResult) {
         if (existing && existing.pm && timeData.session === 'PM') {
             showScanFeedback(student, "PM Session Already Scanned", "yellow");
             showScanOverlay(student.parsedName, student.lrn, 'warning', student.section, timeData);
+            // Even if already scanned, update cooldown to prevent overlay spam
+            lastScannedLrn = student.lrn;
+            lastScanTimestamp = nowTimestamp;
             return;
         }
         
         if (existing && existing.am && timeData.session === 'AM') {
             showScanFeedback(student, "AM Session Already Scanned", "yellow");
             showScanOverlay(student.parsedName, student.lrn, 'warning', student.section, timeData);
+            // Even if already scanned, update cooldown to prevent overlay spam
+            lastScannedLrn = student.lrn;
+            lastScanTimestamp = nowTimestamp;
             return;
         }
+
+        // Update cooldown tracking
+        lastScannedLrn = student.lrn;
+        lastScanTimestamp = nowTimestamp;
 
         markAttendanceInExcel(student, timeData);
         
@@ -851,6 +869,11 @@ function onScanSuccess(decodedText, decodedResult) {
         showScanOverlay(student.parsedName, student.lrn, 'success', student.section, timeData);
         playBeep('success');
     } else {
+        // Cooldown for unknown scans too
+        if (scannedInput === lastScannedLrn && (nowTimestamp - lastScanTimestamp) < 5000) return;
+        lastScannedLrn = scannedInput;
+        lastScanTimestamp = nowTimestamp;
+
         showScanOverlay(scannedInput, "NOT FOUND", 'error', "Unknown Section", {status: 'INVALID', session: 'N/A'});
         playBeep('error');
     }
@@ -1027,12 +1050,24 @@ function showScanOverlay(name, lrn, type, section, timeData) {
 
 function addLog(lrn, name, section) {
     if (emptyLogMsg) emptyLogMsg.classList.add('hidden');
+    const lrnStr = String(lrn);
+
+    // PREVENT DOUBLE UI ENTRIES: Check if this LRN already exists in the table as the very first row
+    // (This handles the rapid double-fire UI glitch)
+    const firstRow = scanLogsTable.querySelector('tr');
+    if (firstRow) {
+        const firstLrnElement = firstRow.querySelector('.font-mono');
+        if (firstLrnElement && firstLrnElement.textContent.trim() === lrnStr) {
+            console.log(`UI Log ignored: LRN ${lrnStr} already at top of table.`);
+            return;
+        }
+    }
+
     const row = document.createElement('tr');
     row.className = "hover:bg-gray-50 transition-colors group border-b border-gray-100 last:border-0";
     
     const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
     const timeStr = new Date().toLocaleTimeString('en-PH', timeOptions);
-    const lrnStr = String(lrn);
     const sessionType = getAttendanceStatus(lrnStr).session;
     
     const photoHTML = `
@@ -1534,23 +1569,29 @@ const startScannerWithCamera = async (cameraIdOrFacingMode) => {
         if (typeof cameraIdOrFacingMode === 'string') {
             // Camera ID provided - device-specific
             console.log("Using specific camera ID:", cameraIdOrFacingMode);
-        } else if (typeof cameraIdOrFacingMode === 'object' && cameraIdOrFacingMode.facingMode) {
+        } else if (typeof cameraIdOrFacingMode === 'object') {
             // FacingMode provided - add it to config
-            cameraConfig.videoConstraints.facingMode = cameraIdOrFacingMode.facingMode;
-            console.log("Using facing mode:", cameraIdOrFacingMode.facingMode);
+            if (cameraIdOrFacingMode.facingMode) {
+                cameraConfig.videoConstraints.facingMode = cameraIdOrFacingMode.facingMode;
+                console.log("Using facing mode:", cameraIdOrFacingMode.facingMode);
+            }
         }
         
         // Start with new camera
         await html5QrCode.start(cameraIdOrFacingMode, cameraConfig, onScanSuccess);
         
-        // Only update state after successful start
+        // Update state after successful start
         if (typeof cameraIdOrFacingMode === 'string') {
             activeCameraId = cameraIdOrFacingMode;
             if (cameraSelect && cameraSelect.value !== cameraIdOrFacingMode) {
                 cameraSelect.value = cameraIdOrFacingMode;
             }
         } else {
-            activeCameraId = null;
+            // If started via facingMode, try to find the actual ID from the scanner
+            activeCameraId = html5QrCode.getRunningTrack()?.getSettings()?.deviceId || null;
+            if (activeCameraId && cameraSelect) {
+                cameraSelect.value = activeCameraId;
+            }
         }
         
         isScannerActive = true;
@@ -1575,6 +1616,7 @@ const switchCamera = async (cameraId) => {
         return;
     }
     
+    // Check if the target is actually different
     if (cameraId === activeCameraId) {
         console.log("Same camera selected, skipping switch");
         return;
@@ -1586,7 +1628,6 @@ const switchCamera = async (cameraId) => {
         
         // Set flag to prevent scanning during switch
         isSwitchingCamera = true;
-        isScannerActive = false;
         
         // Properly release the current camera and all video streams
         await releaseCameraStream();

@@ -322,9 +322,13 @@
                             .single();
                         
                         if (newLog) {
-                            dashboardData.presentToday.unshift(newLog);
-                            dashboardData.lastScanned = newLog;
-                            refreshUI();
+                            // PREVENT DOUBLE ENTRIES: Check if this log ID already exists in the list
+                            const exists = dashboardData.presentToday.some(log => log.id === newLog.id);
+                            if (!exists) {
+                                dashboardData.presentToday.unshift(newLog);
+                                dashboardData.lastScanned = newLog;
+                                refreshUI();
+                            }
                         }
                     })
                     .subscribe();
