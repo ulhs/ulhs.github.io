@@ -41,8 +41,13 @@
     animation: pulse-border 2s infinite;
 }
 
-/* Ensure student heads aren't cut off in profile photos */
+/* Ensure student heads aren't cut off and photos fill their containers perfectly */
 .student-photo-display {
     object-fit: cover;
-    object-position: center 15%;
+    object-position: center 10%; /* Focus on the upper part of the image */
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 100%;
+    min-height: 100%;
+    display: block;
 }
