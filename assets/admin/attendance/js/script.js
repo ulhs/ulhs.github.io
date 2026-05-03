@@ -175,7 +175,7 @@ function renderLogTableFromSession(logs) {
             <tr class="hover:bg-gray-50 transition-colors">
                 <td class="px-4 py-3 text-center">
                     <div class="flex justify-center">
-                        <img data-secure-lrn="${lrnStr}" class="w-10 h-10 rounded-lg object-cover border border-gray-100 shadow-sm" style="display: none">
+                        <img data-secure-lrn="${lrnStr}" class="w-10 h-10 rounded-lg student-photo-display border border-gray-100 shadow-sm" style="display: none">
                         <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300">
                             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
                         </div>
@@ -1072,7 +1072,7 @@ function addLog(lrn, name, section) {
     
     const photoHTML = `
         <div class="flex justify-center">
-            <img data-secure-lrn="${lrnStr}" class="w-10 h-10 rounded-lg object-cover border border-gray-100 shadow-sm" style="display: none">
+            <img data-secure-lrn="${lrnStr}" class="w-10 h-10 rounded-lg student-photo-display border border-gray-100 shadow-sm" style="display: none">
             <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300">
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
             </div>

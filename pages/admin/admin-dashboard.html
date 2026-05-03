@@ -163,7 +163,7 @@
                             <div id="last-scanned-card" class="bg-white rounded-3xl shadow-xl p-6 border border-gray-100 transition-all duration-300 mt-8">
                                 <div class="flex items-center gap-6">
                                     <div class="w-24 h-24 rounded-2xl bg-gray-100 border-2 border-gray-100 overflow-hidden flex-shrink-0 relative">
-                                        <img id="last-student-photo" src="" alt="" class="w-full h-full object-cover" style="display:none">
+                                        <img id="last-student-photo" src="" alt="" class="w-full h-full student-photo-display" style="display:none">
                                         <div id="last-photo-placeholder" class="w-full h-full flex items-center justify-center text-gray-300">
                                             <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
                                         </div>
@@ -435,7 +435,7 @@
                         <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0">
                             <td class="px-4 py-3 text-center">
                                 <div class="flex justify-center">
-                                    <img data-secure-lrn="${lrn}" data-photo-url="${student?.photo_url || ''}" class="w-10 h-10 rounded-lg object-cover border border-gray-100 shadow-sm" style="display: none">
+                                    <img data-secure-lrn="${lrn}" data-photo-url="${student?.photo_url || ''}" class="w-10 h-10 rounded-lg student-photo-display border border-gray-100 shadow-sm" style="display: none">
                                     <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300">
                                         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
                                     </div>

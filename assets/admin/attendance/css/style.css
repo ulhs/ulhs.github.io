@@ -40,3 +40,9 @@
 .pulse-upload {
     animation: pulse-border 2s infinite;
 }
+
+/* Ensure student heads aren't cut off in profile photos */
+.student-photo-display {
+    object-fit: cover;
+    object-position: center 15%;
+}
