@@ -493,21 +493,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function initVisitorCounter() {
         const counterEl = document.getElementById('visitor-count');
+        const counterContainer = document.querySelector('.visitor-counter');
         if (!counterEl) return;
 
+        // 1. Refined Homepage Detection
+        const path = window.location.pathname.toLowerCase();
+        const isHomePage = path === '/' || 
+                          path.endsWith('/index.html') || 
+                          path.endsWith('/') ||
+                          path === '' ||
+                          path.includes('index.html') ||
+                          (!path.includes('.html') && !path.includes('/pages/'));
+
+        // 2. Hide counter if not on homepage
+        if (!isHomePage) {
+            if (counterContainer) counterContainer.style.display = 'none';
+            return;
+        }
+
+        // 3. Logic for Homepage
         try {
-            // Using counterapi.dev - a free, reliable visitor counter API
-            const response = await fetch('https://api.counterapi.dev/v1/ulhs-website/visits/up');
+            // Check if already counted this session
+            const sessionKey = 'ulhs_visited_session';
+            const hasBeenCounted = sessionStorage.getItem(sessionKey);
+            
+            // Use 'up' to increment, or no suffix to just fetch
+            const apiEndpoint = hasBeenCounted 
+                ? 'https://api.counterapi.dev/v1/ulhs-website/visits' 
+                : 'https://api.counterapi.dev/v1/ulhs-website/visits/up';
+
+            // Use a short timeout to prevent long hangs
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+            const response = await fetch(apiEndpoint, { 
+                signal: controller.signal,
+                mode: 'cors',
+                cache: 'no-cache'
+            });
+            clearTimeout(timeoutId);
+
+            if (!response.ok) throw new Error(`API returned ${response.status}`);
+            
             const data = await response.json();
             
-            if (data && data.count) {
+            if (data && typeof data.count !== 'undefined') {
                 counterEl.textContent = data.count.toLocaleString();
+                if (!hasBeenCounted) sessionStorage.setItem(sessionKey, 'true');
             } else {
                 counterEl.textContent = '---';
             }
         } catch (err) {
             console.warn("Visitor counter failed:", err);
             counterEl.textContent = '---';
+            // If it fails, we still want to see the container but with the error state
         }
     }
 
