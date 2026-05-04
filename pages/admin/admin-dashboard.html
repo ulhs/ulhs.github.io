@@ -11,6 +11,7 @@
     <script src="../../assets/lib/tailwind.min.js"></script>
     <link rel="stylesheet" href="../../assets/css/typography.css">
     <link rel="stylesheet" href="../../assets/css/style.css">
+    <link rel="stylesheet" href="../../assets/admin/attendance/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../../assets/js/supabase-config.js"></script>
     <script src="../../assets/js/admin-nav.js"></script>
@@ -162,19 +163,19 @@
 
                             <div id="last-scanned-card" class="bg-white rounded-3xl shadow-xl p-6 border border-gray-100 transition-all duration-300 mt-8">
                                 <div class="flex items-center gap-6">
-                                    <div class="w-24 h-24 rounded-2xl bg-gray-100 border-2 border-gray-100 overflow-hidden flex-shrink-0 relative">
+                                    <div class="rounded-2xl bg-white/10 backdrop-blur-md border-2 border-white/20 overflow-hidden flex-shrink-0 relative shadow-lg" style="width: 140px; height: 140px; min-width: 140px; min-height: 140px;">
                                         <img id="last-student-photo" src="" alt="" class="w-full h-full student-photo-display" style="display:none">
-                                        <div id="last-photo-placeholder" class="w-full h-full flex items-center justify-center text-gray-300">
-                                            <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                                        <div id="last-photo-placeholder" class="w-full h-full flex items-center justify-center text-gray-300 bg-gray-100">
+                                            <svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
                                         </div>
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Last Scanned Learner</p>
-                                        <h3 id="last-student-name" class="text-2xl font-black text-gray-900 truncate leading-tight">Waiting for scan...</h3>
-                                        <div class="flex items-center gap-2 mt-1">
-                                            <span id="section-name" class="text-xs font-bold text-gray-400 truncate uppercase tracking-wider">No activity</span>
+                                        <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">Last Scanned Learner</p>
+                                        <h3 id="last-student-name" class="text-3xl font-black text-gray-900 truncate leading-tight tracking-tighter">Waiting for scan...</h3>
+                                        <div class="flex items-center gap-2 mt-2">
+                                            <span id="section-name" class="text-xs font-bold text-blue-600 truncate uppercase tracking-wider">No activity</span>
                                             <span class="text-gray-300">•</span>
-                                            <span id="last-scan-time" class="text-xs font-bold text-gray-400">--:--:--</span>
+                                            <span id="last-scan-time" class="text-xs font-bold text-gray-500 tabular-nums">--:--:--</span>
                                         </div>
                                     </div>
                                 </div>
