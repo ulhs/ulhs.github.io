@@ -14,6 +14,7 @@
     <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../../assets/js/supabase-config.js"></script>
+    <script src="../../assets/js/theme-manager.js"></script>
     <script src="../../assets/js/admin-nav.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
@@ -65,7 +66,7 @@
             </script>
         </div>
         <input type="checkbox" id="nav-toggle" class="nav-toggle">
-        <label for="nav-toggle" class="nav-toggle-label">
+        <label for="nav-toggle" class="nav-toggle-label" aria-label="Toggle Navigation">
             <span></span>
         </label>
         <nav class="nav-links magic-nav">
@@ -101,44 +102,24 @@
                         </a>
                     </li>
                     <div class="indicator"></div>
+                    <div id="theme-toggle" class="theme-toggle" data-tooltip="Switch to Dark">🌙</div>
                 </ul>
             </nav>
         </div>
     </header>
 
     <main class="container mx-auto px-4 pb-12 max-w-5xl mt-8">
-        <div class="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
-            <div class="flex items-center justify-between mb-8">
-                <div>
-                    <h2 class="text-3xl font-black text-gray-900 uppercase tracking-tight">Manage System Access</h2>
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Granular Tool-Based Control</p>
+        <div class="bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-gray-100">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+                <div class="text-center sm:text-left">
+                    <h2 class="text-2xl sm:text-3xl font-black text-gray-900 uppercase tracking-tight">Manage System Access</h2>
+                    <p class="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Granular Tool-Based Control</p>
                 </div>
-                <!--
-                <div class="bg-blue-100 p-3 rounded-2xl">
-                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                </div>
-                -->
             </div>
 
-            <!-- Permission Legend 
-            <div class="flex gap-4 mb-8 bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                <div class="flex items-center gap-2">
-                    <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-                    <span class="text-[10px] font-black uppercase text-gray-500 tracking-wider">Attendance (🕒)</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="w-3 h-3 rounded-full bg-purple-500"></span>
-                    <span class="text-[10px] font-black uppercase text-gray-500 tracking-wider">ID Gen (🆔)</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="w-3 h-3 rounded-full bg-green-500"></span>
-                    <span class="text-[10px] font-black uppercase text-gray-500 tracking-wider">Stats (📊)</span>
-                </div>
-            </div>
-            -->
             <!-- Matrix Table -->
-            <div class="overflow-hidden rounded-3xl border border-gray-100">
-                <table class="w-full text-left border-collapse">
+            <div class="overflow-x-auto rounded-3xl border border-gray-100">
+                <table class="w-full text-left border-collapse min-w-[600px] sm:min-w-0">
                     <thead>
                         <tr class="bg-gray-900 text-white">
                             <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Faculty Member</th>
@@ -160,9 +141,9 @@
             </div>
 
             <!-- Bulk Actions -->
-            <div class="mt-6 flex justify-end gap-4">
-                <p id="status-message" class="mr-auto self-center text-[10px] font-black uppercase tracking-widest text-green-600 opacity-0 transition-opacity">Database Updated!</p>
-                <button id="btn-refresh" class="text-[10px] font-black uppercase tracking-widest text-gray-600 border border-gray-200 px-4 py-2 rounded-xl hover:bg-gray-50 transition-all">Refresh List</button>
+            <div class="mt-6 flex flex-col sm:flex-row justify-end items-center gap-4">
+                <p id="status-message" class="sm:mr-auto text-[10px] font-black uppercase tracking-widest text-green-600 opacity-0 transition-opacity order-2 sm:order-1">Database Updated!</p>
+                <button id="btn-refresh" class="w-full sm:w-auto text-[10px] font-black uppercase tracking-widest text-gray-600 border border-gray-200 px-4 py-2 rounded-xl hover:bg-gray-50 transition-all order-1 sm:order-2">Refresh List</button>
             </div>
 
             <!-- DPA Notice -->

@@ -18,6 +18,7 @@
     <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../../assets/js/supabase-config.js"></script>
+    <script src="../../assets/js/theme-manager.js"></script>
     <script src="../../assets/js/admin-nav.js"></script>
 </head>
 <body>
@@ -69,7 +70,7 @@
             </script>
         </div>
         <input type="checkbox" id="nav-toggle" class="nav-toggle">
-        <label for="nav-toggle" class="nav-toggle-label">
+        <label for="nav-toggle" class="nav-toggle-label" aria-label="Toggle Navigation">
             <span></span>
         </label>
         <nav class="nav-links magic-nav">
@@ -131,6 +132,7 @@
                             </li>`;
                         
                         html += '<div class="indicator"></div>';
+                        html += '<div id="theme-toggle" class="theme-toggle" data-tooltip="Switch to Dark">🌙</div>';
                         document.write(html);
                     </script>
                 </ul>
@@ -138,37 +140,39 @@
         </div>
     </header>
 
-    <main class="id-gen-container">
+    <main class="id-gen-container px-4 sm:px-6 lg:px-8">
         <!-- IMAGE EDITOR MODAL -->
         <div id="editor-modal" class="modal">
-            <div class="modal-content">
-                <h3 class="accent-title">Edit Photo</h3>
-                <div class="cropper-container-box">
-                    <img id="editor-image" src="">
+            <div class="modal-content w-[95%] max-w-2xl mx-auto">
+                <h3 class="accent-title text-xl sm:text-2xl">Edit Photo</h3>
+                <div class="cropper-container-box aspect-square sm:aspect-auto">
+                    <img id="editor-image" src="" class="max-w-full h-auto">
                 </div>
-                <div class="editor-controls">
-                    <button type="button" id="btn-rotate-left" class="btn btn-small btn-secondary">Rotate Left 90°</button>
-                    <button type="button" id="btn-rotate-right" class="btn btn-small btn-secondary">Rotate Right 90°</button>
+                <div class="editor-controls flex flex-col gap-4 mt-6">
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <button type="button" id="btn-rotate-left" class="btn btn-small btn-secondary text-[10px] sm:text-xs">Rotate Left 90°</button>
+                        <button type="button" id="btn-rotate-right" class="btn btn-small btn-secondary text-[10px] sm:text-xs">Rotate Right 90°</button>
+                    </div>
                     
-                    <div class="rotate-slider-container">
-                        <label for="rotate-arbitrary">Arbitrary Rotation: <span id="rotate-val">0</span>°</label>
-                        <input type="range" id="rotate-arbitrary" class="rotate-slider" min="-180" max="180" value="0">
+                    <div class="rotate-slider-container w-full">
+                        <label for="rotate-arbitrary" class="text-xs sm:text-sm">Arbitrary Rotation: <span id="rotate-val">0</span>°</label>
+                        <input type="range" id="rotate-arbitrary" class="rotate-slider w-full" min="-180" max="180" value="0">
                     </div>
 
-                    <div class="editor-actions">
-                        <button type="button" id="btn-cancel-edit" class="btn btn-small btn-secondary">Cancel</button>
-                        <button type="button" id="btn-apply-edit" class="btn btn-small">Apply Changes</button>
+                    <div class="editor-actions flex flex-col sm:flex-row justify-center gap-3">
+                        <button type="button" id="btn-cancel-edit" class="btn btn-small btn-secondary w-full sm:w-auto">Cancel</button>
+                        <button type="button" id="btn-apply-edit" class="btn btn-small w-full sm:w-auto">Apply Changes</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <h2 class="accent-title" id="gen-title">ID Generator</h2>
-        <p id="gen-subtitle">Complete the form below to generate an ID card.</p>
+        <h2 class="accent-title text-2xl sm:text-3xl mt-8" id="gen-title">ID Generator</h2>
+        <p id="gen-subtitle" class="text-xs sm:text-sm">Complete the form below to generate an ID card.</p>
 
         <!-- ID TYPE TOGGLE -->
-        <div class="id-type-toggle-container">
-            <div class="id-type-toggle">
+        <div class="id-type-toggle-container my-6">
+            <div class="id-type-toggle flex justify-center scale-90 sm:scale-100">
                 <input type="radio" id="type-student" name="id-type" value="student" checked>
                 <label for="type-student">Student</label>
                 <input type="radio" id="type-personnel" name="id-type" value="personnel">
@@ -198,11 +202,11 @@
                                 Remove Background (Beta)
                             </label>
                         </div>
-                        <div class="btn-group">
-                            <button type="button" id="btn-capture" class="btn btn-small">Capture Photo</button>
-                            <button type="button" id="btn-upload" class="btn btn-small btn-secondary">Upload Photo</button>
+                        <div class="btn-group flex flex-col sm:flex-row gap-2 mt-4">
+                            <button type="button" id="btn-capture" class="btn btn-small w-full sm:w-auto">Capture Photo</button>
+                            <button type="button" id="btn-upload" class="btn btn-small btn-secondary w-full sm:w-auto">Upload Photo</button>
                             <input type="file" id="file-input" accept="image/*" style="display:none">
-                            <button type="button" id="btn-retake" class="btn btn-small btn-secondary" style="display:none">Retake / New Photo</button>
+                            <button type="button" id="btn-retake" class="btn btn-small btn-secondary w-full sm:w-auto" style="display:none">Retake / New Photo</button>
                         </div>
                     </div>
 
@@ -291,13 +295,13 @@
                                     <span>Upload Signature</span>
                                 </div>
                             </div>
-                            <div class="btn-group">
-                                <button type="button" id="btn-upload-sig" class="btn btn-small btn-secondary">Upload Signature</button>
+                            <div class="btn-group flex flex-wrap gap-2 mt-4">
+                                <button type="button" id="btn-upload-sig" class="btn btn-small btn-secondary flex-1 min-w-[140px]">Upload Signature</button>
                                 <input type="file" id="sig-input" accept="image/*" style="display:none">
-                                <button type="button" id="btn-draw-sig" class="btn btn-small btn-secondary">Draw Signature</button>
-                                <button type="button" id="btn-capture-sig" class="btn btn-small btn-secondary">Capture via Webcam</button>
-                                <button type="button" id="btn-edit-sig" class="btn btn-small btn-secondary" style="display:none">Edit</button>
-                                <button type="button" id="btn-remove-sig" class="btn btn-small btn-secondary" style="display:none">Remove</button>
+                                <button type="button" id="btn-draw-sig" class="btn btn-small btn-secondary flex-1 min-w-[140px]">Draw Signature</button>
+                                <button type="button" id="btn-capture-sig" class="btn btn-small btn-secondary flex-1 min-w-[140px]">Capture via Webcam</button>
+                                <button type="button" id="btn-edit-sig" class="btn btn-small btn-secondary flex-1 min-w-[140px]" style="display:none">Edit</button>
+                                <button type="button" id="btn-remove-sig" class="btn btn-small btn-secondary flex-1 min-w-[140px]" style="display:none">Remove</button>
                             </div>
                             <div class="form-group bg-remove-toggle">
                                 <label class="checkbox-container">
@@ -348,19 +352,19 @@
             </div>
 
             <!-- PREVIEW SECTION -->
-            <div class="preview-section">
-                <h3>ID Preview</h3>
-                <div class="preview-box">
-                    <p class="preview-label">Front</p>
-                    <canvas id="canvas-front" width="600" height="960" class="id-preview-canvas"></canvas>
+            <div class="preview-section mt-12 lg:mt-0">
+                <h3 class="text-xl sm:text-2xl font-black uppercase tracking-tight text-center mb-6">ID Preview</h3>
+                <div class="preview-box mb-8">
+                    <p class="preview-label text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Front Side</p>
+                    <canvas id="canvas-front" width="600" height="960" class="id-preview-canvas w-full max-w-[400px] mx-auto shadow-2xl rounded-xl border border-gray-100"></canvas>
                 </div>
-                <div class="preview-box">
-                    <p class="preview-label">Back</p>
-                    <canvas id="canvas-back" width="600" height="960" class="id-preview-canvas"></canvas>
+                <div class="preview-box mb-8">
+                    <p class="preview-label text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Back Side</p>
+                    <canvas id="canvas-back" width="600" height="960" class="id-preview-canvas w-full max-w-[400px] mx-auto shadow-2xl rounded-xl border border-gray-100"></canvas>
                 </div>
-                <div class="btn-group">
-                    <button id="btn-download-front" class="btn" disabled>Download Front</button>
-                    <button id="btn-download-back" class="btn" disabled>Download Back</button>
+                <div class="btn-group flex flex-col sm:flex-row gap-4">
+                    <button id="btn-download-front" class="btn btn-full sm:flex-1" disabled>Download Front</button>
+                    <button id="btn-download-back" class="btn btn-full sm:flex-1" disabled>Download Back</button>
                 </div>
             </div>
         </div>

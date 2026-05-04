@@ -16,6 +16,7 @@
     <script src="../../assets/lib/html5-qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../../assets/js/supabase-config.js"></script>
+    <script src="../../assets/js/theme-manager.js"></script>
     <link rel="stylesheet" href="../../assets/css/typography.css">
     <link rel="stylesheet" href="../../assets/css/style.css">
     <link rel="stylesheet" href="../../assets/admin/attendance/css/style.css">
@@ -43,12 +44,28 @@
 
                 console.log("Session found for user:", session.user.email);
 
+                const cachedAccess = JSON.parse(localStorage.getItem('attendanceOfflineAccess') || 'null');
+
                 // Logged in -> Check Profile for Access
                 const { data: profile, error: profileError } = await window.supabaseClient
                     .from('profiles')
                     .select('*')
                     .eq('id', session.user.id)
                     .single();
+
+                if (profileError) {
+                    const canUseCachedAccess = cachedAccess && cachedAccess.userId === session.user.id && cachedAccess.access?.attendance;
+                    if (canUseCachedAccess) {
+                        console.warn("Profile lookup unavailable. Using cached offline attendance access.");
+                        sessionStorage.setItem('userName', cachedAccess.fullName || session.user.email);
+                        sessionStorage.setItem('userRole', cachedAccess.role || 'staff');
+                        sessionStorage.setItem('userAccess', JSON.stringify(cachedAccess.access || {}));
+                        sessionStorage.setItem('adminLoggedIn', 'true');
+                        return;
+                    }
+
+                    throw profileError;
+                }
 
                 // Check for explicit "can_scan" permission or Admin role
                 const userRole = (profile?.role || 'staff').toLowerCase();
@@ -66,12 +83,20 @@
                 // Store in session for UI
                 sessionStorage.setItem('userName', profile?.full_name || session.user.email);
                 sessionStorage.setItem('userRole', userRole);
-                sessionStorage.setItem('userAccess', JSON.stringify({
+                const resolvedAccess = {
                     attendance: canScan,
                     idGen: profile?.can_manage_ids || userRole === 'admin',
                     stats: profile?.can_view_dashboard || ['admin', 'school_head'].includes(userRole)
-                }));
+                };
+                sessionStorage.setItem('userAccess', JSON.stringify(resolvedAccess));
                 sessionStorage.setItem('adminLoggedIn', 'true');
+                localStorage.setItem('attendanceOfflineAccess', JSON.stringify({
+                    userId: session.user.id,
+                    fullName: profile?.full_name || session.user.email,
+                    role: userRole,
+                    access: resolvedAccess,
+                    cachedAt: new Date().toISOString()
+                }));
                 
                 // Show Admin Tools if applicable
                 if (userRole === 'admin') {
@@ -109,7 +134,7 @@
             </script>
         </div>
         <input type="checkbox" id="nav-toggle" class="nav-toggle">
-        <label for="nav-toggle" class="nav-toggle-label">
+        <label for="nav-toggle" class="nav-toggle-label" aria-label="Toggle Navigation">
             <span></span>
         </label>
         <nav class="nav-links magic-nav">
@@ -175,6 +200,7 @@
                             </li>`;
                         
                         html += '<div class="indicator"></div>';
+                        html += '<div id="theme-toggle" class="theme-toggle" data-tooltip="Switch to Dark">🌙</div>';
                         document.write(html);
                     </script>
                 </ul>
@@ -213,16 +239,16 @@
             <!-- Left Column: Controls and Scanner -->
             <div class="lg:col-span-7 space-y-6">
                 <!-- Real-time Clock Card -->
-                <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 p-8 flex flex-col items-center justify-center text-center relative">
-                    <div class="absolute top-4 left-6 flex items-center gap-2">
+                <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 p-6 sm:p-8 flex flex-col items-center justify-center text-center relative">
+                    <div class="mb-4 sm:mb-0 sm:absolute sm:top-4 sm:left-6 flex flex-wrap justify-center items-center gap-2">
                         <span id="session-badge" class="px-3 py-1 bg-gray-100 text-gray-500 rounded-full text-[10px] font-black uppercase tracking-widest">Detecting Session...</span>
                         <span id="cloud-sync-badge" class="px-3 py-1 bg-red-100 text-red-500 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
                             <i class="fa-solid fa-cloud"></i> Offline
                         </span>
                     </div>
-                    <h2 id="live-clock" class="text-7xl md:text-8xl font-black text-gray-900 tracking-tight leading-none mb-2 flex items-baseline gap-2 tabular-nums">
+                    <h2 id="live-clock" class="text-5xl sm:text-7xl md:text-8xl font-black text-gray-900 tracking-tight leading-none mb-2 flex items-baseline gap-2 tabular-nums">
                         <span id="clock-time">00:00</span>
-                        <span id="clock-ampm" class="text-2xl md:text-3xl font-black text-blue-600 uppercase tracking-widest">AM</span>
+                        <span id="clock-ampm" class="text-xl sm:text-2xl md:text-3xl font-black text-blue-600 uppercase tracking-widest">AM</span>
                     </h2>
                     <p id="live-date" class="text-xl font-black text-blue-700 uppercase tracking-widest">Loading Date...</p>
                 </div>
@@ -232,22 +258,10 @@
                     <div class="flex items-center justify-between mb-4">
                         <div>
                             <h3 id="system-status-title" class="text-lg font-black text-gray-900 uppercase tracking-tight">Cloud Registry Status</h3>
-                            <p id="system-status-desc" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Connecting to Supabase...</p>
+                            <p id="system-status-desc" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Connecting to Database...</p>
                         </div>
                         <div id="status-icon" class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
                             <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                        </div>
-                    </div>
-
-                    <!-- Cloud Stats Grid -->
-                    <div id="cloud-stats-grid" class="grid grid-cols-2 gap-4 mt-4">
-                        <div class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50">
-                            <p class="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1">Students</p>
-                            <p id="total-students-count" class="text-2xl font-black text-blue-900">0</p>
-                        </div>
-                        <div class="bg-green-50/50 p-4 rounded-2xl border border-green-100/50">
-                            <p class="text-[9px] font-black text-green-600 uppercase tracking-widest mb-1">Today's Logs</p>
-                            <p id="total-logs-count" class="text-2xl font-black text-green-900">0</p>
                         </div>
                     </div>
 
@@ -336,21 +350,21 @@
                             </p>
                         </div>
 
-                        <div class="mt-6 flex flex-wrap justify-center gap-4 items-center bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                        <div class="mt-6 flex flex-col sm:flex-row flex-wrap justify-center gap-4 items-center bg-gray-50 p-4 sm:p-6 rounded-2xl border border-gray-100">
                             <!-- Targeted Export Selectors -->
-                            <div class="flex items-center gap-3 mr-auto">
-                                <div class="flex flex-col gap-1">
+                            <div class="flex items-center gap-3 w-full sm:w-auto mr-auto">
+                                <div class="flex flex-col gap-1 flex-1 sm:flex-none">
                                     <label class="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Export Month</label>
-                                    <select id="export-month" class="bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                                    <select id="export-month" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                                         <option value="0">January</option><option value="1">February</option><option value="2">March</option>
                                         <option value="3">April</option><option value="4">May</option><option value="5">June</option>
                                         <option value="6">July</option><option value="7">August</option><option value="8">September</option>
                                         <option value="9">October</option><option value="10">November</option><option value="11">December</option>
                                     </select>
                                 </div>
-                                <div class="flex flex-col gap-1">
+                                <div class="flex flex-col gap-1 flex-1 sm:flex-none">
                                     <label class="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Year</label>
-                                    <select id="export-year" class="bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                                    <select id="export-year" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                                         <option value="2024">2024</option>
                                         <option value="2025">2025</option>
                                         <option value="2026" selected>2026</option>
@@ -358,23 +372,23 @@
                                 </div>
                             </div>
 
-                            <button id="start-btn" class="group relative px-8 py-3 bg-deped-blue text-white rounded-xl font-black uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed overflow-hidden" disabled>
-                                <span class="relative z-10 flex items-center gap-2">
+                            <button id="start-btn" class="w-full sm:w-auto group relative px-8 py-3 bg-deped-blue text-white rounded-xl font-black uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed overflow-hidden" disabled>
+                                <span class="relative z-10 flex items-center justify-center gap-2">
                                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
                                     Launch Scanner
                                 </span>
                                 <div id="btn-pulse" class="absolute inset-0 bg-white/20 scale-0 rounded-xl transition-transform duration-1000"></div>
                             </button>
-                            <button id="stop-btn" class="px-8 py-3 bg-red-600 text-white rounded-xl font-black uppercase tracking-widest shadow-xl hover:bg-red-700 transition-all hidden">Stop</button>
-                            <button id="export-btn" class="px-6 py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition-all hidden flex items-center gap-2">
+                            <button id="stop-btn" class="w-full sm:w-auto px-8 py-3 bg-red-600 text-white rounded-xl font-black uppercase tracking-widest shadow-xl hover:bg-red-700 transition-all hidden">Stop</button>
+                            <button id="export-btn" class="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition-all hidden flex items-center justify-center gap-2">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                                 Save Session
                             </button>
-                            <button id="export-jhs-btn" class="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all hidden flex items-center gap-2">
+                            <button id="export-jhs-btn" class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all hidden flex items-center justify-center gap-2">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                                 Export JHS
                             </button>
-                            <button id="export-shs-btn" class="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold shadow-lg hover:bg-purple-700 transition-all hidden flex items-center gap-2">
+                            <button id="export-shs-btn" class="w-full sm:w-auto px-6 py-3 bg-purple-600 text-white rounded-xl font-bold shadow-lg hover:bg-purple-700 transition-all hidden flex items-center justify-center gap-2">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                                 Export SHS
                             </button>
@@ -397,20 +411,20 @@
                         <div class="space-y-6">
                             <!-- Last Scanned Card (Prominent & Upgraded) -->
                             <div id="last-scanned-card" class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl shadow-2xl p-6 text-white transition-all duration-500 transform hover:scale-[1.01] border border-blue-400/30">
-                                <div class="flex items-center gap-6">
-                                    <div class="w-28 h-28 rounded-2xl bg-white/10 backdrop-blur-md border-2 border-white/20 overflow-hidden flex-shrink-0 relative shadow-inner">
+                                <div class="flex flex-col sm:flex-row items-center gap-6">
+                                    <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-white/10 backdrop-blur-md border-2 border-white/20 overflow-hidden flex-shrink-0 relative shadow-inner">
                                         <img id="last-student-photo" src="" alt="" class="w-full h-full student-photo-display" style="display:none">
                                         <div id="last-photo-placeholder" class="w-full h-full flex items-center justify-center text-white/30">
                                             <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
                                         </div>
                                     </div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center gap-2 mb-2">
+                                    <div class="flex-1 min-w-0 text-center sm:text-left">
+                                        <div class="flex items-center justify-center sm:justify-start gap-2 mb-2">
                                             <span class="px-2 py-0.5 bg-blue-400/30 rounded text-[9px] font-black uppercase tracking-widest text-blue-100">Last Scanned Learner</span>
                                             <span id="last-scan-status-badge" class="hidden px-2 py-0.5 bg-green-400 text-green-950 rounded text-[9px] font-black uppercase tracking-widest">SUCCESS</span>
                                         </div>
-                                        <h3 id="last-student-name" class="text-3xl font-black truncate leading-tight tracking-tighter">Waiting for scan...</h3>
-                                        <div class="flex items-center gap-2 mt-2">
+                                        <h3 id="last-student-name" class="text-2xl sm:text-3xl font-black truncate leading-tight tracking-tighter">Waiting for scan...</h3>
+                                        <div class="flex items-center justify-center sm:justify-start gap-2 mt-2">
                                             <span id="section-name" class="text-xs font-bold text-blue-200 truncate uppercase tracking-wider">No activity</span>
                                             <span class="text-blue-400/50">•</span>
                                             <span id="last-scan-time" class="text-xs font-bold text-blue-200 tabular-nums">--:--:--</span>
@@ -420,14 +434,22 @@
                             </div>
 
                             <!-- Statistics Grid -->
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                                     <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Campus Population</p>
-                                    <p id="total-count" class="text-3xl font-black text-gray-900 tracking-tighter">0</p>
+                                    <p id="total-count" class="text-2xl sm:text-3xl font-black text-gray-900 tracking-tighter">0</p>
                                 </div>
-                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                                     <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Campus Entries</p>
-                                    <p id="present-count" class="text-3xl font-black text-green-600 tracking-tighter">0</p>
+                                    <p id="present-count" class="text-2xl sm:text-3xl font-black text-green-600 tracking-tighter">0</p>
+                                </div>
+                                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">AM Logs</p>
+                                    <p id="am-entry-count" class="text-2xl sm:text-3xl font-black text-amber-600 tracking-tighter">0</p>
+                                </div>
+                                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">PM Logs</p>
+                                    <p id="pm-entry-count" class="text-2xl sm:text-3xl font-black text-orange-600 tracking-tighter">0</p>
                                 </div>
                             </div>
                         </div>
@@ -444,16 +466,22 @@
                         <table class="w-full text-left text-sm">
                             <thead>
                                  <tr class="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest text-left">
-                                     <th class="px-4 py-3 w-16 text-center">Photo</th>
-                                     <th class="px-4 py-3">LRN / Section</th>
-                                     <th class="px-4 py-3">Learner Name</th>
-                                     <th class="px-4 py-3 text-right">Time</th>
+                                     <th class="px-2 sm:px-4 py-3 w-12 sm:w-16 text-center">Photo</th>
+                                     <th class="px-2 sm:px-4 py-3">LRN / Section</th>
+                                     <th class="px-2 sm:px-4 py-3">Learner Name</th>
+                                     <th class="px-2 sm:px-4 py-3 text-right">Time</th>
                                  </tr>
                              </thead>
                             <tbody id="scan-logs-table" class="divide-y divide-gray-100">
                                 <!-- Table rows will be inserted here -->
                             </tbody>
                         </table>
+                    </div>
+                    <div id="log-expand-container" class="p-3 border-t border-gray-50 text-center hidden">
+                        <button id="log-expand-btn" class="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:text-blue-800 transition-colors flex items-center gap-2 mx-auto">
+                            <span>Show All Logs</span>
+                            <i class="fa-solid fa-chevron-down transition-transform duration-300"></i>
+                        </button>
                     </div>
                     <div id="empty-log-msg" class="p-12 text-center text-gray-400">
                         <svg class="w-12 h-12 mx-auto mb-3 opacity-20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
@@ -555,6 +583,7 @@
         </div>
     </footer>
 
+    <script src="../../assets/admin/attendance/js/offline-store.js"></script>
     <script src="../../assets/admin/attendance/js/script.js"></script>
     <script src="../../assets/js/visitor-counter.js"></script>
 </body>

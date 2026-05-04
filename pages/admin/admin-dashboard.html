@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="../../assets/admin/attendance/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../../assets/js/supabase-config.js"></script>
+    <script src="../../assets/js/theme-manager.js"></script>
     <script src="../../assets/js/admin-nav.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
@@ -65,7 +66,7 @@
             </script>
         </div>
         <input type="checkbox" id="nav-toggle" class="nav-toggle">
-        <label for="nav-toggle" class="nav-toggle-label">
+        <label for="nav-toggle" class="nav-toggle-label" aria-label="Toggle Navigation">
             <span></span>
         </label>
         <nav class="nav-links magic-nav">
@@ -127,6 +128,7 @@
                             </li>`;
                         
                         html += '<div class="indicator"></div>';
+                        html += '<div id="theme-toggle" class="theme-toggle" data-tooltip="Switch to Dark">🌙</div>';
                         document.write(html);
                     </script>
                 </ul>
@@ -146,33 +148,53 @@
                         </h2>
 
                         <div class="space-y-4">
-                            <div class="grid grid-cols-3 gap-4">
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                <div>
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">View Section</p>
+                                    <p class="text-xs font-bold text-gray-500 mt-1">Filter daily logs and last scanned learner by section.</p>
+                                </div>
+                                <div class="w-full md:w-72">
+                                    <select id="section-filter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                                        <option value="ALL">All Sections</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 xl:grid-cols-5 gap-4">
                                 <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
                                     <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Population</p>
-                                    <p id="total-count" class="text-2xl font-black text-blue-800">0</p>
-                                </div>
-                                <div class="bg-green-50 p-4 rounded-xl border border-green-100">
-                                    <p class="text-[10px] font-bold text-green-600 uppercase tracking-widest">Today</p>
-                                    <p id="present-count" class="text-2xl font-black text-green-800">0</p>
+                                    <p id="total-count" class="text-xl sm:text-2xl font-black text-blue-800">0</p>
                                 </div>
                                 <div class="bg-purple-50 p-4 rounded-xl border border-purple-100">
                                     <p class="text-[10px] font-bold text-purple-600 uppercase tracking-widest">Lifetime</p>
-                                    <p id="lifetime-count" class="text-2xl font-black text-purple-800">0</p>
+                                    <p id="lifetime-count" class="text-xl sm:text-2xl font-black text-purple-800">0</p>
+                                </div>
+                                <div class="bg-green-50 p-4 rounded-xl border border-green-100">
+                                    <p class="text-[10px] font-bold text-green-600 uppercase tracking-widest">Today</p>
+                                    <p id="present-count" class="text-xl sm:text-2xl font-black text-green-800">0</p>
+                                </div>
+                                <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                                    <p class="text-[10px] font-bold text-amber-600 uppercase tracking-widest">AM Logs</p>
+                                    <p id="am-count" class="text-xl sm:text-2xl font-black text-amber-800">0</p>
+                                </div>
+                                <div class="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                                    <p class="text-[10px] font-bold text-orange-600 uppercase tracking-widest">PM Logs</p>
+                                    <p id="pm-count" class="text-xl sm:text-2xl font-black text-orange-800">0</p>
                                 </div>
                             </div>
 
                             <div id="last-scanned-card" class="bg-white rounded-3xl shadow-xl p-6 border border-gray-100 transition-all duration-300 mt-8">
-                                <div class="flex items-center gap-6">
-                                    <div class="rounded-2xl bg-white/10 backdrop-blur-md border-2 border-white/20 overflow-hidden flex-shrink-0 relative shadow-lg" style="width: 140px; height: 140px; min-width: 140px; min-height: 140px;">
+                                <div class="flex flex-col sm:flex-row items-center gap-6">
+                                    <div class="rounded-2xl bg-white/10 backdrop-blur-md border-2 border-white/20 overflow-hidden flex-shrink-0 relative shadow-lg w-32 h-32 sm:w-36 sm:h-36">
                                         <img id="last-student-photo" src="" alt="" class="w-full h-full student-photo-display" style="display:none">
                                         <div id="last-photo-placeholder" class="w-full h-full flex items-center justify-center text-gray-300 bg-gray-100">
                                             <svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
                                         </div>
                                     </div>
-                                    <div class="flex-1 min-w-0">
+                                    <div class="flex-1 min-w-0 text-center sm:text-left">
                                         <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">Last Scanned Learner</p>
-                                        <h3 id="last-student-name" class="text-3xl font-black text-gray-900 truncate leading-tight tracking-tighter">Waiting for scan...</h3>
-                                        <div class="flex items-center gap-2 mt-2">
+                                        <h3 id="last-student-name" class="text-2xl sm:text-3xl font-black text-gray-900 truncate leading-tight tracking-tighter">Waiting for scan...</h3>
+                                        <div class="flex items-center justify-center sm:justify-start gap-2 mt-2">
                                             <span id="section-name" class="text-xs font-bold text-blue-600 truncate uppercase tracking-wider">No activity</span>
                                             <span class="text-gray-300">•</span>
                                             <span id="last-scan-time" class="text-xs font-bold text-gray-500 tabular-nums">--:--:--</span>
@@ -193,16 +215,22 @@
                         <table class="w-full text-left text-sm">
                             <thead>
                                  <tr class="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest text-left">
-                                     <th class="px-4 py-3 w-16 text-center">Photo</th>
-                                     <th class="px-4 py-3">LRN / Section</th>
-                                     <th class="px-4 py-3">Learner Name</th>
-                                     <th class="px-4 py-3 text-right">Time</th>
+                                     <th class="px-2 sm:px-4 py-3 w-12 sm:w-16 text-center">Photo</th>
+                                     <th class="px-2 sm:px-4 py-3">LRN / Section</th>
+                                     <th class="px-2 sm:px-4 py-3">Learner Name</th>
+                                     <th class="px-2 sm:px-4 py-3 text-right">Time</th>
                                  </tr>
                              </thead>
                              <tbody id="scan-logs-table" class="divide-y divide-gray-100">
                                  <!-- Dynamic content -->
                              </tbody>
                         </table>
+                    </div>
+                    <div id="log-expand-container" class="p-3 border-t border-gray-50 text-center hidden">
+                        <button id="log-expand-btn" class="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:text-blue-800 transition-colors flex items-center gap-2 mx-auto">
+                            <span>Show All Logs</span>
+                            <i class="fa-solid fa-chevron-down transition-transform duration-300"></i>
+                        </button>
                     </div>
                     <div id="empty-log-msg" class="p-12 text-center text-gray-400">
                         <svg class="w-12 h-12 mx-auto mb-3 opacity-20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
@@ -255,10 +283,72 @@
     <script>
         let dashboardData = {
             totalStudents: 0,
+            students: [],
             presentToday: [],
             lifetimeLogs: 0,
-            lastScanned: null
+            lastScanned: null,
+            availableSections: [],
+            selectedSection: 'ALL',
+            isLogsExpanded: false
         };
+
+        function normalizeSectionName(section) {
+            return (section || 'N/A').trim();
+        }
+
+        function getFilteredLogs() {
+            if (dashboardData.selectedSection === 'ALL') {
+                return dashboardData.presentToday;
+            }
+
+            return dashboardData.presentToday.filter(log => {
+                const section = normalizeSectionName(log.students?.section);
+                return section === dashboardData.selectedSection;
+            });
+        }
+
+        function getFilteredPopulationCount() {
+            if (dashboardData.selectedSection === 'ALL') {
+                return dashboardData.totalStudents;
+            }
+
+            return dashboardData.students.filter(student =>
+                normalizeSectionName(student.section) === dashboardData.selectedSection
+            ).length;
+        }
+
+        function populateSectionFilter() {
+            const filter = document.getElementById('section-filter');
+            if (!filter) return;
+
+            const currentValue = dashboardData.selectedSection;
+            const options = ['<option value="ALL">All Sections</option>']
+                .concat(dashboardData.availableSections.map(section => `<option value="${section}">${section}</option>`));
+
+            filter.innerHTML = options.join('');
+            filter.value = dashboardData.availableSections.includes(currentValue) || currentValue === 'ALL'
+                ? currentValue
+                : 'ALL';
+            dashboardData.selectedSection = filter.value;
+        }
+
+        async function fetchLifetimeCount() {
+            if (!window.supabaseClient) return;
+
+            // Use inner join to only count logs for students who exist in the system
+            let query = window.supabaseClient
+                .from('attendance_logs')
+                .select('id, students!inner(section)', { count: 'exact', head: true });
+
+            if (dashboardData.selectedSection !== 'ALL') {
+                query = query.eq('students.section', dashboardData.selectedSection);
+            }
+
+            const { count, error } = await query;
+            if (!error) {
+                dashboardData.lifetimeLogs = count || 0;
+            }
+        }
 
         async function initDashboard() {
             if (!window.supabaseClient) {
@@ -274,11 +364,20 @@
                 
                 if (!countError) dashboardData.totalStudents = count;
 
+                const { data: studentsData } = await window.supabaseClient
+                    .from('students')
+                    .select('section');
+
+                dashboardData.students = studentsData || [];
+
+                dashboardData.availableSections = [...new Set((dashboardData.students || [])
+                    .map(student => normalizeSectionName(student.section))
+                    .filter(section => section && section !== 'N/A'))]
+                    .sort((a, b) => a.localeCompare(b));
+                populateSectionFilter();
+
                 // 2. Fetch Lifetime Logs Count
-                const { count: lifeCount } = await window.supabaseClient
-                    .from('attendance_logs')
-                    .select('*', { count: 'exact', head: true });
-                dashboardData.lifetimeLogs = lifeCount || 0;
+                await fetchLifetimeCount();
 
                 // 3. Fetch Today's Logs
                 const now = new Date();
@@ -290,7 +389,7 @@
                     .from('attendance_logs')
                     .select(`
                         *,
-                        students (full_name, section)
+                        students (full_name, section, photo_url)
                     `)
                     .gte('scanned_at', startOfToday)
                     .order('scanned_at', { ascending: false });
@@ -317,7 +416,7 @@
                             .from('attendance_logs')
                             .select(`
                                 *,
-                                students (full_name, section)
+                                students (full_name, section, photo_url)
                             `)
                             .eq('id', payload.new.id)
                             .single();
@@ -328,9 +427,29 @@
                             if (!exists) {
                                 dashboardData.presentToday.unshift(newLog);
                                 dashboardData.lastScanned = newLog;
+                                
+                                // Update lifetime count
+                                if (dashboardData.selectedSection === 'ALL' || 
+                                    normalizeSectionName(newLog.students?.section) === dashboardData.selectedSection) {
+                                    dashboardData.lifetimeLogs++;
+                                }
+
                                 refreshUI();
                             }
                         }
+                    })
+                    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'attendance_logs' }, async (payload) => {
+                        console.log('Log deletion detected:', payload.old);
+                        // Re-fetch lifetime count to ensure accuracy across filters
+                        await fetchLifetimeCount();
+                        
+                        // Remove from today's list if it was there
+                        const index = dashboardData.presentToday.findIndex(log => log.id === payload.old.id);
+                        if (index !== -1) {
+                            dashboardData.presentToday.splice(index, 1);
+                        }
+                        
+                        refreshUI();
                     })
                     .subscribe();
 
@@ -387,11 +506,44 @@
         }
 
         function refreshUI() {
+            const filteredLogs = getFilteredLogs();
+            const amLogs = filteredLogs.filter(log => log.session === 'AM').length;
+            const pmLogs = filteredLogs.filter(log => log.session === 'PM').length;
+            const activeLastScanned = filteredLogs.length > 0 ? filteredLogs[0] : null;
+            const filteredPopulation = getFilteredPopulationCount();
+
             // Update Stats
-            document.getElementById('total-count').textContent = dashboardData.totalStudents;
-            document.getElementById('present-count').textContent = dashboardData.presentToday.length;
+            document.getElementById('total-count').textContent = filteredPopulation;
+            document.getElementById('present-count').textContent = filteredLogs.length;
             document.getElementById('lifetime-count').textContent = dashboardData.lifetimeLogs;
-            document.getElementById('log-count').textContent = `${dashboardData.presentToday.length} STUDENT${dashboardData.presentToday.length !== 1 ? 'S' : ''}`;
+            document.getElementById('am-count').textContent = amLogs;
+            document.getElementById('pm-count').textContent = pmLogs;
+            document.getElementById('log-count').textContent = `${filteredLogs.length} STUDENT${filteredLogs.length !== 1 ? 'S' : ''}`;
+
+            // Handle log expansion
+            const expandContainer = document.getElementById('log-expand-container');
+            const expandBtn = document.getElementById('log-expand-btn');
+            const LOG_LIMIT = 5;
+
+            if (expandContainer && expandBtn) {
+                if (filteredLogs.length > LOG_LIMIT) {
+                    expandContainer.classList.remove('hidden');
+                    const btnSpan = expandBtn.querySelector('span');
+                    const btnIcon = expandBtn.querySelector('i');
+                    
+                    if (dashboardData.isLogsExpanded) {
+                        if (btnSpan) btnSpan.textContent = 'Show Fewer Logs';
+                        if (btnIcon) btnIcon.classList.add('rotate-180');
+                    } else {
+                        if (btnSpan) btnSpan.textContent = `Show All Logs (${filteredLogs.length})`;
+                        if (btnIcon) btnIcon.classList.remove('rotate-180');
+                    }
+                } else {
+                    expandContainer.classList.add('hidden');
+                }
+            }
+
+            const logsToShow = dashboardData.isLogsExpanded ? filteredLogs : filteredLogs.slice(0, LOG_LIMIT);
 
             // Update Last Scanned Card
             const lastCard = document.getElementById('last-scanned-card');
@@ -400,9 +552,10 @@
             const lastPlaceholder = document.getElementById('last-photo-placeholder');
             const lastSection = document.getElementById('section-name');
             const lastTime = document.getElementById('last-scan-time');
+            const emptyLogMsg = document.getElementById('empty-log-msg');
 
-            if (dashboardData.lastScanned) {
-                const log = dashboardData.lastScanned;
+            if (activeLastScanned) {
+                const log = activeLastScanned;
                 const student = log.students;
                 const lrn = log.student_lrn;
                 
@@ -422,12 +575,24 @@
                     lastCard.classList.add('scale-[1.02]', 'ring-2', 'ring-blue-400');
                     setTimeout(() => lastCard.classList.remove('scale-[1.02]', 'ring-2', 'ring-blue-400'), 500);
                 }
+            } else {
+                if (lastName) lastName.textContent = dashboardData.selectedSection === 'ALL' ? 'Waiting for scan...' : 'No activity for this section';
+                if (lastSection) lastSection.textContent = dashboardData.selectedSection === 'ALL' ? 'No activity' : dashboardData.selectedSection;
+                if (lastTime) lastTime.textContent = '--:--:--';
+                if (lastPhoto) {
+                    lastPhoto.style.display = 'none';
+                    lastPhoto.classList.add('hidden');
+                }
+                if (lastPlaceholder) {
+                    lastPlaceholder.style.display = 'flex';
+                    lastPlaceholder.classList.remove('hidden');
+                }
             }
 
             // Update Table
             const tableBody = document.getElementById('scan-logs-table');
             if (tableBody) {
-                tableBody.innerHTML = dashboardData.presentToday.map(log => {
+                tableBody.innerHTML = logsToShow.map(log => {
                     const student = log.students;
                     const lrn = log.student_lrn;
                     const time = new Date(log.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -455,6 +620,10 @@
                     `;
                 }).join('');
 
+                if (emptyLogMsg) {
+                    emptyLogMsg.style.display = filteredLogs.length === 0 ? 'block' : 'none';
+                }
+
                 // Load secure photos for the table
                 tableBody.querySelectorAll('img[data-secure-lrn]').forEach(img => {
                     const lrn = img.getAttribute('data-secure-lrn');
@@ -465,7 +634,28 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', initDashboard);
+        document.addEventListener('DOMContentLoaded', () => {
+            const sectionFilter = document.getElementById('section-filter');
+            if (sectionFilter) {
+                sectionFilter.addEventListener('change', async (event) => {
+                    dashboardData.selectedSection = event.target.value;
+                    await fetchLifetimeCount();
+                    refreshUI();
+                });
+            }
+
+            initDashboard();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const expandBtn = document.getElementById('log-expand-btn');
+            if (expandBtn) {
+                expandBtn.addEventListener('click', () => {
+                    dashboardData.isLogsExpanded = !dashboardData.isLogsExpanded;
+                    refreshUI();
+                });
+            }
+        });
     </script>
 </body>
 </html>

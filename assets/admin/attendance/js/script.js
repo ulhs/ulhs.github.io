@@ -5,9 +5,210 @@ let studentPhotos = new Map(); // lrn -> dataURL (in-memory storage)
 let html5QrCode = null;
 let attendanceSession = new Map(); // lrn -> { am: 'P'|'T'|null, pm: 'P'|'T'|'A'|null }
 let totalCampusPopulation = 0;
+let currentSessionLogs = [];
+let isLogsExpanded = false; // Track expansion state of the log table
 
 // Supabase Integration Status
 let isCloudSynced = false;
+const offlineStore = window.attendanceOfflineStore || null;
+let pendingSyncCount = 0;
+let isSyncingPendingScans = false;
+let syncIntervalId = null;
+let appInitialized = false;
+
+function getLocalDateKey(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function getDayRangeForLocalDate(localDate) {
+    const [year, month, day] = localDate.split('-').map(Number);
+    const start = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const end = new Date(year, month - 1, day, 23, 59, 59, 999);
+    return {
+        startIso: start.toISOString(),
+        endIso: end.toISOString()
+    };
+}
+
+function normalizeCloudStudent(s) {
+    const rawSex = s.sex || s.gender || 'M';
+    const gender = (rawSex.toUpperCase().startsWith('F') || rawSex.toLowerCase() === 'female') ? 'female' : 'male';
+    const rawGrade = String(s.grade_level || s.grade || s.gradeLevel || '0');
+    const gradeNum = parseInt(rawGrade.replace(/\D/g, '')) || 0;
+    const sectionLower = (s.section || '').toLowerCase();
+    const isSHSTrack = ['humss', 'stem', 'gas', 'tvl', 'ict', 'abm', 'he'].some(track => sectionLower.includes(track));
+    const level = (gradeNum >= 11 || isSHSTrack) ? 'SHS' : 'JHS';
+    const sLrn = String(s.lrn);
+    const photoSource = s.photo_url || `profiles/${sLrn}.webp`;
+
+    if (photoSource) {
+        studentPhotos.set(sLrn, photoSource);
+    }
+
+    return {
+        lrn: sLrn,
+        excelName: s.full_name,
+        parsedName: (s.full_name || '').toUpperCase(),
+        section: s.section,
+        gender,
+        grade_level: gradeNum || rawGrade,
+        level,
+        photo_url: photoSource,
+        fromCloud: true
+    };
+}
+
+function mapAttendanceStatusToDbStatus(status) {
+    const normalized = String(status || '').toUpperCase();
+    if (normalized.includes('ABSENT')) return 'ABSENT';
+    if (normalized.includes('TARDY') || normalized.includes('LATE')) return 'TARDY';
+    return 'PRESENT';
+}
+
+function mapLogStatusToSessionCode(status) {
+    const normalized = String(status || '').toUpperCase();
+    if (normalized === 'ABSENT') return 'A';
+    if (normalized === 'TARDY' || normalized === 'LATE') return 'T';
+    return 'P';
+}
+
+function buildLogIdentityKey(log) {
+    const localDate = log.local_date || getLocalDateKey(new Date(log.scanned_at));
+    return `${String(log.student_lrn)}|${log.session}|${localDate}`;
+}
+
+function mergeLogsByIdentity(logs) {
+    const merged = new Map();
+
+    (logs || []).forEach((log) => {
+        const normalizedLog = {
+            ...log,
+            student_lrn: String(log.student_lrn),
+            local_date: log.local_date || getLocalDateKey(new Date(log.scanned_at)),
+            sync_status: log.sync_status || 'synced'
+        };
+        const key = buildLogIdentityKey(normalizedLog);
+        const existing = merged.get(key);
+
+        if (!existing) {
+            merged.set(key, normalizedLog);
+            return;
+        }
+
+        const existingPriority = existing.sync_status === 'synced' ? 2 : 1;
+        const incomingPriority = normalizedLog.sync_status === 'synced' ? 2 : 1;
+
+        if (incomingPriority > existingPriority) {
+            merged.set(key, normalizedLog);
+            return;
+        }
+
+        if (incomingPriority === existingPriority && new Date(normalizedLog.scanned_at) > new Date(existing.scanned_at)) {
+            merged.set(key, normalizedLog);
+        }
+    });
+
+    return Array.from(merged.values()).sort((a, b) => new Date(b.scanned_at) - new Date(a.scanned_at));
+}
+
+function applySessionStateFromLogs(logs) {
+    currentSessionLogs = Array.isArray(logs) ? [...logs] : [];
+    attendanceSession.clear();
+
+    currentSessionLogs.forEach((log) => {
+        const existing = attendanceSession.get(String(log.student_lrn)) || { am: null, pm: null };
+        const code = mapLogStatusToSessionCode(log.status);
+
+        if (log.session === 'AM') existing.am = code;
+        if (log.session === 'PM') existing.pm = code;
+
+        attendanceSession.set(String(log.student_lrn), existing);
+    });
+
+    if (presentCountDisplay) presentCountDisplay.textContent = attendanceSession.size;
+    updateSessionLogCounters(currentSessionLogs);
+    renderLogTableFromSession(currentSessionLogs);
+
+    if (currentSessionLogs.length > 0) {
+        const lastLog = [...currentSessionLogs].sort((a, b) => new Date(b.scanned_at) - new Date(a.scanned_at))[0];
+        const lastStudent = masterStudentDatabase.find(s => String(s.lrn) === String(lastLog.student_lrn));
+        if (lastStudent) {
+            updateDashboard(lastStudent, lastLog.scanned_at);
+        }
+    }
+}
+
+function updateSessionLogCounters(logs) {
+    const safeLogs = Array.isArray(logs) ? logs : [];
+    const amCount = safeLogs.filter(log => log.session === 'AM').length;
+    const pmCount = safeLogs.filter(log => log.session === 'PM').length;
+
+    if (amEntryCountDisplay) amEntryCountDisplay.textContent = amCount;
+    if (pmEntryCountDisplay) pmEntryCountDisplay.textContent = pmCount;
+}
+
+async function refreshPendingSyncCount() {
+    if (!offlineStore) {
+        pendingSyncCount = 0;
+        updateCloudSyncBadge();
+        return 0;
+    }
+
+    try {
+        pendingSyncCount = await offlineStore.getPendingCount();
+    } catch (err) {
+        console.error("Pending sync count error:", err);
+        pendingSyncCount = 0;
+    }
+
+    updateCloudSyncBadge();
+    return pendingSyncCount;
+}
+
+function updateCloudSyncBadge() {
+    const cloudBadge = document.getElementById('cloud-sync-badge');
+    if (!cloudBadge) return;
+
+    if (!navigator.onLine) {
+        cloudBadge.innerHTML = `<i class="fa-solid fa-cloud-slash"></i> Offline${pendingSyncCount > 0 ? ` (${pendingSyncCount} Pending)` : ''}`;
+        cloudBadge.className = "px-3 py-1 bg-red-100 text-red-500 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1";
+        return;
+    }
+
+    if (isSyncingPendingScans) {
+        cloudBadge.innerHTML = `<i class="fa-solid fa-rotate"></i> Syncing${pendingSyncCount > 0 ? ` ${pendingSyncCount}` : ''}`;
+        cloudBadge.className = "px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1";
+        return;
+    }
+
+    if (pendingSyncCount > 0) {
+        cloudBadge.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> ${pendingSyncCount} Pending`;
+        cloudBadge.className = "px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1";
+        return;
+    }
+
+    cloudBadge.innerHTML = `<i class="fa-solid fa-cloud"></i> ${isCloudSynced ? 'Synced' : 'Online'}`;
+    cloudBadge.className = "px-3 py-1 bg-green-100 text-green-600 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1";
+}
+
+function updateUIWithCacheData() {
+    if (statusTitle) statusTitle.textContent = "Offline Registry Ready";
+    if (statusDesc) statusDesc.textContent = `${masterStudentDatabase.length} cached students available for offline scanning.`;
+    if (statusIcon) {
+        statusIcon.innerHTML = '<svg class="w-6 h-6 text-yellow-600" fill="currentColor" viewBox="0 0 20 20"><path d="M18 13V7a2 2 0 00-2-2h-1V4a2 2 0 10-4 0v1H9V4a2 2 0 10-4 0v1H4a2 2 0 00-2 2v6a2 2 0 002 2h12a2 2 0 002-2z"></path></svg>';
+        statusIcon.className = "w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center";
+    }
+
+    if (startBtn) startBtn.disabled = masterStudentDatabase.length === 0;
+    if (exportJhsBtn) exportJhsBtn.classList.remove('hidden');
+    if (exportShsBtn) exportShsBtn.classList.remove('hidden');
+    if (totalCountDisplay) totalCountDisplay.textContent = masterStudentDatabase.length;
+
+    updateCloudSyncBadge();
+}
 
 // --- SUPABASE INTEGRATION ---
 async function initSupabaseSync() {
@@ -15,6 +216,12 @@ async function initSupabaseSync() {
     if (!window.supabaseClient) {
         console.log("Sync: Waiting for client...");
         setTimeout(initSupabaseSync, 100);
+        return;
+    }
+
+    if (!navigator.onLine) {
+        isCloudSynced = false;
+        updateCloudSyncBadge();
         return;
     }
 
@@ -27,122 +234,105 @@ async function initSupabaseSync() {
 
         if (students && students.length > 0) {
             console.log(`Cloud Sync: ${students.length} students loaded.`);
-            
-            // Map Supabase data to local format
-            const cloudStudents = students.map(s => {
-                // Determine gender/sex with flexible naming (gender or sex)
-                const rawSex = s.sex || s.gender || 'M';
-                const gender = (rawSex.toUpperCase().startsWith('F') || rawSex.toLowerCase() === 'female') ? 'female' : 'male';
 
-                // Robust Grade Level & System (JHS vs SHS) Detection
-                const rawGrade = String(s.grade_level || s.grade || s.gradeLevel || '0');
-                const gradeNum = parseInt(rawGrade.replace(/\D/g, '')) || 0;
-                
-                // Fallback: Check section name for SHS tracks if grade number is unclear
-                const sectionLower = (s.section || '').toLowerCase();
-                const isSHSTrack = ['humss', 'stem', 'gas', 'tvl', 'ict', 'abm', 'he'].some(track => sectionLower.includes(track));
-                
-                const level = (gradeNum >= 11 || isSHSTrack) ? 'SHS' : 'JHS';
-
-                // Load cloud photo if it exists
-                const sLrn = String(s.lrn);
-                if (s.photo_url) {
-                    studentPhotos.set(sLrn, s.photo_url);
-                } else {
-                    // Fallback: Store the path for private bucket fetching
-                    const manualPath = `profiles/${sLrn}.webp`;
-                    studentPhotos.set(sLrn, manualPath);
-                }
-
-                return {
-                    lrn: sLrn,
-                    excelName: s.full_name, 
-                    parsedName: s.full_name.toUpperCase(),
-                    section: s.section,
-                    gender: gender,
-                    grade_level: gradeNum || rawGrade,
-                    level: level,
-                    fromCloud: true
-                };
-            });
-
-            // Merge with local database (prioritizing cloud)
+            const cloudStudents = students.map(normalizeCloudStudent);
             masterStudentDatabase = [...cloudStudents];
             isCloudSynced = true;
-            
-            console.log("Supabase Sync: First 5 students mapping sample:", masterStudentDatabase.slice(0, 5).map(s=>({name:s.excelName, gender:s.gender})));
-            
-            // Load today's logs to restore session state
-            await restoreAttendanceSession();
 
-            // Update UI
+            if (offlineStore) {
+                await offlineStore.saveStudents(cloudStudents);
+                await offlineStore.saveMeta('last-student-sync-at', new Date().toISOString());
+            }
+
+            console.log("Supabase Sync: First 5 students mapping sample:", masterStudentDatabase.slice(0, 5).map(s => ({ name: s.excelName, gender: s.gender })));
+
+            await restoreAttendanceSession();
             updateUIWithCloudData();
+        } else if (masterStudentDatabase.length > 0) {
+            updateUIWithCacheData();
         }
+
+        await refreshPendingSyncCount();
     } catch (err) {
         console.error("Supabase Sync Error:", err.message);
         isCloudSynced = false;
+        if (masterStudentDatabase.length > 0) {
+            updateUIWithCacheData();
+        }
+        updateCloudSyncBadge();
     }
 }
 
 async function restoreAttendanceSession() {
     try {
-        // Wait for Supabase to be ready
-        if (!window.supabaseClient) return;
+        const todayKey = getLocalDateKey();
+        let localLogs = [];
 
-        const now = new Date();
-        // Start of today in local time, converted to ISO
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-        
-        console.log("Restoring session since:", startOfToday);
-
-        const { data: logs, error } = await window.supabaseClient
-            .from('attendance_logs')
-            .select('*')
-            .gte('scanned_at', startOfToday);
-
-        if (error) {
-            console.error("Session Restore Database Error:", error.message);
-            return;
+        if (offlineStore) {
+            localLogs = await offlineStore.getLogsByDate(todayKey);
         }
 
-        if (logs) {
-            attendanceSession.clear(); 
-            logs.forEach(log => {
-                const existing = attendanceSession.get(log.student_lrn) || { am: null, pm: null };
-                // Map database status to UI codes (P/T)
-                const statusMap = { 'PRESENT': 'P', 'TARDY': 'T', 'LATE': 'T' };
-                const code = statusMap[log.status] || 'P';
+        if (window.supabaseClient && navigator.onLine) {
+            const { startIso } = getDayRangeForLocalDate(todayKey);
+            console.log("Restoring session since:", startIso);
 
-                if (log.session === 'AM') existing.am = code;
-                if (log.session === 'PM') existing.pm = code;
-                attendanceSession.set(log.student_lrn, existing);
-            });
-            
-            console.log(`✅ Session Restored: ${attendanceSession.size} unique students synced.`);
-            
-            // 1. Update the Big Number on dashboard
-            if (presentCountDisplay) presentCountDisplay.textContent = attendanceSession.size;
-            
-            // 2. Update the Recent Logs Table
-            renderLogTableFromSession(logs);
-            
-            // 3. Update the Cloud Stats panel if it exists
-            const logCountEl = document.getElementById('total-logs-count');
-            if (logCountEl) logCountEl.textContent = attendanceSession.size;
+            const { data: logs, error } = await window.supabaseClient
+                .from('attendance_logs')
+                .select('*')
+                .gte('scanned_at', startIso);
 
-            // 4. SMART UPDATE: Show the last scanned learner from the logs
-            if (logs.length > 0) {
-                const sortedLogs = [...logs].sort((a, b) => new Date(b.scanned_at) - new Date(a.scanned_at));
-                const lastLog = sortedLogs[0];
-                const lastStudent = masterStudentDatabase.find(s => String(s.lrn) === String(lastLog.student_lrn));
-                if (lastStudent) {
-                    console.log("Auto-updating dashboard with last known log student:", lastStudent.parsedName);
-                    updateDashboard(lastStudent, lastLog.scanned_at);
+            if (error) {
+                console.error("Session Restore Database Error:", error.message);
+            } else if (logs) {
+                const normalizedCloudLogs = logs.map(log => ({
+                    ...log,
+                    scan_id: `cloud:${log.student_lrn}:${log.session}:${log.scanned_at}`,
+                    local_date: getLocalDateKey(new Date(log.scanned_at)),
+                    sync_status: 'synced'
+                }));
+
+                if (offlineStore) {
+                    await offlineStore.upsertLogs(normalizedCloudLogs);
+                    localLogs = await offlineStore.getLogsByDate(todayKey);
+                } else {
+                    localLogs = normalizedCloudLogs;
                 }
             }
         }
+
+        const mergedLogs = mergeLogsByIdentity(localLogs);
+        applySessionStateFromLogs(mergedLogs);
+        console.log(`✅ Session Restored: ${attendanceSession.size} unique students ready.`);
     } catch (err) {
         console.error("Session Restore System Error:", err);
+    }
+}
+
+async function hydrateFromOfflineCache() {
+    if (!offlineStore) {
+        updateCloudSyncBadge();
+        return;
+    }
+
+    try {
+        const todayKey = getLocalDateKey();
+        const [cachedStudents, cachedLogs] = await Promise.all([
+            offlineStore.getStudents(),
+            offlineStore.getLogsByDate(todayKey)
+        ]);
+
+        if (cachedStudents && cachedStudents.length > 0) {
+            masterStudentDatabase = cachedStudents;
+            updateUIWithCacheData();
+        }
+
+        if (cachedLogs && cachedLogs.length > 0) {
+            applySessionStateFromLogs(mergeLogsByIdentity(cachedLogs));
+        }
+    } catch (err) {
+        console.error("Offline cache hydration error:", err);
+    } finally {
+        await refreshPendingSyncCount();
     }
 }
 
@@ -150,6 +340,8 @@ function renderLogTableFromSession(logs) {
     const tableBody = document.getElementById('scan-logs-table');
     const emptyMsg = document.getElementById('empty-log-msg');
     const logCount = document.getElementById('log-count');
+    const expandContainer = document.getElementById('log-expand-container');
+    const expandBtn = document.getElementById('log-expand-btn');
 
     if (!tableBody) return;
 
@@ -157,6 +349,7 @@ function renderLogTableFromSession(logs) {
         tableBody.innerHTML = '';
         if (emptyMsg) emptyMsg.style.display = 'block';
         if (logCount) logCount.textContent = '0 STUDENTS';
+        if (expandContainer) expandContainer.classList.add('hidden');
         return;
     }
 
@@ -166,7 +359,30 @@ function renderLogTableFromSession(logs) {
     // Map logs to table rows, sorted by time descending
     const sortedLogs = [...logs].sort((a, b) => new Date(b.scanned_at) - new Date(a.scanned_at));
     
-    tableBody.innerHTML = sortedLogs.map(log => {
+    // Determine which logs to show
+    const LOG_LIMIT = 5;
+    const logsToShow = isLogsExpanded ? sortedLogs : sortedLogs.slice(0, LOG_LIMIT);
+
+    // Update expand button visibility and text
+    if (expandContainer && expandBtn) {
+        if (sortedLogs.length > LOG_LIMIT) {
+            expandContainer.classList.remove('hidden');
+            const btnSpan = expandBtn.querySelector('span');
+            const btnIcon = expandBtn.querySelector('i');
+            
+            if (isLogsExpanded) {
+                if (btnSpan) btnSpan.textContent = 'Show Fewer Logs';
+                if (btnIcon) btnIcon.classList.add('rotate-180');
+            } else {
+                if (btnSpan) btnSpan.textContent = `Show All Logs (${sortedLogs.length})`;
+                if (btnIcon) btnIcon.classList.remove('rotate-180');
+            }
+        } else {
+            expandContainer.classList.add('hidden');
+        }
+    }
+    
+    tableBody.innerHTML = logsToShow.map(log => {
         // Try to find student in master database
         const student = masterStudentDatabase.find(s => String(s.lrn) === String(log.student_lrn));
         const lrnStr = String(log.student_lrn);
@@ -208,16 +424,10 @@ function renderLogTableFromSession(logs) {
 
 function updateUIWithCloudData() {
     if (statusTitle) statusTitle.textContent = "Cloud Registry Active";
-    if (statusDesc) statusDesc.textContent = `${masterStudentDatabase.length} students synced from Supabase.`;
+    if (statusDesc) statusDesc.textContent = `${masterStudentDatabase.length} students synced from Database.`;
     if (statusIcon) {
         statusIcon.innerHTML = '<svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm14 1a1 1 0 11-2 0 1 1 0 012 0zM2 13a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2zm14 1a1 1 0 11-2 0 1 1 0 012 0z" clip-rule="evenodd"></path></svg>';
         statusIcon.className = "w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center";
-    }
-    
-    const cloudBadge = document.getElementById('cloud-sync-badge');
-    if (cloudBadge) {
-        cloudBadge.innerHTML = '<i class="fa-solid fa-cloud"></i> Synced';
-        cloudBadge.className = "px-3 py-1 bg-green-100 text-green-600 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1";
     }
 
     if (startBtn) startBtn.disabled = false;
@@ -225,11 +435,7 @@ function updateUIWithCloudData() {
     if (exportShsBtn) exportShsBtn.classList.remove('hidden');
     if (totalCountDisplay) totalCountDisplay.textContent = masterStudentDatabase.length;
     
-    // Update Cloud Stats Grid
-    const studentCountEl = document.getElementById('total-students-count');
-    const logCountEl = document.getElementById('total-logs-count');
-    if (studentCountEl) studentCountEl.textContent = masterStudentDatabase.length;
-    if (logCountEl) logCountEl.textContent = attendanceSession.size;
+    updateCloudSyncBadge();
 }
 
 // --- DIAGNOSTICS & VERIFICATION ---
@@ -270,16 +476,13 @@ async function testSupabaseConnection() {
 
 // Call init on load
 window.addEventListener('load', () => {
-    // 1. Initial Data Sync
-    initSupabaseSync();
-
-    // 2. Setup Export Selectors
+    // 1. Setup Export Selectors
     const exportMonth = document.getElementById('export-month');
     const exportYear = document.getElementById('export-year');
     if (exportMonth) exportMonth.value = new Date().getMonth();
     if (exportYear) exportYear.value = new Date().getFullYear();
 
-    // 3. Attach SF2 Export Listeners
+    // 2. Attach SF2 Export Listeners
     const exportJhsBtn = document.getElementById('export-jhs-btn');
     const exportShsBtn = document.getElementById('export-shs-btn');
     
@@ -296,7 +499,7 @@ window.addEventListener('load', () => {
         });
     }
 
-    // 4. Test Mode & Bulk Import
+    // 3. Test Mode & Bulk Import
     const testModeToggle = document.getElementById('test-mode-toggle');
     if (testModeToggle) {
         testModeToggle.addEventListener('change', () => {
@@ -308,6 +511,15 @@ window.addEventListener('load', () => {
     const fileInput = document.getElementById('file-input');
     if (fileInput) {
         fileInput.addEventListener('change', (e) => handleBulkImport(e.target.files));
+    }
+
+    // 4. Log Table Expansion
+    const expandBtn = document.getElementById('log-expand-btn');
+    if (expandBtn) {
+        expandBtn.addEventListener('click', () => {
+            isLogsExpanded = !isLogsExpanded;
+            renderLogTableFromSession(currentSessionLogs);
+        });
     }
 });
 
@@ -396,6 +608,8 @@ const startBtn = document.getElementById('start-btn');
 const stopBtn = document.getElementById('stop-btn');
 const totalCountDisplay = document.getElementById('total-count');
 const presentCountDisplay = document.getElementById('present-count');
+const amEntryCountDisplay = document.getElementById('am-entry-count');
+const pmEntryCountDisplay = document.getElementById('pm-entry-count');
 const sectionDisplay = document.getElementById('section-name');
 const scanLogsTable = document.getElementById('scan-logs-table');
 const logCount = document.getElementById('log-count');
@@ -413,6 +627,7 @@ const overlayTimeStatus = document.getElementById('overlay-time-status');
 const exportBtn = document.getElementById('export-btn');
 const exportJhsBtn = document.getElementById('export-jhs-btn');
 const exportShsBtn = document.getElementById('export-shs-btn');
+const adminTools = document.getElementById('admin-tools-container');
 
 // New Bulk Importer UI Elements
 const fileInput = document.getElementById('file-input');
@@ -530,6 +745,9 @@ async function handleBulkImport(files) {
                         // Extract LRN from filename (e.g., "123456789012.webp" -> "123456789012")
                         const lrn = filename.split('/').pop().split('.')[0];
                         studentPhotos.set(lrn, dataURL);
+                        if (offlineStore) {
+                            await offlineStore.savePhoto(lrn, dataURL);
+                        }
                         photoCount++;
                     }
                 }
@@ -560,6 +778,9 @@ async function handleBulkImport(files) {
     }
     
     if (masterStudentDatabase.length > 0) {
+        if (offlineStore) {
+            await offlineStore.saveStudents(masterStudentDatabase);
+        }
         startBtn.disabled = false;
         exportBtn.classList.remove('hidden');
         exportBtn.textContent = "Export All (ZIP)";
@@ -744,55 +965,206 @@ function updateSummaryTable(ws, gender, colIndex, summaryRows) {
     });
 }
 
-async function logAttendanceToSupabase(student, timeData) {
+async function getCurrentSupabaseSession() {
+    if (!window.supabaseClient) return null;
+
     try {
         const { data: { session } } = await window.supabaseClient.auth.getSession();
-        if (!session) throw new Error("No active session.");
-
-        // Real-time Permission Check (DPA Compliance & Security)
-        const { data: profile, error: profileError } = await window.supabaseClient
-            .from('profiles')
-            .select('can_scan, role')
-            .eq('id', session.user.id)
-            .single();
-
-        if (profileError || (!profile.can_scan && profile.role !== 'admin')) {
-            alert("❌ ACCESS REVOKED: You no longer have permission to scan attendance. Please contact the administrator.");
-            window.location.href = './login.html';
-            return;
-        }
-        
-        const logData = {
-            student_lrn: student.lrn,
-            session: timeData.session,
-            status: (timeData.status === 'P' ? 'PRESENT' : 'TARDY'),
-            scanned_at: new Date().toISOString(),
-            section: student.section,
-            scanned_by: session ? session.user.id : null
-        };
-
-        console.log("Pushing log to Supabase:", logData);
-
-        const { data, error } = await window.supabaseClient
-            .from('attendance_logs')
-            .insert([logData]);
-
-        if (error) {
-            // SHOW THE ERROR TO THE USER DIRECTLY
-            alert("❌ FAILED TO SAVE TO CLOUD:\n" + error.message);
-            throw error;
-        }
-        
-        console.log(`✅ Cloud Log Saved: ${student.parsedName}`);
-        await restoreAttendanceSession();
-        
+        return session || null;
     } catch (err) {
-        console.error("❌ Cloud Logging Error:", err.message);
+        console.error("Session lookup error:", err);
+        return null;
     }
 }
 
+async function canCurrentUserScan(session) {
+    if (!session || !navigator.onLine || !window.supabaseClient) return false;
+
+    const { data: profile, error } = await window.supabaseClient
+        .from('profiles')
+        .select('can_scan, role')
+        .eq('id', session.user.id)
+        .single();
+
+    if (error) throw error;
+    return !!(profile && (profile.can_scan || profile.role === 'admin'));
+}
+
+async function remoteLogExists(log) {
+    if (!window.supabaseClient || !navigator.onLine) return false;
+
+    const { startIso, endIso } = getDayRangeForLocalDate(log.local_date || getLocalDateKey(new Date(log.scanned_at)));
+    const { data, error } = await window.supabaseClient
+        .from('attendance_logs')
+        .select('*')
+        .eq('student_lrn', log.student_lrn)
+        .eq('session', log.session)
+        .gte('scanned_at', startIso)
+        .lte('scanned_at', endIso)
+        .limit(1);
+
+    if (error) throw error;
+    return Array.isArray(data) && data.length > 0;
+}
+
+async function reconcilePendingScansWithRemote(session = null) {
+    if (!offlineStore || !window.supabaseClient || !navigator.onLine) return 0;
+
+    const activeSession = session || await getCurrentSupabaseSession();
+    const pendingScans = await offlineStore.getPendingScans();
+    let reconciledCount = 0;
+
+    for (const scan of pendingScans) {
+        try {
+            const exists = await remoteLogExists(scan);
+            if (!exists) continue;
+
+            await offlineStore.markScanSynced(scan.scan_id, {
+                ...scan,
+                scanned_by: scan.scanned_by || activeSession?.user?.id || null,
+                sync_status: 'synced',
+                synced_at: new Date().toISOString()
+            });
+            reconciledCount++;
+        } catch (err) {
+            console.error(`Pending reconciliation failed for ${scan.student_lrn}:`, err.message);
+        }
+    }
+
+    if (reconciledCount > 0) {
+        await refreshPendingSyncCount();
+    }
+
+    return reconciledCount;
+}
+
+async function syncPendingAttendance(options = {}) {
+    const silent = !!options.silent;
+
+    if (!offlineStore || !window.supabaseClient || !navigator.onLine || isSyncingPendingScans) {
+        updateCloudSyncBadge();
+        return;
+    }
+
+    isSyncingPendingScans = true;
+    updateCloudSyncBadge();
+
+    try {
+        const session = await getCurrentSupabaseSession();
+        if (!session) throw new Error("No active session for sync.");
+
+        const hasPermission = await canCurrentUserScan(session);
+        if (!hasPermission) {
+            throw new Error("Attendance scan permission is no longer available.");
+        }
+
+        await reconcilePendingScansWithRemote(session);
+        const pendingScans = await offlineStore.getPendingScans();
+        let syncedCount = 0;
+
+        for (const scan of pendingScans) {
+            try {
+                const exists = await remoteLogExists(scan);
+
+                if (!exists) {
+                    const { error } = await window.supabaseClient
+                        .from('attendance_logs')
+                        .insert([{
+                            student_lrn: scan.student_lrn,
+                            session: scan.session,
+                            status: scan.status,
+                            scanned_at: scan.scanned_at,
+                            section: scan.section,
+                            scanned_by: scan.scanned_by || session.user.id
+                        }]);
+
+                    if (error) throw error;
+                }
+
+                await offlineStore.markScanSynced(scan.scan_id, {
+                    ...scan,
+                    scanned_by: scan.scanned_by || session.user.id,
+                    sync_status: 'synced',
+                    synced_at: new Date().toISOString()
+                });
+                syncedCount++;
+            } catch (scanErr) {
+                console.error(`Pending scan sync failed for ${scan.student_lrn}:`, scanErr.message);
+                await offlineStore.upsertLog({
+                    ...scan,
+                    sync_status: 'failed',
+                    last_error: scanErr.message
+                });
+            }
+        }
+
+        await refreshPendingSyncCount();
+
+        if (syncedCount > 0) {
+            if (!silent) {
+                console.log(`✅ Synced ${syncedCount} pending attendance record(s).`);
+            }
+            await restoreAttendanceSession();
+        }
+    } catch (err) {
+        console.error("Pending attendance sync error:", err.message);
+    } finally {
+        isSyncingPendingScans = false;
+        updateCloudSyncBadge();
+    }
+}
+
+async function logAttendanceToSupabase(student, timeData, scanTime = new Date()) {
+    const session = await getCurrentSupabaseSession();
+    const scannedAt = scanTime.toISOString();
+    const logData = {
+        scan_id: `local:${student.lrn}:${timeData.session}:${scanTime.getTime()}`,
+        student_lrn: String(student.lrn),
+        session: timeData.session,
+        status: mapAttendanceStatusToDbStatus(timeData.status),
+        scanned_at: scannedAt,
+        created_at: scannedAt,
+        local_date: getLocalDateKey(scanTime),
+        section: student.section,
+        scanned_by: session ? session.user.id : null,
+        sync_status: 'pending',
+        student_name: student.parsedName
+    };
+
+    try {
+        if (offlineStore) {
+            await offlineStore.queuePendingScan(logData);
+            await offlineStore.saveMeta('last-local-scan-at', scannedAt);
+        } else if (navigator.onLine && window.supabaseClient) {
+            const { error } = await window.supabaseClient
+                .from('attendance_logs')
+                .insert([{
+                    student_lrn: logData.student_lrn,
+                    session: logData.session,
+                    status: logData.status,
+                    scanned_at: logData.scanned_at,
+                    section: logData.section,
+                    scanned_by: logData.scanned_by
+                }]);
+
+            if (error) throw error;
+            logData.sync_status = 'synced';
+        }
+
+        await refreshPendingSyncCount();
+
+        if (navigator.onLine) {
+            await syncPendingAttendance({ silent: true });
+        }
+    } catch (err) {
+        console.error("❌ Attendance queue error:", err.message);
+    }
+
+    return logData;
+}
+
 // --- SCANNER LOGIC ---
-function onScanSuccess(decodedText, decodedResult) {
+async function onScanSuccess(decodedText, decodedResult) {
     // Critical: Only process scans if scanner is actively running and NOT switching cameras
     if (!isScannerActive || isSwitchingCamera || !html5QrCode || !html5QrCode.isScanning) {
         return;
@@ -853,6 +1225,7 @@ function onScanSuccess(decodedText, decodedResult) {
         lastScannedLrn = student.lrn;
         lastScanTimestamp = nowTimestamp;
 
+        const scanTime = new Date();
         markAttendanceInExcel(student, timeData);
         
         attendanceSession.set(student.lrn, {
@@ -860,12 +1233,16 @@ function onScanSuccess(decodedText, decodedResult) {
             pm: timeData.pm
         });
 
-        // Async logging to cloud
-        logAttendanceToSupabase(student, timeData);
+        // Local-first logging with queued cloud sync
+        const savedLog = await logAttendanceToSupabase(student, timeData, scanTime);
+        if (savedLog) {
+            currentSessionLogs = mergeLogsByIdentity([savedLog, ...currentSessionLogs]);
+            updateSessionLogCounters(currentSessionLogs);
+        }
 
-        updateDashboard(student, new Date());
+        updateDashboard(student, scanTime);
         showScanFeedback(student, "Success!", "green");
-        addLog(student.lrn, student.parsedName, student.section);
+        addLog(student.lrn, student.parsedName, student.section, scanTime, timeData.session);
         showScanOverlay(student.parsedName, student.lrn, 'success', student.section, timeData);
         playBeep('success');
     } else {
@@ -907,6 +1284,13 @@ async function loadStudentPhotoSecurely(lrn, imgElement, placeholderElement) {
     
     // PRIORITY 1: In-memory dataURL (from ZIP)
     let dataURL = studentPhotos.get(lrnStr);
+
+    if (!dataURL && offlineStore) {
+        dataURL = await offlineStore.getPhoto(lrnStr);
+        if (dataURL) {
+            studentPhotos.set(lrnStr, dataURL);
+        }
+    }
     
     // If not in memory, check student object or use default path
     if (!dataURL) {
@@ -929,19 +1313,22 @@ async function loadStudentPhotoSecurely(lrn, imgElement, placeholderElement) {
             // SECURE FETCH: Authenticated download from private bucket
             const { data, error } = await window.supabaseClient.storage.from('student-photos').download(dataURL);
             if (error) throw error;
-            
-            const blobUrl = URL.createObjectURL(data);
-            imgElement.src = blobUrl;
-            
-            // Clean up blob URL after load to prevent memory leaks
-            imgElement.onload = () => {
-                URL.revokeObjectURL(blobUrl);
-                console.log(`✅ Secure photo loaded for LRN ${lrnStr}`);
-            };
+
+            const cachedDataURL = await blobToDataURL(data);
+            studentPhotos.set(lrnStr, cachedDataURL);
+            if (offlineStore) {
+                await offlineStore.savePhoto(lrnStr, cachedDataURL);
+            }
+
+            imgElement.src = cachedDataURL;
+            console.log(`✅ Secure photo loaded for LRN ${lrnStr}`);
         } else {
             // PUBLIC OR DATA URL: Standard loading with cache-buster for public URLs
             const finalUrl = dataURL.startsWith('data:') ? dataURL : (dataURL + (dataURL.includes('?') ? '&' : '?') + 't=' + Date.now());
             imgElement.src = finalUrl;
+            if (dataURL.startsWith('data:') && offlineStore) {
+                await offlineStore.savePhoto(lrnStr, dataURL);
+            }
         }
     } catch (err) {
         console.error(`❌ Photo load failed for LRN ${lrnStr}:`, err.message);
@@ -1048,7 +1435,7 @@ function showScanOverlay(name, lrn, type, section, timeData) {
     }, 3000);
 }
 
-function addLog(lrn, name, section) {
+function addLog(lrn, name, section, scanTime = new Date(), sessionType = null) {
     if (emptyLogMsg) emptyLogMsg.classList.add('hidden');
     const lrnStr = String(lrn);
 
@@ -1067,8 +1454,9 @@ function addLog(lrn, name, section) {
     row.className = "hover:bg-gray-50 transition-colors group border-b border-gray-100 last:border-0";
     
     const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
-    const timeStr = new Date().toLocaleTimeString('en-PH', timeOptions);
-    const sessionType = getAttendanceStatus(lrnStr).session;
+    const displayTime = scanTime instanceof Date ? scanTime : new Date(scanTime);
+    const timeStr = displayTime.toLocaleTimeString('en-PH', timeOptions);
+    const resolvedSessionType = sessionType || getAttendanceStatus(lrnStr).session;
     
     const photoHTML = `
         <div class="flex justify-center">
@@ -1089,7 +1477,7 @@ function addLog(lrn, name, section) {
         <td class="px-4 py-3 font-black text-gray-900 uppercase text-xs tracking-tight">${name}</td>
         <td class="px-4 py-3 text-right">
             <div class="font-black text-gray-900 text-xs tabular-nums">${timeStr}</div>
-            <div class="text-[8px] font-black text-blue-500 uppercase tracking-widest mt-0.5">${sessionType} SESSION</div>
+            <div class="text-[8px] font-black text-blue-500 uppercase tracking-widest mt-0.5">${resolvedSessionType} SESSION</div>
         </td>
     `;
     scanLogsTable.prepend(row);
@@ -1849,6 +2237,43 @@ function logoutDueToInactivity() {
     window.location.href = '../admin.html';
 }
 
+async function initializeAttendanceApp() {
+    if (appInitialized) return;
+    appInitialized = true;
+
+    await hydrateFromOfflineCache();
+    await initSupabaseSync();
+    await refreshPendingSyncCount();
+
+    if (navigator.onLine) {
+        await reconcilePendingScansWithRemote();
+        await syncPendingAttendance({ silent: true });
+    }
+
+    if (syncIntervalId) clearInterval(syncIntervalId);
+    syncIntervalId = setInterval(() => {
+        if (navigator.onLine) {
+            syncPendingAttendance({ silent: true });
+        }
+    }, 30000);
+}
+
+window.addEventListener('online', async () => {
+    updateCloudSyncBadge();
+    await initSupabaseSync();
+    await reconcilePendingScansWithRemote();
+    await syncPendingAttendance({ silent: true });
+});
+
+window.addEventListener('offline', () => {
+    isCloudSynced = false;
+    if (masterStudentDatabase.length > 0) {
+        updateUIWithCacheData();
+    } else {
+        updateCloudSyncBadge();
+    }
+});
+
 // Attach inactivity listeners
 ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
     document.addEventListener(evt, resetInactivityTimer, true);
@@ -1865,8 +2290,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Start inactivity timer immediately
     resetInactivityTimer();
     
-    // Start Supabase Cloud Sync
-    initSupabaseSync();
+    // Start offline-first attendance data flow
+    initializeAttendanceApp();
     
     // Attach Sync Listener
     const syncPhotosBtn = document.getElementById('sync-photos-btn');
@@ -1874,7 +2299,5 @@ document.addEventListener('DOMContentLoaded', () => {
         syncPhotosBtn.addEventListener('click', syncPhotosToSupabase);
     }
 
-    // Start clock
-    setInterval(updateClock, 1000);
-    updateClock();
+    updateCloudSyncBadge();
 });

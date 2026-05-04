@@ -371,39 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     initScrollReveal();
 
-    /* --- DARK MODE LOGIC --- */
-    const themeToggle = document.getElementById('theme-toggle');
-    const currentTheme = localStorage.getItem('theme');
-
-    function updateThemeUI(isDark) {
-        if (isDark) {
-            document.body.classList.add('dark-mode');
-            if (themeToggle) {
-                themeToggle.textContent = '☀️';
-                themeToggle.setAttribute('data-tooltip', 'Switch to Light');
-            }
-        } else {
-            document.body.classList.remove('dark-mode');
-            if (themeToggle) {
-                themeToggle.textContent = '🌙';
-                themeToggle.setAttribute('data-tooltip', 'Switch to Dark');
-            }
-        }
-    }
-
-    if (currentTheme === 'dark') {
-        updateThemeUI(true);
-    } else {
-        updateThemeUI(false);
-    }
-
-    if (themeToggle) {
-        themeToggle.addEventListener('click', () => {
-            const isDark = document.body.classList.toggle('dark-mode');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            updateThemeUI(isDark);
-        });
-    }
+    /* --- THEME LOGIC HANDLED BY THEME-MANAGER.JS --- */
 
     /* --- DYNAMIC CONTENT LOADING --- */
     async function loadDynamicContent() {
