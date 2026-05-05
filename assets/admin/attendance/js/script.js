@@ -344,22 +344,15 @@ async function hydrateFromOfflineCache() {
 
         // Load all photos from dedicated store to ensure they're in memory
         // This handles photos that might not be linked to a student record yet
-        const db = await indexedDB.open('ulhs-attendance-offline', 1);
-        const transaction = db.transaction('photos', 'readonly');
-        const store = transaction.objectStore('photos');
-        const request = store.getAll();
-        
-        request.onsuccess = () => {
-            const allPhotos = request.result;
-            if (allPhotos && allPhotos.length > 0) {
-                allPhotos.forEach(p => {
-                    if (!studentPhotos.has(p.lrn)) {
-                        studentPhotos.set(p.lrn, p.data);
-                    }
-                });
-                console.log(`[Offline] Hydrated ${allPhotos.length} photos into memory.`);
-            }
-        };
+        const allPhotos = await offlineStore.getAllPhotos();
+        if (allPhotos && allPhotos.length > 0) {
+            allPhotos.forEach(p => {
+                if (!studentPhotos.has(p.lrn)) {
+                    studentPhotos.set(p.lrn, p.data);
+                }
+            });
+            console.log(`[Offline] Hydrated ${allPhotos.length} photos into memory.`);
+        }
 
         if (cachedLogs && cachedLogs.length > 0) {
             applySessionStateFromLogs(mergeLogsByIdentity(cachedLogs));

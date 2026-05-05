@@ -198,6 +198,12 @@
             });
         },
 
+        async getAllPhotos() {
+            return withStore(STORES.photos, 'readonly', async (store) => {
+                return promisifyRequest(store.getAll());
+            });
+        },
+
         async saveMeta(key, value) {
             return withStore(STORES.meta, 'readwrite', async (store) => {
                 store.put({
