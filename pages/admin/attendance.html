@@ -28,7 +28,6 @@
         async function checkAccess() {
             // Wait for Supabase to be ready
             if (!window.supabaseClient) {
-                console.log("Waiting for Supabase client...");
                 setTimeout(checkAccess, 100);
                 return;
             }
@@ -36,13 +35,7 @@
             try {
                 const { data: { session }, error } = await window.supabaseClient.auth.getSession();
                 
-                if (error || !session) {
-                    console.log("No active session found. Redirecting to login...");
-                    window.location.href = './login.html';
-                    return;
-                }
-
-                console.log("Session found for user:", session.user.email);
+                if (error || !session) return; // Handled by admin-nav.js
 
                 const cachedAccess = JSON.parse(localStorage.getItem('attendanceOfflineAccess') || 'null');
 
@@ -56,14 +49,12 @@
                 if (profileError) {
                     const canUseCachedAccess = cachedAccess && cachedAccess.userId === session.user.id && cachedAccess.access?.attendance;
                     if (canUseCachedAccess) {
-                        console.warn("Profile lookup unavailable. Using cached offline attendance access.");
                         sessionStorage.setItem('userName', cachedAccess.fullName || session.user.email);
                         sessionStorage.setItem('userRole', cachedAccess.role || 'staff');
                         sessionStorage.setItem('userAccess', JSON.stringify(cachedAccess.access || {}));
                         sessionStorage.setItem('adminLoggedIn', 'true');
                         return;
                     }
-
                     throw profileError;
                 }
 
@@ -71,12 +62,9 @@
                 const userRole = (profile?.role || 'staff').toLowerCase();
                 const canScan = profile?.can_scan || userRole === 'admin';
                 
-                console.log("Profile check complete. Role:", userRole, "Can Scan:", canScan);
-
                 if (!canScan) {
-                    console.error("Access Denied: Permission 'can_scan' missing.");
-                    alert("ACCESS DENIED: You do not have permission to use the Attendance Scanner. Please contact the administrator.");
-                    window.location.href = './login.html';
+                    alert("ACCESS DENIED: You do not have permission to use the Attendance Scanner.");
+                    window.location.href = './admin-dashboard.html';
                     return;
                 }
 
@@ -193,7 +181,7 @@
                         // Logout
                         html += `
                             <li class="list">
-                                <a href="./login.html" onclick="window.supabaseClient.auth.signOut(); sessionStorage.clear();">
+                                <a href="./login.html" onclick="handleLogout(event)">
                                     <span class="icon"><i class="fa-solid fa-right-from-bracket"></i></span>
                                     <span class="text">LOGOUT</span>
                                 </a>
@@ -280,6 +268,10 @@
                                 <div class="text-center">
                                     <p class="text-[8px] font-black text-blue-400 uppercase">Sections</p>
                                     <p id="loaded-sections-count" class="text-xs font-black text-blue-700">0</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-[8px] font-black text-blue-400 uppercase">Students</p>
+                                    <p id="total-students-count" class="text-xs font-black text-blue-700">0</p>
                                 </div>
                                 <div class="text-center">
                                     <p class="text-[8px] font-black text-blue-400 uppercase">Photos</p>

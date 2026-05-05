@@ -1,4 +1,65 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // --- Admin Session Guard ---
+    async function syncAdminSession() {
+        if (!window.supabaseClient) {
+            setTimeout(syncAdminSession, 100);
+            return;
+        }
+
+        const { data: { session } } = await window.supabaseClient.auth.getSession();
+        
+        if (session) {
+            // If session exists but storage is empty, hydrate it
+            if (!sessionStorage.getItem('adminLoggedIn')) {
+                const { data: profile } = await window.supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (profile) {
+                    sessionStorage.setItem('adminLoggedIn', 'true');
+                    sessionStorage.setItem('userRole', profile.role);
+                    sessionStorage.setItem('userName', profile.full_name);
+                    
+                    const access = {
+                        attendance: profile.can_scan,
+                        idGen: profile.can_manage_ids,
+                        stats: profile.can_view_dashboard
+                    };
+                    sessionStorage.setItem('userAccess', JSON.stringify(access));
+                    
+                    // Trigger UI update if necessary
+                    window.dispatchEvent(new Event('sessionHydrated'));
+                }
+            }
+        } else if (!window.location.pathname.includes('login.html')) {
+            // No session and not on login page -> redirect
+            window.location.replace('./login.html');
+        }
+    }
+
+    // Run session sync
+    if (window.location.pathname.includes('/admin/')) {
+        await syncAdminSession();
+    }
+
+    // --- Global Logout Handler ---
+    window.handleLogout = async function(e) {
+        if (e) e.preventDefault();
+        
+        try {
+            if (window.supabaseClient) {
+                await window.supabaseClient.auth.signOut();
+            }
+        } catch (err) {
+            console.error("Sign out error:", err);
+        } finally {
+            sessionStorage.clear();
+            window.location.href = './login.html';
+        }
+    };
+
     const navLinks = document.querySelector('.nav-links');
     const listItems = document.querySelectorAll('.nav-links .list');
     const indicator = document.querySelector('.nav-links.magic-nav .indicator');

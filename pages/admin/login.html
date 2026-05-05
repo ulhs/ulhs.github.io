@@ -43,97 +43,171 @@
             <h2 style="font-family: 'Acme', sans-serif; color: #1e3a8a;">Personnel Portal</h2>
             <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Admin, Faculty & Staff Login</p>
             
-            <form id="unified-login-form" class="login-form">
-                <div class="space-y-4">
-                    <input type="email" id="email" placeholder="School Email" required 
-                           style="width: 100%; padding: 14px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 0.9rem;">
-                    <input type="password" id="password" placeholder="System Password" required 
-                           style="width: 100%; padding: 14px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 0.9rem;">
-                </div>
-                <button type="submit" class="login-btn">
-                    Login to System
+            <div id="auth-container">
+                <button id="google-login-btn" class="login-btn flex items-center justify-center gap-3" style="display: flex; align-items: center; justify-content: center; gap: 12px; background: white; color: #374151; border: 2px solid #e5e7eb;">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="Google">
+                    <span id="login-text" style="font-weight: 800;">Sign in with Google</span>
                 </button>
-            </form>
+                <div id="auth-status" style="display: none; margin-top: 16px;">
+                    <div class="inline-block animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+                    <p id="status-text" style="font-size: 0.65rem; color: #3b82f6; font-weight: 800; text-transform: uppercase; margin-top: 8px;">Verifying Credentials...</p>
+                </div>
+                <p id="auth-footer-text" style="font-size: 0.65rem; color: #9ca3af; margin-top: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Authorized Personnel Only • Gmail Required
+                </p>
+            </div>
 
             <div class="login-links" style="margin-top: 24px;">
                 <a href="../../index.html" class="back-link" style="font-size: 0.8rem; color: #6b7280; text-decoration: none; font-weight: 600;">&larr; Back to Homepage</a>
             </div>
             
             <div id="login-error-msg" class="error-msg" style="display: none; background: #fff5f5; color: #c53030; padding: 12px; border-radius: 10px; font-size: 0.75rem; margin-top: 20px; border: 1px solid #feb2b2; font-weight: 700;">
-                Invalid credentials or unauthorized access.
+                Unauthorized access. Your email is not on the whitelist.
             </div>
         </div>
     </div>
 
     <script>
-        const loginForm = document.getElementById('unified-login-form');
-        const emailInput = document.getElementById('email');
-        const passwordInput = document.getElementById('password');
+        const googleLoginBtn = document.getElementById('google-login-btn');
+        const loginText = document.getElementById('login-text');
+        const authStatus = document.getElementById('auth-status');
+        const statusText = document.getElementById('status-text');
+        const authFooter = document.getElementById('auth-footer-text');
         const errorMsg = document.getElementById('login-error-msg');
 
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            errorMsg.style.display = 'none';
+        let isProcessing = false;
+
+        async function processSession(session) {
+            if (!session || isProcessing) return;
+            isProcessing = true;
             
-            const email = emailInput.value;
-            const password = passwordInput.value;
-
             try {
-                // 1. Authenticate with Supabase
-                const { data, error } = await window.supabaseClient.auth.signInWithPassword({
-                    email,
-                    password
-                });
+                googleLoginBtn.style.display = 'none';
+                authFooter.style.display = 'none';
+                authStatus.style.display = 'block';
+                errorMsg.style.display = 'none';
 
-                if (error) throw error;
-
-                // 2. Fetch profile to determine role and access
+                // 1. Fetch profile
                 const { data: profile, error: profileError } = await window.supabaseClient
                     .from('profiles')
                     .select('*')
-                    .eq('id', data.user.id)
+                    .eq('id', session.user.id)
                     .single();
 
+                let finalProfile = profile;
+
                 if (profileError || !profile) {
-                    throw new Error("Profile not found. Please contact the administrator.");
+                    statusText.textContent = "Authorizing Account...";
+                    
+                    // Check Whitelist using a robust query
+                    console.log("🔍 Verifying whitelist for:", session.user.email);
+                    const { data: whitelist, error: whitelistError } = await window.supabaseClient
+                        .from('admin_whitelist')
+                        .select('*')
+                        .ilike('email', session.user.email.trim())
+                        .single();
+                    
+                    if (whitelistError || !whitelist) {
+                        console.error("❌ Whitelist lookup failed:", whitelistError);
+                        await window.supabaseClient.auth.signOut();
+                        throw new Error("Access Denied: Your email is not whitelisted.");
+                    }
+
+                    statusText.textContent = "Setting up Profile...";
+                    const profileData = {
+                        id: session.user.id,
+                        email: session.user.email.toLowerCase().trim(),
+                        full_name: session.user.user_metadata.full_name || session.user.email,
+                        avatar_url: session.user.user_metadata.avatar_url || null,
+                        role: whitelist.role || 'staff',
+                        can_scan: whitelist.can_scan || false,
+                        can_manage_ids: whitelist.can_manage_ids || false,
+                        can_view_dashboard: whitelist.can_view_dashboard || false
+                    };
+
+                    const { data: newProfile, error: insertError } = await window.supabaseClient
+                        .from('profiles')
+                        .insert([profileData])
+                        .select()
+                        .single();
+                    
+                    if (insertError) throw new Error("Profile setup failed: " + insertError.message);
+                    finalProfile = newProfile;
                 }
 
-                const userRole = (profile.role || 'staff').toLowerCase();
+                statusText.textContent = "Welcome, " + (finalProfile.full_name || "Admin");
                 
-                // 3. Setup Session Data for the whole site
+                // Hydrate Session Storage
                 sessionStorage.setItem('adminLoggedIn', 'true');
-                sessionStorage.setItem('userRole', userRole);
-                sessionStorage.setItem('userName', profile.full_name || email);
-                
-                // Map database columns to session access object
-                const access = {
-                    attendance: profile.can_scan || ['admin', 'school_head'].includes(userRole),
-                    idGen: profile.can_manage_ids || ['admin', 'school_head'].includes(userRole),
-                    stats: profile.can_view_dashboard || ['admin', 'school_head'].includes(userRole)
-                };
-                sessionStorage.setItem('userAccess', JSON.stringify(access));
-                localStorage.setItem('lastUserRole', userRole);
+                sessionStorage.setItem('userRole', finalProfile.role);
+                sessionStorage.setItem('userName', finalProfile.full_name);
+                sessionStorage.setItem('userAccess', JSON.stringify({
+                    attendance: finalProfile.can_scan,
+                    idGen: finalProfile.can_manage_ids,
+                    stats: finalProfile.can_view_dashboard
+                }));
 
-                // 4. Smart Redirection based on permissions
-                console.log("Login success. Role:", userRole, "Access:", access);
-                
-                if (access.stats) {
-                    window.location.replace('./admin-dashboard.html');
-                } else if (access.attendance) {
-                    window.location.replace('./attendance.html');
-                } else if (access.idGen) {
-                    window.location.replace('./id-gen.html');
-                } else {
-                    // Authenticated but no tool permissions assigned yet
-                    throw new Error("Account verified, but no tool permissions are assigned to you. Please contact the School Head.");
-                }
+                // Redirect based on priority
+                setTimeout(() => {
+                    const access = JSON.parse(sessionStorage.getItem('userAccess'));
+                    console.log("🚀 Access Granted. Redirecting with access:", access);
+                    let target = './admin-dashboard.html';
+                    if (!access.stats) {
+                        if (access.attendance) target = './attendance.html';
+                        else if (access.idGen) target = './id-gen.html';
+                    }
+                    window.location.replace(target);
+                }, 800);
 
             } catch (err) {
                 console.error("Login Error:", err);
-                errorMsg.textContent = err.message || 'Invalid credentials.';
+                isProcessing = false;
+                googleLoginBtn.style.display = 'flex';
+                authFooter.style.display = 'block';
+                authStatus.style.display = 'none';
+                errorMsg.textContent = err.message;
+                errorMsg.style.display = 'block';
+            }
+        }
+
+        async function initAuth() {
+            if (!window.supabaseClient) {
+                setTimeout(initAuth, 100);
+                return;
+            }
+
+            // Handle server-side errors from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('error_description')) {
+                errorMsg.textContent = "Auth Error: " + urlParams.get('error_description');
+                errorMsg.style.display = 'block';
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            // Handle session
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (session) processSession(session);
+
+            window.supabaseClient.auth.onAuthStateChange((event, session) => {
+                if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+                    processSession(session);
+                }
+            });
+        }
+
+        googleLoginBtn.addEventListener('click', async () => {
+            errorMsg.style.display = 'none';
+            const { error } = await window.supabaseClient.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo: window.location.origin + window.location.pathname }
+            });
+            if (error) {
+                errorMsg.textContent = "OAuth Error: " + error.message;
                 errorMsg.style.display = 'block';
             }
         });
+
+        initAuth();
     </script>
 </body>
 </html>

@@ -27,10 +27,7 @@
             }
 
             const { data: { session } } = await window.supabaseClient.auth.getSession();
-            if (!session) {
-                window.location.href = './login.html';
-                return;
-            }
+            if (!session) return; // handled by admin-nav.js
 
             const { data: profile } = await window.supabaseClient
                 .from('profiles')
@@ -40,7 +37,7 @@
 
             if (!profile || (profile.role !== 'admin' && profile.role !== 'school_head' && !profile.can_view_dashboard)) {
                 alert("ACCESS DENIED: You do not have permission to view the Dashboard.");
-                window.location.href = profile?.role === 'teacher' ? './attendance.html' : './login.html';
+                window.location.href = './attendance.html';
             }
         }
         checkDashboardAccess();
@@ -121,7 +118,7 @@
                         // Logout
                         html += `
                             <li class="list">
-                                <a href="./login.html" onclick="sessionStorage.clear()">
+                                <a href="./login.html" onclick="handleLogout(event)">
                                     <span class="icon"><i class="fa-solid fa-right-from-bracket"></i></span>
                                     <span class="text">LOGOUT</span>
                                 </a>

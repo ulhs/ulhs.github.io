@@ -2,6 +2,7 @@
 let masterStudentDatabase = [];
 let sectionWorkbooks = {}; // Stores ExcelJS workbook objects indexed by section name
 let studentPhotos = new Map(); // lrn -> dataURL (in-memory storage)
+let pendingPhotoSync = new Set(); // Track LRNs that need to be uploaded to Supabase
 let html5QrCode = null;
 let attendanceSession = new Map(); // lrn -> { am: 'P'|'T'|null, pm: 'P'|'T'|'A'|null }
 let totalCampusPopulation = 0;
@@ -207,6 +208,13 @@ function updateUIWithCacheData() {
     if (exportShsBtn) exportShsBtn.classList.remove('hidden');
     if (totalCountDisplay) totalCountDisplay.textContent = masterStudentDatabase.length;
 
+    // Show Admin Tools if admin or has permission
+    const userAccess = JSON.parse(sessionStorage.getItem('userAccess') || '{}');
+    const userRole = sessionStorage.getItem('userRole');
+    if (userRole === 'admin' || userAccess.stats) {
+        if (adminTools) adminTools.classList.remove('hidden');
+    }
+
     updateCloudSyncBadge();
 }
 
@@ -323,8 +331,35 @@ async function hydrateFromOfflineCache() {
 
         if (cachedStudents && cachedStudents.length > 0) {
             masterStudentDatabase = cachedStudents;
+            
+            // Re-map photos from database records if available
+            masterStudentDatabase.forEach(s => {
+                if (s.photo_url && (s.photo_url.startsWith('data:') || s.photo_url.startsWith('profiles/'))) {
+                    studentPhotos.set(s.lrn, s.photo_url);
+                }
+            });
+            
             updateUIWithCacheData();
         }
+
+        // Load all photos from dedicated store to ensure they're in memory
+        // This handles photos that might not be linked to a student record yet
+        const db = await indexedDB.open('ulhs-attendance-offline', 1);
+        const transaction = db.transaction('photos', 'readonly');
+        const store = transaction.objectStore('photos');
+        const request = store.getAll();
+        
+        request.onsuccess = () => {
+            const allPhotos = request.result;
+            if (allPhotos && allPhotos.length > 0) {
+                allPhotos.forEach(p => {
+                    if (!studentPhotos.has(p.lrn)) {
+                        studentPhotos.set(p.lrn, p.data);
+                    }
+                });
+                console.log(`[Offline] Hydrated ${allPhotos.length} photos into memory.`);
+            }
+        };
 
         if (cachedLogs && cachedLogs.length > 0) {
             applySessionStateFromLogs(mergeLogsByIdentity(cachedLogs));
@@ -434,6 +469,13 @@ function updateUIWithCloudData() {
     if (exportJhsBtn) exportJhsBtn.classList.remove('hidden');
     if (exportShsBtn) exportShsBtn.classList.remove('hidden');
     if (totalCountDisplay) totalCountDisplay.textContent = masterStudentDatabase.length;
+
+    // Show Admin Tools if admin or has permission
+    const userAccess = JSON.parse(sessionStorage.getItem('userAccess') || '{}');
+    const userRole = sessionStorage.getItem('userRole');
+    if (userRole === 'admin' || userAccess.stats) {
+        if (adminTools) adminTools.classList.remove('hidden');
+    }
     
     updateCloudSyncBadge();
 }
@@ -694,31 +736,68 @@ setInterval(updateClock, 1000);
 updateClock();
 
 // --- BULK SF2 & PHOTO ZIP IMPORTER (SESSION-ONLY WORKFLOW) ---
+function updateSyncButtonState() {
+    const syncPhotosBtn = document.getElementById('sync-photos-btn');
+    if (!syncPhotosBtn) {
+        console.warn("Sync button not found in DOM");
+        return;
+    }
+
+    const pendingCount = pendingPhotoSync.size;
+    console.log(`[Sync Debug] Updating button state. Pending photos: ${pendingCount}`);
+    
+    // Explicitly check if the button exists and is accessible
+    if (syncPhotosBtn) {
+        if (pendingCount > 0) {
+            console.log("[Sync Debug] Enabling button...");
+            syncPhotosBtn.disabled = false;
+            syncPhotosBtn.style.setProperty('background-color', '#2563eb', 'important');
+            syncPhotosBtn.style.setProperty('color', '#ffffff', 'important');
+            syncPhotosBtn.style.setProperty('cursor', 'pointer', 'important');
+            
+            syncPhotosBtn.classList.remove('bg-gray-200', 'text-gray-400', 'cursor-not-allowed');
+            syncPhotosBtn.classList.add('bg-blue-600', 'text-white', 'shadow-lg', 'hover:bg-blue-700', 'active:scale-95', 'animate-pulse');
+            
+            syncPhotosBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up text-lg"></i> Sync ${pendingCount} Photos to Cloud`;
+        } else {
+            console.log("[Sync Debug] Disabling button...");
+            syncPhotosBtn.disabled = true;
+            syncPhotosBtn.style.backgroundColor = ''; 
+            syncPhotosBtn.style.color = '';
+            syncPhotosBtn.style.cursor = '';
+            syncPhotosBtn.classList.add('bg-gray-200', 'text-gray-400', 'cursor-not-allowed');
+            syncPhotosBtn.classList.remove('bg-blue-600', 'text-white', 'shadow-lg', 'hover:bg-blue-700', 'active:scale-95', 'animate-pulse');
+            syncPhotosBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up text-lg"></i> Sync Photos to Cloud`;
+        }
+    }
+}
+
 async function handleBulkImport(files) {
     if (!files || files.length === 0) return;
 
-    statusTitle.textContent = "Processing Files...";
-    statusIcon.innerHTML = '<svg class="w-6 h-6 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>';
+    console.log(`[Import Debug] Processing ${files.length} files...`);
+
+    // Update UI
+    if (statusTitle) statusTitle.textContent = "Processing Files...";
+    if (statusIcon) {
+        statusIcon.innerHTML = '<svg class="w-6 h-6 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>';
+    }
     
     let loadedCount = 0;
-    // We don't reset everything if user uploads photos separately, but we reset database on SF2 uploads
-    const hasExcel = Array.from(files).some(f => f.name.endsWith('.xlsx'));
-    if (hasExcel) {
-        masterStudentDatabase = [];
-        sectionWorkbooks = {};
-        attendanceSession.clear();
-    }
+    let zipSummary = { new: 0, updated: 0, invalid: 0, total: 0 };
+    let hasZip = false;
 
     for (const file of files) {
         try {
-            if (file.name.endsWith('.xlsx')) {
+            if (file.name.toLowerCase().endsWith('.xlsx')) {
+                console.log(`[Import Debug] Processing Excel: ${file.name}`);
                 const buffer = await file.arrayBuffer();
                 const workbook = new ExcelJS.Workbook();
                 await workbook.xlsx.load(buffer);
                 
                 const sheetName = detectSheetName(workbook);
                 const level = detectLevel(workbook, sheetName);
-                const sectionName = file.name.replace('.xlsx', '');
+                const sectionName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension properly
 
                 sectionWorkbooks[sectionName] = {
                     workbook: workbook,
@@ -727,70 +806,149 @@ async function handleBulkImport(files) {
                     fileName: file.name
                 };
 
+                masterStudentDatabase = masterStudentDatabase.filter(s => s.section !== sectionName);
                 processSectionData(sectionWorkbooks[sectionName]);
                 loadedCount++;
             } 
-            else if (file.name.endsWith('.zip')) {
+            else if (file.name.toLowerCase().endsWith('.zip')) {
+                hasZip = true;
+                console.log(`[Import Debug] Processing ZIP: ${file.name}`);
                 statusDesc.textContent = "Unpacking Student Photos...";
                 const zip = await JSZip.loadAsync(file);
-                let photoCount = 0;
 
-                for (const [filename, zipEntry] of Object.entries(zip.files)) {
-                    if (zipEntry.dir) continue;
-                    
+                const zipEntries = Object.entries(zip.files).filter(([_, entry]) => !entry.dir);
+                const totalEntries = zipEntries.length;
+                let processedInZip = 0;
+
+                for (const [filename, zipEntry] of zipEntries) {
                     const isImage = /\.(webp|jpg|jpeg|png)$/i.test(filename);
                     if (isImage) {
+                        console.log(`[Import Debug] Found image: ${filename}`);
+                        zipSummary.total++;
+                        
+                        // Map extension to proper MIME type
+                        const ext = filename.split('.').pop().toLowerCase();
+                        const mimeType = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
+                        
                         const blob = await zipEntry.async("blob");
-                        const dataURL = await blobToDataURL(blob);
-                        // Extract LRN from filename (e.g., "123456789012.webp" -> "123456789012")
-                        const lrn = filename.split('/').pop().split('.')[0];
+                        // Ensure the blob has the correct MIME type
+                        const typedBlob = new Blob([blob], { type: mimeType });
+                        const dataURL = await blobToDataURL(typedBlob);
+                        
+                        // Extract LRN (12 digits) from filename
+                        const lrnMatch = filename.match(/\d{12}/);
+                        const lrn = lrnMatch ? lrnMatch[0] : null;
+
+                        if (!lrn) {
+                            console.warn(`[Import Warning] No 12-digit LRN found in filename: ${filename}`);
+                            zipSummary.invalid++;
+                            continue;
+                        }
+
+                        console.log(`[Import Debug] Valid LRN found: ${lrn}`);
+
+                        if (studentPhotos.has(lrn)) {
+                            zipSummary.updated++;
+                        } else {
+                            zipSummary.new++;
+                        }
+                        
                         studentPhotos.set(lrn, dataURL);
+                        pendingPhotoSync.add(lrn); // Queue for Supabase Cloud Sync
+                        console.log(`[Import Debug] Added LRN ${lrn} to pendingPhotoSync. Current size: ${pendingPhotoSync.size}`);
+                        
+                        const student = masterStudentDatabase.find(s => s.lrn === lrn);
+                        if (student) {
+                            student.photo_url = dataURL;
+                        }
+                        
+                        // Update UI if this student is currently displayed on dashboard
+                        const lastStudentName = document.getElementById('last-student-name');
+                        if (lastStudentName && student && lastStudentName.textContent === student.parsedName) {
+                            const lastStudentPhoto = document.getElementById('last-student-photo');
+                            const lastPhotoPlaceholder = document.getElementById('last-photo-placeholder');
+                            if (lastStudentPhoto) {
+                                lastStudentPhoto.src = dataURL;
+                                lastStudentPhoto.style.display = 'block';
+                                lastStudentPhoto.classList.remove('hidden');
+                            }
+                            if (lastPhotoPlaceholder) {
+                                lastPhotoPlaceholder.style.display = 'none';
+                                lastPhotoPlaceholder.classList.add('hidden');
+                            }
+                        }
+
                         if (offlineStore) {
                             await offlineStore.savePhoto(lrn, dataURL);
                         }
-                        photoCount++;
+                    }
+                    processedInZip++;
+                    if (processedInZip % 10 === 0 || processedInZip === totalEntries) {
+                        statusDesc.textContent = `Unpacking Student Photos: ${processedInZip}/${totalEntries}...`;
                     }
                 }
-                console.log(`Loaded ${photoCount} photos into memory.`);
+                console.log(`[Import Debug] ZIP processed: ${zipSummary.new} new, ${zipSummary.updated} updated, ${zipSummary.invalid} invalid.`);
             }
         } catch (err) {
-            console.error(`Error processing ${file.name}:`, err);
+            console.error(`[Import Error] Failed to process ${file.name}:`, err);
         }
     }
 
-    statusTitle.textContent = "Session Registry Ready";
-    statusDesc.textContent = `Registry: ${masterStudentDatabase.length} students. Photos: ${studentPhotos.size} loaded.`;
-    statusIcon.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
-    statusIcon.className = "w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600";
+    if (statusTitle) statusTitle.textContent = "Session Registry Ready";
+    
+    // Detailed Status Description
+    let finalDesc = `Registry: ${masterStudentDatabase.length} students. `;
+    if (hasZip) {
+        if (zipSummary.total === 0) {
+            finalDesc += `<span class="text-red-600 font-bold">Error: No images found in ZIP.</span>`;
+        } else if (zipSummary.new === 0 && zipSummary.updated === 0) {
+            finalDesc += `<span class="text-red-600 font-bold">Error: ${zipSummary.invalid} photos skipped (No 12-digit LRN in filenames).</span>`;
+        } else {
+            finalDesc += `ZIP Report: ${zipSummary.new} new, ${zipSummary.updated} updated. `;
+            if (zipSummary.invalid > 0) finalDesc += `(${zipSummary.invalid} skipped). `;
+            finalDesc += `<span class="text-blue-700 font-black animate-pulse">Action Required: Click 'Sync Photos to Cloud' below to save changes.</span>`;
+        }
+    } else {
+        finalDesc += `Photos: ${studentPhotos.size} loaded.`;
+    }
+    if (statusDesc) statusDesc.innerHTML = finalDesc;
+    if (statusIcon) {
+        statusIcon.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+        statusIcon.className = "w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600";
+    }
 
     // Update UI stats
-    importStats.classList.remove('hidden');
-    loadedSectionsCount.textContent = Object.keys(sectionWorkbooks).length;
-    totalStudentsCount.textContent = masterStudentDatabase.length;
-    totalPhotosCount.textContent = studentPhotos.size;
-    totalCountDisplay.textContent = masterStudentDatabase.length;
+    if (importStats) importStats.classList.remove('hidden');
+    if (loadedSectionsCount) loadedSectionsCount.textContent = Object.keys(sectionWorkbooks).length;
+    if (totalStudentsCount) totalStudentsCount.textContent = masterStudentDatabase.length;
+    if (totalPhotosCount) totalPhotosCount.textContent = studentPhotos.size;
+    if (totalCountDisplay) totalCountDisplay.textContent = masterStudentDatabase.length;
     
     // Update Sync Button state
-    const syncPhotosBtn = document.getElementById('sync-photos-btn');
-    if (studentPhotos.size > 0 && syncPhotosBtn) {
-        syncPhotosBtn.disabled = false;
-        syncPhotosBtn.className = "w-full py-4 bg-blue-600 text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-3 active:scale-95";
-    }
+    updateSyncButtonState();
     
-    if (masterStudentDatabase.length > 0) {
-        if (offlineStore) {
+    if (masterStudentDatabase.length > 0 || studentPhotos.size > 0) {
+        if (offlineStore && masterStudentDatabase.length > 0) {
             await offlineStore.saveStudents(masterStudentDatabase);
         }
-        startBtn.disabled = false;
-        exportBtn.classList.remove('hidden');
-        exportBtn.textContent = "Export All (ZIP)";
         
-        // Show SF2 buttons if admin or has permission
+        // Always show start button if there are students
+        if (masterStudentDatabase.length > 0) {
+            if (startBtn) startBtn.disabled = false;
+            if (exportBtn) {
+                exportBtn.classList.remove('hidden');
+                exportBtn.textContent = "Export All (ZIP)";
+            }
+        }
+        
+        // Show Admin Tools if admin or has permission
         const userAccess = JSON.parse(sessionStorage.getItem('userAccess') || '{}');
         const userRole = sessionStorage.getItem('userRole');
         if (userRole === 'admin' || userAccess.stats) {
-            exportJhsBtn.classList.remove('hidden');
-            exportShsBtn.classList.remove('hidden');
+            if (masterStudentDatabase.length > 0) {
+                if (exportJhsBtn) exportJhsBtn.classList.remove('hidden');
+                if (exportShsBtn) exportShsBtn.classList.remove('hidden');
+            }
             if (adminTools) adminTools.classList.remove('hidden');
         }
     }
@@ -868,14 +1026,16 @@ function processSectionData(sectionObj) {
         }
 
         if (lrn && lrn.length >= 5) {
+            const cleanLrn = lrn.replace(/[^0-9]/g, '');
             masterStudentDatabase.push({
-                lrn: lrn.replace(/[^0-9]/g, ''),
+                lrn: cleanLrn,
                 excelName: rawName,
                 parsedName: parseExcelName(rawName),
                 rowIndex: rowNumber,
                 gender: isMaleSection ? 'male' : 'female',
                 section: sectionObj.info.section,
-                level: level
+                level: level,
+                photo_url: studentPhotos.get(cleanLrn) || null
             });
         }
     });
@@ -932,7 +1092,16 @@ function getAttendanceStatus(lrn) {
 
 function markAttendanceInExcel(student, timeData) {
     const sectionObj = sectionWorkbooks[student.section];
-    if (!sectionObj) return;
+    if (!sectionObj) {
+        console.warn(`Workbook for section ${student.section} not found. Skipping Excel update.`);
+        return;
+    }
+
+    // Guard: Ensure rowIndex exists (Hybrid Mode Check)
+    if (student.rowIndex === undefined || student.rowIndex === null) {
+        console.info(`Student ${student.lrn} was loaded from Cloud without Excel context. Skipping Excel update.`);
+        return;
+    }
 
     const mapping = SF2_MAPPINGS[student.level] || SF2_MAPPINGS['JHS'];
     const worksheet = sectionObj.workbook.getWorksheet(sectionObj.sheetName);
@@ -2152,12 +2321,15 @@ stopBtn.addEventListener('click', async () => {
 
 // Cloud Sync: Upload Photos to Supabase Storage & Update Database
 async function syncPhotosToSupabase() {
-    if (studentPhotos.size === 0) return;
+    if (pendingPhotoSync.size === 0) {
+        alert("No new or updated photos found to sync. Upload a ZIP file first.");
+        return;
+    }
 
     const syncBtn = document.getElementById('sync-photos-btn');
     const originalText = syncBtn.innerHTML;
     
-    if (!confirm(`Are you sure you want to upload ${studentPhotos.size} photos to the cloud? This will link them to the students' records in Supabase.`)) return;
+    if (!confirm(`Are you sure you want to upload ${pendingPhotoSync.size} photos to the cloud? This will link them to the students' records in Supabase.`)) return;
 
     try {
         syncBtn.disabled = true;
@@ -2165,58 +2337,85 @@ async function syncPhotosToSupabase() {
         
         let successCount = 0;
         let failCount = 0;
+        const totalToSync = pendingPhotoSync.size;
 
-        for (const [lrn, dataURL] of studentPhotos.entries()) {
-            try {
-                // 1. Convert DataURL to a clean Image Blob
-                const parts = dataURL.split(',');
-                const byteString = atob(parts[1]);
-                const arrayBuffer = new ArrayBuffer(byteString.length);
-                const uint8Array = new Uint8Array(arrayBuffer);
-                
-                for (let i = 0; i < byteString.length; i++) {
-                    uint8Array[i] = byteString.charCodeAt(i);
+        const pendingLrns = Array.from(pendingPhotoSync);
+        const CHUNK_SIZE = 5; // Process 5 photos at a time
+        
+        for (let i = 0; i < pendingLrns.length; i += CHUNK_SIZE) {
+            const chunk = pendingLrns.slice(i, i + CHUNK_SIZE);
+            
+            await Promise.all(chunk.map(async (lrn) => {
+                const dataURL = studentPhotos.get(lrn);
+                if (!dataURL) return;
+
+                try {
+                    // 1. Convert DataURL to a clean Image Blob
+                    const parts = dataURL.split(',');
+                    const mimeMatch = parts[0].match(/:(.*?);/);
+                    let mimeType = mimeMatch ? mimeMatch[1] : 'image/webp';
+                    
+                    // Fallback for generic octet-stream - default to webp since we know it's a student photo
+                    if (mimeType === 'application/octet-stream') {
+                        mimeType = 'image/webp';
+                    }
+                    
+                    const extension = mimeType.split('/')[1] || 'webp';
+                    const cleanExtension = extension === 'jpeg' ? 'jpg' : extension;
+                    
+                    const byteString = atob(parts[1]);
+                    const arrayBuffer = new ArrayBuffer(byteString.length);
+                    const uint8Array = new Uint8Array(arrayBuffer);
+                    
+                    for (let j = 0; j < byteString.length; j++) {
+                        uint8Array[j] = byteString.charCodeAt(j);
+                    }
+                    
+                    const blob = new Blob([uint8Array], { type: mimeType });
+                    const fileName = `${lrn}.${cleanExtension}`;
+                    const filePath = `profiles/${fileName}`;
+
+                    // 2. Upload to Supabase Storage
+                    const { error: uploadError } = await window.supabaseClient
+                        .storage
+                        .from('student-photos')
+                        .upload(filePath, blob, {
+                            cacheControl: '3600',
+                            upsert: true,
+                            contentType: mimeType
+                        });
+
+                    if (uploadError) throw uploadError;
+
+                    // 3. Update Students Table
+                    const { error: updateError } = await window.supabaseClient
+                        .from('students')
+                        .update({ photo_url: filePath })
+                        .eq('lrn', lrn);
+
+                    if (updateError) throw updateError;
+
+                    successCount++;
+                    pendingPhotoSync.delete(lrn);
+                } catch (err) {
+                    console.error(`Failed to sync photo for LRN ${lrn}:`, err.message);
+                    failCount++;
                 }
-                
-                const blob = new Blob([uint8Array], { type: 'image/webp' });
-                const fileName = `${lrn}.webp`;
-                const filePath = `profiles/${fileName}`;
+            }));
 
-                // 2. Upload to Supabase Storage with explicit metadata
-                const { data: uploadData, error: uploadError } = await window.supabaseClient
-                    .storage
-                    .from('student-photos')
-                    .upload(filePath, blob, {
-                        cacheControl: '0', // Disable cache during testing
-                        upsert: true,
-                        contentType: 'image/webp'
-                    });
-
-                if (uploadError) throw uploadError;
-
-                // 3. Update Students Table with the relative path (Private Bucket compatible)
-                const { error: updateError } = await window.supabaseClient
-                    .from('students')
-                    .update({ photo_url: filePath })
-                    .eq('lrn', lrn);
-
-                if (updateError) throw updateError;
-
-                successCount++;
-                syncBtn.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin"></i> Syncing (${successCount}/${studentPhotos.size})...`;
-            } catch (err) {
-                console.error(`Failed to sync photo for LRN ${lrn}:`, err.message);
-                failCount++;
-            }
+            syncBtn.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin"></i> Syncing (${successCount}/${totalToSync})...`;
         }
 
         alert(`Sync Complete!\n✅ Success: ${successCount}\n❌ Failed: ${failCount}`);
+        
+        // Reset button state via centralized function
+        updateSyncButtonState();
         
     } catch (err) {
         console.error("Global Sync Error:", err.message);
         alert("An error occurred during sync: " + err.message);
     } finally {
-        syncBtn.disabled = false;
+        syncBtn.disabled = pendingPhotoSync.size === 0;
         syncBtn.innerHTML = originalText;
     }
 }
@@ -2244,6 +2443,9 @@ async function initializeAttendanceApp() {
     await hydrateFromOfflineCache();
     await initSupabaseSync();
     await refreshPendingSyncCount();
+    
+    // Initial sync button state
+    updateSyncButtonState();
 
     if (navigator.onLine) {
         await reconcilePendingScansWithRemote();
