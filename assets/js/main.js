@@ -37,14 +37,17 @@ function getRootPath() {
         if (document.getElementById('faq-bot-toggle')) return;
         if (!document.body) return;
 
-        // Skip chatbot for admin pages
+        // Skip chatbot for admin pages or if dismissed for this session
         const isAdminPage = window.location.pathname.includes('admin.html') || 
                           window.location.pathname.includes('id-gen.html');
-        if (isAdminPage) return;
+        const isDismissed = sessionStorage.getItem('chatbot_dismissed') === 'true';
+        
+        if (isAdminPage || isDismissed) return;
 
         const botContainer = document.createElement('div');
         botContainer.className = 'faq-bot-container';
         botContainer.innerHTML = `
+            <div class="faq-bot-dismiss" id="faq-bot-dismiss" title="Dismiss Assistant for this session">&times;</div>
             <div class="faq-bot-toggle" id="faq-bot-toggle">
                 <span class="bot-icon">💬</span>
             </div>
@@ -85,9 +88,11 @@ function getRootPath() {
     }
 
     function setupBotEvents() {
+        const container = document.querySelector('.faq-bot-container');
         const toggle = document.getElementById('faq-bot-toggle');
         const window = document.getElementById('faq-bot-window');
         const close = document.getElementById('faq-bot-close');
+        const dismiss = document.getElementById('faq-bot-dismiss');
         const send = document.getElementById('faq-bot-send');
         const input = document.getElementById('faq-bot-input');
         const messages = document.getElementById('faq-bot-messages');
@@ -98,6 +103,7 @@ function getRootPath() {
         toggle.addEventListener('click', () => {
             const isVisible = window.style.display === 'flex';
             window.style.display = isVisible ? 'none' : 'flex';
+            document.body.classList.toggle('chatbot-open', !isVisible);
             if (!isVisible) {
                 input.focus();
                 if (messages.children.length === 0) {
@@ -110,6 +116,34 @@ function getRootPath() {
         close.addEventListener('click', (e) => {
             e.stopPropagation();
             window.style.display = 'none';
+            document.body.classList.remove('chatbot-open');
+        });
+
+        // Dismiss Assistant for this session
+        if (dismiss) {
+            dismiss.addEventListener('click', (e) => {
+                e.stopPropagation();
+                sessionStorage.setItem('chatbot_dismissed', 'true');
+                container.style.opacity = '0';
+                container.style.transform = 'scale(0.8)';
+                setTimeout(() => container.remove(), 300);
+            });
+        }
+
+        // Close on Click Outside
+        document.addEventListener('click', (e) => {
+            if (window.style.display === 'flex' && !container.contains(e.target)) {
+                window.style.display = 'none';
+                document.body.classList.remove('chatbot-open');
+            }
+        });
+
+        // Close on Escape Key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && window.style.display === 'flex') {
+                window.style.display = 'none';
+                document.body.classList.remove('chatbot-open');
+            }
         });
 
         send.addEventListener('click', () => handleSend(input, messages));
@@ -295,13 +329,27 @@ document.addEventListener('DOMContentLoaded', () => {
     backToTopBtn.setAttribute('data-tooltip', 'Back to Top');
     document.body.appendChild(backToTopBtn);
 
-    window.onscroll = function() {
-        if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
-            backToTopBtn.style.display = "flex";
+    let lastScrollTop = 0;
+    window.addEventListener('scroll', () => {
+        let st = window.pageYOffset || document.documentElement.scrollTop;
+        
+        // Show only when scrolling UP and beyond 300px
+        if (st < lastScrollTop && st > 300) {
+            backToTopBtn.classList.add('visible');
         } else {
-            backToTopBtn.style.display = "none";
+            backToTopBtn.classList.remove('visible');
         }
-    };
+
+        // Footer Awareness: Check if near bottom
+        const footer = document.querySelector('footer');
+        if (footer) {
+            const footerRect = footer.getBoundingClientRect();
+            const isNearFooter = footerRect.top <= window.innerHeight;
+            document.body.classList.toggle('at-footer', isNearFooter);
+        }
+        
+        lastScrollTop = st <= 0 ? 0 : st;
+    }, { passive: true });
 
     backToTopBtn.addEventListener('click', () => {
         window.scrollTo({
