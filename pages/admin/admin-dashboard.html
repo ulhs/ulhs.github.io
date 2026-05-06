@@ -157,7 +157,7 @@
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-2 xl:grid-cols-5 gap-4">
+                            <div class="grid grid-cols-2 xl:grid-cols-6 gap-4">
                                 <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
                                     <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Population</p>
                                     <p id="total-count" class="text-xl sm:text-2xl font-black text-blue-800">0</p>
@@ -177,6 +177,10 @@
                                 <div class="bg-orange-50 p-4 rounded-xl border border-orange-100">
                                     <p class="text-[10px] font-bold text-orange-600 uppercase tracking-widest">PM Logs</p>
                                     <p id="pm-count" class="text-xl sm:text-2xl font-black text-orange-800">0</p>
+                                </div>
+                                <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                                    <p class="text-[10px] font-bold text-red-600 uppercase tracking-widest">Departures</p>
+                                    <p id="departure-count" class="text-xl sm:text-2xl font-black text-red-800">0</p>
                                 </div>
                             </div>
 
@@ -507,6 +511,7 @@
             const filteredLogs = getFilteredLogs();
             const amLogs = filteredLogs.filter(log => log.session === 'AM').length;
             const pmLogs = filteredLogs.filter(log => log.session === 'PM').length;
+            const departureLogs = filteredLogs.filter(log => log.session === 'DEPARTURE').length;
             const activeLastScanned = filteredLogs.length > 0 ? filteredLogs[0] : null;
             const filteredPopulation = getFilteredPopulationCount();
 
@@ -516,6 +521,7 @@
             document.getElementById('lifetime-count').textContent = dashboardData.lifetimeLogs;
             document.getElementById('am-count').textContent = amLogs;
             document.getElementById('pm-count').textContent = pmLogs;
+            document.getElementById('departure-count').textContent = departureLogs;
             document.getElementById('log-count').textContent = `${filteredLogs.length} STUDENT${filteredLogs.length !== 1 ? 'S' : ''}`;
 
             // Handle log expansion

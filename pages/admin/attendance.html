@@ -426,13 +426,13 @@
                             </div>
 
                             <!-- Statistics Grid -->
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                                 <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Campus Population</p>
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Population</p>
                                     <p id="total-count" class="text-2xl sm:text-3xl font-black text-gray-900 tracking-tighter">0</p>
                                 </div>
                                 <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Campus Entries</p>
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Entries</p>
                                     <p id="present-count" class="text-2xl sm:text-3xl font-black text-green-600 tracking-tighter">0</p>
                                 </div>
                                 <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
@@ -442,6 +442,10 @@
                                 <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                                     <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">PM Logs</p>
                                     <p id="pm-entry-count" class="text-2xl sm:text-3xl font-black text-orange-600 tracking-tighter">0</p>
+                                </div>
+                                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Departures</p>
+                                    <p id="departure-entry-count" class="text-2xl sm:text-3xl font-black text-red-600 tracking-tighter">0</p>
                                 </div>
                             </div>
                         </div>
@@ -493,8 +497,8 @@
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             </div>
                             <div>
-                                <p class="font-bold text-sm">15-Minute Grace Period</p>
-                                <p class="text-xs text-blue-100/70 mt-1">Scan before 7:45 AM (Morning) or 1:15 PM (Afternoon) to avoid being marked Tardy.</p>
+                                <p class="font-bold text-sm">Three-Scan Routine</p>
+                                <p class="text-xs text-blue-100/70 mt-1">Scan 1 (AM Arrival), Scan 2 (PM Afternoon), and Scan 3 (Departure 3:00 PM onwards) for full attendance and parent alerts.</p>
                             </div>
                         </li>
                         <li class="flex items-start gap-4">
@@ -520,8 +524,8 @@
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             </div>
                             <div>
-                                <p class="font-bold text-sm">One Scan Per Session</p>
-                                <p class="text-xs text-blue-100/70 mt-1">Double-scanning is blocked. Ensure your ID is scanned correctly the first time.</p>
+                                <p class="font-bold text-sm">Parent Notifications</p>
+                                <p class="text-xs text-blue-100/70 mt-1">Arrival scans (AM/PM) and Departure scans trigger real-time Facebook Messenger alerts to registered parents.</p>
                             </div>
                         </li>
                     </ul>
@@ -555,8 +559,8 @@
                             <p class="text-xs text-gray-700 leading-relaxed font-semibold">Access is strictly controlled via Google OAuth authentication and Role-Based Access Control (RBAC). Every access request is logged to prevent unauthorized tampering.</p>
                         </div>
                         <div class="bg-white/40 p-4 rounded-2xl border border-white/60">
-                            <p class="text-xs font-black text-blue-800 uppercase mb-2">Rights Protection</p>
-                            <p class="text-xs text-gray-700 leading-relaxed font-semibold">Collected student and parent contact data is used <b>strictly</b> for official reporting and automated notifications. Rights to access or correct data are retained.</p>
+                            <p class="text-xs font-black text-blue-800 uppercase mb-2">Automated Notifications</p>
+                            <p class="text-xs text-gray-700 leading-relaxed font-semibold">Real-time attendance alerts (Arrival/Departure) are sent only to the registered Messenger account provided during parent portal enrollment.</p>
                         </div>
                     </div>
                 </div>

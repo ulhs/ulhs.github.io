@@ -39,14 +39,13 @@ Deno.serve(async (req) => {
 
           if (!psid) continue
 
-          // Check for 'ref' parameter in referral or postback
+          // 2a. Handle Registration (via Referral or Postback)
           let lrn = messagingEvent.referral?.ref?.replace('reg_', '') || 
                     messagingEvent.postback?.referral?.ref?.replace('reg_', '')
 
           if (lrn && lrn.length === 12) {
             console.log(`📝 Registration attempt: PSID ${psid} for LRN ${lrn}`)
             
-            // Update database
             const { data, error } = await supabase
               .from('students')
               .update({ 
@@ -58,10 +57,48 @@ Deno.serve(async (req) => {
 
             if (!error && data && data.length > 0) {
               console.log(`✅ PSID ${psid} linked to ${data[0].full_name}`)
-              // Send confirmation back to parent
-              await sendConfirmation(psid, data[0].full_name)
-            } else if (error) {
-              console.error(`❌ DB Update Error for LRN ${lrn}:`, error.message)
+              await sendConfirmation(psid, data[0].full_name, lrn)
+            }
+          } 
+          
+          // 2b. Handle Commands (via Text Message)
+          else if (messagingEvent.message?.text) {
+            const text = messagingEvent.message.text.trim().toUpperCase();
+            
+            if (text.startsWith('UNLINK')) {
+              const targetLrn = text.replace('UNLINK', '').trim();
+              
+              if (targetLrn.length === 12) {
+                const { data, error } = await supabase
+                  .from('students')
+                  .update({ 
+                    parent_messenger_id: null,
+                    notify_parent: false 
+                  })
+                  .eq('lrn', targetLrn)
+                  .eq('parent_messenger_id', psid) // Security: only unlink if they own it
+                  .select()
+
+                if (!error && data && data.length > 0) {
+                  await sendResponse(psid, `✅ Successfully unlinked from ${data[0].full_name}. You will no longer receive alerts for this LRN.`);
+                } else {
+                  await sendResponse(psid, `❌ Unlink failed. Please ensure the LRN ${targetLrn} is correct and currently linked to your account.`);
+                }
+              } else {
+                await sendResponse(psid, `❓ To stop alerts for a student, please send: UNLINK [12-digit LRN]`);
+              }
+            } else if (text === 'LIST' || text === 'STUDENTS' || text === 'HELP') {
+              const { data, error } = await supabase
+                .from('students')
+                .select('full_name, lrn')
+                .eq('parent_messenger_id', psid);
+
+              if (!error && data && data.length > 0) {
+                const studentList = data.map(s => `• ${s.full_name} (${s.lrn})`).join('\n');
+                await sendResponse(psid, `📋 You are currently receiving alerts for:\n\n${studentList}\n\nTo unlink a student, send: UNLINK [LRN]`);
+              } else {
+                await sendResponse(psid, `❌ You don't have any students linked to this account yet. Please visit the school portal to register.`);
+              }
             }
           }
         }
@@ -76,15 +113,18 @@ Deno.serve(async (req) => {
   return new Response('Not Found', { status: 404 })
 })
 
-async function sendConfirmation(psid: string, studentName: string) {
-  const message = `✅ Registration Successful! You will now receive attendance alerts for ${studentName}. Thank you!`
-  
+async function sendConfirmation(psid: string, studentName: string, lrn: string) {
+   const message = `✅ Registration Successful! You will now receive attendance alerts for ${studentName}. \n\nTo see all your linked students, send: LIST\nTo stop alerts, send: UNLINK ${lrn}`
+   await sendResponse(psid, message)
+ }
+
+async function sendResponse(psid: string, text: string) {
   await fetch(`https://graph.facebook.com/v12.0/me/messages?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       recipient: { id: psid },
-      message: { text: message }
+      message: { text: text }
     })
   })
 }

@@ -123,11 +123,12 @@ function applySessionStateFromLogs(logs) {
     attendanceSession.clear();
 
     currentSessionLogs.forEach((log) => {
-        const existing = attendanceSession.get(String(log.student_lrn)) || { am: null, pm: null };
+        const existing = attendanceSession.get(String(log.student_lrn)) || { am: null, pm: null, departure: null };
         const code = mapLogStatusToSessionCode(log.status);
 
         if (log.session === 'AM') existing.am = code;
         if (log.session === 'PM') existing.pm = code;
+        if (log.session === 'DEPARTURE') existing.departure = code;
 
         attendanceSession.set(String(log.student_lrn), existing);
     });
@@ -149,9 +150,11 @@ function updateSessionLogCounters(logs) {
     const safeLogs = Array.isArray(logs) ? logs : [];
     const amCount = safeLogs.filter(log => log.session === 'AM').length;
     const pmCount = safeLogs.filter(log => log.session === 'PM').length;
+    const departureCount = safeLogs.filter(log => log.session === 'DEPARTURE').length;
 
     if (amEntryCountDisplay) amEntryCountDisplay.textContent = amCount;
     if (pmEntryCountDisplay) pmEntryCountDisplay.textContent = pmCount;
+    if (departureEntryCountDisplay) departureEntryCountDisplay.textContent = departureCount;
 }
 
 async function refreshPendingSyncCount() {
@@ -648,6 +651,7 @@ const totalCountDisplay = document.getElementById('total-count');
 const presentCountDisplay = document.getElementById('present-count');
 const amEntryCountDisplay = document.getElementById('am-entry-count');
 const pmEntryCountDisplay = document.getElementById('pm-entry-count');
+const departureEntryCountDisplay = document.getElementById('departure-entry-count');
 const sectionDisplay = document.getElementById('section-name');
 const scanLogsTable = document.getElementById('scan-logs-table');
 const logCount = document.getElementById('log-count');
@@ -674,16 +678,19 @@ const loadedSectionsCount = document.getElementById('loaded-sections-count');
 const totalStudentsCount = document.getElementById('total-students-count');
 const totalPhotosCount = document.getElementById('total-photos-count');
 
-// Time Windows Configuration (with 15-minute grace period)
+// Time Windows Configuration (Updated for 3-scan logic)
 const TIME_CONFIG = {
     AM: {
         late: "07:45",     // Marked LATE after 7:45 (7:30 start + 15m grace)
-        absent: "11:45"    // Not accepted as AM session after 11:45
+        absent: "11:45"    // End of AM window
     },
     PM: {
-        start: "12:00",    // PM session starts accepting at 12:00
-        late: "13:15",     // Marked LATE after 13:15 (13:00 start + 15m grace)
-        absent: "16:00"    // Marked ABSENT after 16:00
+        start: "12:00",    // PM session starts at 12:00
+        late: "13:15",     // Marked LATE after 13:15
+        threshold: "15:00" // PM session ends at 2:59 PM. 3:00 PM starts Departure.
+    },
+    DEPARTURE: {
+        start: "15:00"     // Departure window starts at 3:00 PM
     }
 };
 
@@ -1049,41 +1056,42 @@ function parseExcelName(name) {
 function getAttendanceStatus(lrn) {
     const now = new Date();
     const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-    const existing = attendanceSession.get(lrn) || { am: null, pm: null };
+    const existing = attendanceSession.get(lrn) || { am: null, pm: null, departure: null };
     
-    // Determine Session
+    // 1. AM Session (Arrival)
     if (timeStr < TIME_CONFIG.AM.absent) {
-        // AM Session
         if (timeStr < TIME_CONFIG.AM.late) return { session: 'AM', status: 'PRESENT', code: '', am: 'P' };
         return { session: 'AM', status: 'TARDY', code: 'T', am: 'T' };
-    } else if (timeStr >= TIME_CONFIG.PM.start) {
-        // PM Session
-        if (timeStr < TIME_CONFIG.PM.absent) {
-            const isLate = timeStr >= TIME_CONFIG.PM.late;
-            const pmType = isLate ? 'T' : 'P';
-            
-            let code = '';
-            let status = 'PRESENT';
-            
-            if (existing.am === 'T' && isLate) {
-                code = 'TT';
-                status = 'TARDY (DOUBLE)';
-            } else if (existing.am === 'T' || isLate) {
-                code = 'T';
-                status = 'TARDY';
-            } else if (!existing.am) {
-                code = '/';
-                status = 'AM ABSENT';
-            }
-            
-            return { session: 'PM', status, code, am: existing.am, pm: pmType };
+    } 
+    
+    // 2. PM Session (Afternoon Attendance) - Up to 2:59 PM
+    else if (timeStr >= TIME_CONFIG.PM.start && timeStr < TIME_CONFIG.PM.threshold) {
+        const isLate = timeStr >= TIME_CONFIG.PM.late;
+        const pmType = isLate ? 'T' : 'P';
+        
+        let code = '';
+        let status = 'PRESENT';
+        
+        if (existing.am === 'T' && isLate) {
+            code = 'TT';
+            status = 'TARDY (DOUBLE)';
+        } else if (existing.am === 'T' || isLate) {
+            code = 'T';
+            status = 'TARDY';
+        } else if (!existing.am) {
+            code = '/';
+            status = 'AM ABSENT';
         }
         
-        // After 4:00 PM
-        return { session: 'PM', status: 'ABSENT (WHOLE DAY)', code: 'X', am: existing.am, pm: 'A' };
+        return { session: 'PM', status, code, am: existing.am, pm: pmType };
     }
     
-    return { session: 'BREAK', status: 'WAITING', code: '', am: existing.am, pm: null };
+    // 3. Departure Session - 3:00 PM Onwards
+    else if (timeStr >= TIME_CONFIG.DEPARTURE.start) {
+        return { session: 'DEPARTURE', status: 'LEAVING', code: 'OUT', am: existing.am, pm: existing.pm, departure: 'P' };
+    }
+    
+    return { session: 'BREAK', status: 'WAITING', code: '', am: existing.am, pm: existing.pm };
 }
 
 function markAttendanceInExcel(student, timeData) {
@@ -1332,14 +1340,15 @@ async function logAttendanceToSupabase(student, timeData, scanTime = new Date())
  * Triggers a parent notification via Supabase Edge Function
  * This is currently optimized for Facebook Messenger integration.
  */
-async function triggerParentNotification(student, timeData, scanTime) {
+async function triggerParentNotification(student, timeData, scanTime, forceType = null) {
     if (!window.supabaseClient || !navigator.onLine) return;
 
     try {
         console.log(`[Notification] Triggering alert for ${student.parsedName} to parent ${student.parent_messenger_id}`);
         
-        // We call a Supabase Edge Function that handles the Meta Graph API
-        // This keeps our Facebook Page Access Token secure on the server side
+        // Use forced type if provided, otherwise default to arrival
+        const type = forceType || (timeData.session === 'DEPARTURE' ? 'departure' : 'arrival');
+
         const { data, error } = await window.supabaseClient.functions.invoke('send-messenger-alert', {
             body: {
                 psid: student.parent_messenger_id,
@@ -1347,7 +1356,7 @@ async function triggerParentNotification(student, timeData, scanTime) {
                 session: timeData.session,
                 status: timeData.status,
                 time: scanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                type: timeData.session === 'AM' ? 'arrival' : 'departure'
+                type: type
             }
         });
 
@@ -1355,7 +1364,6 @@ async function triggerParentNotification(student, timeData, scanTime) {
         console.log("✅ Parent notification sent successfully.");
     } catch (err) {
         console.warn("⚠️ Notification trigger failed:", err.message);
-        // We don't alert the user here as this is a background process
     }
 }
 
@@ -1399,22 +1407,26 @@ async function onScanSuccess(decodedText, decodedResult) {
         const timeData = getAttendanceStatus(student.lrn);
         const existing = attendanceSession.get(student.lrn);
 
-        if (existing && existing.pm && timeData.session === 'PM') {
-            showScanFeedback(student, "PM Session Already Scanned", "yellow");
-            showScanOverlay(student.parsedName, student.lrn, 'warning', student.section, timeData);
-            // Even if already scanned, update cooldown to prevent overlay spam
-            lastScannedLrn = student.lrn;
-            lastScanTimestamp = nowTimestamp;
-            return;
-        }
-        
-        if (existing && existing.am && timeData.session === 'AM') {
-            showScanFeedback(student, "AM Session Already Scanned", "yellow");
-            showScanOverlay(student.parsedName, student.lrn, 'warning', student.section, timeData);
-            // Even if already scanned, update cooldown to prevent overlay spam
-            lastScannedLrn = student.lrn;
-            lastScanTimestamp = nowTimestamp;
-            return;
+        // 1. Check for Duplicate Session Scans
+        if (existing) {
+            if (timeData.session === 'AM' && existing.am) {
+                showScanFeedback(student, "AM Session Already Scanned", "yellow");
+                showScanOverlay(student.parsedName, student.lrn, 'warning', student.section, timeData);
+                lastScannedLrn = student.lrn; lastScanTimestamp = nowTimestamp;
+                return;
+            }
+            if (timeData.session === 'PM' && existing.pm) {
+                showScanFeedback(student, "PM Session Already Scanned", "yellow");
+                showScanOverlay(student.parsedName, student.lrn, 'warning', student.section, timeData);
+                lastScannedLrn = student.lrn; lastScanTimestamp = nowTimestamp;
+                return;
+            }
+            if (timeData.session === 'DEPARTURE' && existing.departure) {
+                showScanFeedback(student, "Departure Already Scanned", "yellow");
+                showScanOverlay(student.parsedName, student.lrn, 'warning', student.section, timeData);
+                lastScannedLrn = student.lrn; lastScanTimestamp = nowTimestamp;
+                return;
+            }
         }
 
         // Update cooldown tracking
@@ -1426,7 +1438,8 @@ async function onScanSuccess(decodedText, decodedResult) {
         
         attendanceSession.set(student.lrn, {
             am: timeData.am || (existing ? existing.am : null),
-            pm: timeData.pm
+            pm: timeData.pm || (existing ? existing.pm : null),
+            departure: timeData.departure || (existing ? existing.departure : null)
         });
 
         // Local-first logging with queued cloud sync
@@ -1437,7 +1450,11 @@ async function onScanSuccess(decodedText, decodedResult) {
             
             // Trigger Parent Notification (Facebook Messenger)
             if (student.notify_parent && student.parent_messenger_id) {
-                triggerParentNotification(student, timeData, scanTime);
+                // Determine if it's an arrival or departure for the notification text
+                // AM and PM scans are "arrivals" at their respective sessions
+                // DEPARTURE scan is "departure"
+                const notificationType = timeData.session === 'DEPARTURE' ? 'departure' : 'arrival';
+                triggerParentNotification(student, timeData, scanTime, notificationType);
             }
         }
 

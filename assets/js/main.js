@@ -2278,13 +2278,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (docSf10El) docSf10El.required = false;
             if (docNcaeEl) docNcaeEl.required = false;
 
-            if (type === 'grade7') {
+            if (type === 'grade7' || type.includes('grade7')) {
                 if (elemSchoolEl) elemSchoolEl.required = true;
             }
-            if (type === 'grade11') {
+            if (type === 'grade11' || type.includes('grade11')) {
                 if (trackEl) trackEl.required = true;
             }
-            if (type === 'transferee') {
+            if (type === 'transferee' || type.includes('transferee')) {
                 if (prevSchoolIdEl) prevSchoolIdEl.required = true;
                 if (prevSchoolAddrEl) prevSchoolAddrEl.required = true;
             }
@@ -2292,7 +2292,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function updateConditionalVisibility(type) {
             condBlocks.forEach(block => {
-                const shouldShow = block.getAttribute('data-cond') === type;
+                const cond = block.getAttribute('data-cond');
+                const shouldShow = cond === type || (type && type.includes(cond));
                 block.hidden = !shouldShow;
             });
             setConditionalRequirements(type);
@@ -2433,8 +2434,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 { label: 'Data Privacy Agreement', value: document.getElementById(`enroll-agreement${suffix}`)?.checked ? 'Accepted' : 'Not Accepted' }
             );
 
-            if (type === 'grade7') items.push({ label: 'Elementary School Graduated', value: getValue('enroll-elem-school') });
-            if (type === 'grade11') items.push({ label: 'SHS Track/Strand', value: getValue('enroll-track') });
+            if (type === 'grade7' || type.includes('grade7')) items.push({ label: 'Elementary School Graduated', value: getValue('enroll-elem-school') });
+            if (type === 'grade11' || type.includes('grade11')) items.push({ label: 'SHS Track/Strand', value: getValue('enroll-track') });
             if (type === 'transferee') {
                 items.push({ label: 'Previous School ID', value: getValue('enroll-prev-school-id') });
                 items.push({ label: 'Previous School Address', value: getValue('enroll-prev-school-address') });
@@ -2461,9 +2462,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let subjectType = type;
             if (type === 'transferee') {
                 subjectType = `Transferee (${context.toUpperCase()})`;
-            } else if (type === 'grade7') {
+            } else if (type === 'grade7' || type.includes('grade7')) {
                 subjectType = 'Grade 7';
-            } else if (type === 'grade11') {
+            } else if (type === 'grade11' || type.includes('grade11')) {
                 subjectType = 'Grade 11';
             }
 
@@ -3294,6 +3295,7 @@ async function initIDGenerator() {
     const personnelFields = document.getElementById('personnel-fields');
     const personnelExtraFields = document.getElementById('personnel-extra-fields');
     const personnelTypeGroup = document.getElementById('personnel-type-group');
+    const personnelNicknameGroup = document.getElementById('personnel-nickname-group');
     const guardianLabel = document.getElementById('guardian-label');
     const mobileGroup = document.getElementById('mobile-group');
     const personnelMobileGroup = document.getElementById('personnel-mobile-group');
@@ -3307,13 +3309,14 @@ async function initIDGenerator() {
             personnelFields.style.display = isPersonnel ? 'block' : 'none';
             personnelExtraFields.style.display = isPersonnel ? 'block' : 'none';
             personnelTypeGroup.style.display = isPersonnel ? 'block' : 'none';
+            personnelNicknameGroup.style.display = isPersonnel ? 'block' : 'none';
             personnelMobileGroup.style.display = isPersonnel ? 'block' : 'none';
             mobileGroup.style.display = isPersonnel ? 'none' : 'block';
             
             // Update labels
             guardianLabel.textContent = isPersonnel ? 'Emergency Contact Name' : 'Name of Father/Mother/Guardian';
-            genTitle.textContent = isPersonnel ? 'Personnel ID Generator' : 'ID Generator';
-            genSubtitle.textContent = isPersonnel ? 'Complete the form to generate a Personnel ID.' : 'Complete the form below to generate an ID card.';
+            genTitle.textContent = isPersonnel ? 'Personnel ID Generator' : 'Student ID Generator';
+            genSubtitle.textContent = isPersonnel ? 'Complete the form below to generate a Personnel ID.' : 'Complete the form below to generate a Student ID.';
             photoLabel.textContent = isPersonnel ? 'Personnel Photo' : 'Photo';
 
             // Update requirements
@@ -3324,6 +3327,7 @@ async function initIDGenerator() {
             // Reset preview
             ctxFront.clearRect(0, 0, canvasFront.width, canvasFront.height);
             ctxBack.clearRect(0, 0, canvasBack.width, canvasBack.height);
+            document.getElementById('nickname').value = '';
             document.getElementById('btn-download-front').disabled = true;
             document.getElementById('btn-download-back').disabled = true;
         };
@@ -3735,6 +3739,7 @@ async function initIDGenerator() {
     async function renderPersonnelID(firstname, mi, lastname, birthdate) {
         const empType = document.getElementById('employment-type').value;
         const empNumber = document.getElementById('emp-number').value.toUpperCase();
+        const nickname = document.getElementById('nickname').value.toUpperCase();
         const position = document.getElementById('position').value.toUpperCase();
         const bloodType = document.getElementById('blood-type').value.toUpperCase() || "N/A";
         const gsis = document.getElementById('gsis').value || "N/A";
@@ -3786,23 +3791,38 @@ async function initIDGenerator() {
             ctxFront.textAlign = "left";
             ctxFront.textBaseline = "alphabetic";
             
-            // Surname - 59px Arial Bold White (X: 33, Y: 383)
-            ctxFront.font = "bold 59px Arial";
-            ctxFront.fillText(lastname, 33, 383);
+            // Nickname - 90px 'Bookman Old Style' Bold White (X: 5, Y: 423)
+            ctxFront.font = "bold 90px 'Bookman Old Style'";
+            ctxFront.fillText(`"${nickname}"`, 5, 423);
             
-            // GIVEN NAME & M.I. - 45px Arial Bold White (X: 33, Y: 436)
+            // Surname - 59px Arial Bold White (X: 33, Y: 483)
+            ctxFront.font = "bold 59px Arial";
+            ctxFront.fillText(lastname, 33, 483);
+            
+            // GIVEN NAME & M.I. - 45px Arial Bold White (X: 33, Y: 536)
             ctxFront.font = "bold 45px Arial";
-            ctxFront.fillText(`${firstname} ${mi}`, 33, 436);
+            ctxFront.fillText(`${firstname} ${mi}`, 33, 536);
             
             // EMPLOYEE NUMBER - 29px Arial Bold White (X: 278, Y: 665)
             ctxFront.font = "bold 29px Arial";
             ctxFront.fillText(empNumber, 278, 665);
 
             // POSITION - 102px Arial Bold White, read upward (bottom-to-top) (X: 606, Y: 660)
+            // Added Auto-Scaling to prevent layout overflow for long titles
             ctxFront.save();
             ctxFront.translate(606, 660);
             ctxFront.rotate(-Math.PI / 2);
-            ctxFront.font = "bold 102px Arial";
+            
+            const maxVerticalSpace = 640; // Increased to allow more reach (about 2 extra letters)
+            let posFontSize = 102;
+            ctxFront.font = `bold ${posFontSize}px Arial`;
+            
+            // Shrink font size if text is longer than available space
+            while (ctxFront.measureText(position).width > maxVerticalSpace && posFontSize > 30) {
+                posFontSize -= 2;
+                ctxFront.font = `bold ${posFontSize}px Arial`;
+            }
+            
             ctxFront.fillText(position, 0, 0);
             ctxFront.restore();
 

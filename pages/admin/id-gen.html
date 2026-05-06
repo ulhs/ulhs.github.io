@@ -164,8 +164,8 @@
             </div>
         </div>
 
-        <h2 class="accent-title text-2xl sm:text-3xl mt-8" id="gen-title">ID Generator</h2>
-        <p id="gen-subtitle" class="text-xs sm:text-sm">Complete the form below to generate an ID card.</p>
+        <h2 class="accent-title text-2xl sm:text-3xl mt-8" id="gen-title">Student ID Generator</h2>
+        <p id="gen-subtitle" class="text-xs sm:text-sm">Complete the form below to generate a Student ID.</p>
 
         <!-- ID TYPE TOGGLE -->
         <div class="id-type-toggle-container my-6">
@@ -216,6 +216,12 @@
                         </select>
                     </div>
 
+                    <!-- PERSONNEL SPECIFIC: Nickname -->
+                    <div id="personnel-nickname-group" class="form-group" style="display:none">
+                        <label for="nickname">Nickname (7 Characters Maximum)</label>
+                        <input type="text" id="nickname" maxlength="7" placeholder="Juancho">
+                    </div>
+
                     <div class="form-row-three">
                         <div class="form-group">
                             <label for="firstname">First Name</label>
@@ -241,7 +247,7 @@
                     <div id="personnel-fields" style="display:none">
                         <div class="form-group">
                             <label for="emp-number">Employee Number</label>
-                            <input type="text" id="emp-number" placeholder="EMP-2026-001">
+                            <input type="text" id="emp-number" placeholder="1234567">
                         </div>
                         <div class="form-group">
                             <label for="position">Position</label>
