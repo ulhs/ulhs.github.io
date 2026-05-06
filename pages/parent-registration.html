@@ -132,9 +132,10 @@
                 formSection.classList.add('hidden');
                 messengerSection.classList.remove('hidden');
 
-                // Generate the "m.me" link
+                // Generate the Facebook message link
                 const pageName = "ulhsofficial"; 
-                const messengerLink = `https://m.me/${pageName}?ref=reg_${lrn}`;
+                // Using facebook.com domain instead of m.me to better utilize existing login sessions
+                const messengerLink = `https://www.facebook.com/messages/t/${pageName}?ref=reg_${lrn}`;
                 
                 const container = document.getElementById('messenger-button-container');
                 const copyCodeText = document.getElementById('copy-code-text');
