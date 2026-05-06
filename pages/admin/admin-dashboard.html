@@ -215,6 +215,7 @@
                                      <th class="px-2 sm:px-4 py-3 w-12 sm:w-16 text-center">Photo</th>
                                      <th class="px-2 sm:px-4 py-3">LRN / Section</th>
                                      <th class="px-2 sm:px-4 py-3">Learner Name</th>
+                                     <th class="px-2 sm:px-4 py-3 text-center">Alerts</th>
                                      <th class="px-2 sm:px-4 py-3 text-right">Time</th>
                                  </tr>
                              </thead>
@@ -263,7 +264,7 @@
                         </div>
                         <div class="bg-white/40 p-4 rounded-2xl border border-white/60">
                             <p class="text-xs font-black text-blue-800 uppercase mb-2">Rights Protection</p>
-                            <p class="text-xs text-gray-700 leading-relaxed font-semibold">Collected data is used <b>strictly</b> for official DepEd reporting. Students and parents retain all rights to access, correct, or request deletion of their data.</p>
+                            <p class="text-xs text-gray-700 leading-relaxed font-semibold">Collected student and parent contact data is used <b>strictly</b> for official reporting and automated notifications. Rights to access or correct data are retained.</p>
                         </div>
                     </div>
                 </div>
@@ -386,7 +387,7 @@
                     .from('attendance_logs')
                     .select(`
                         *,
-                        students (full_name, section, photo_url)
+                        students (full_name, section, photo_url, notify_parent)
                     `)
                     .gte('scanned_at', startOfToday)
                     .order('scanned_at', { ascending: false });
@@ -413,7 +414,7 @@
                             .from('attendance_logs')
                             .select(`
                                 *,
-                                students (full_name, section, photo_url)
+                                students (full_name, section, photo_url, notify_parent)
                             `)
                             .eq('id', payload.new.id)
                             .single();
@@ -593,6 +594,7 @@
                     const student = log.students;
                     const lrn = log.student_lrn;
                     const time = new Date(log.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const hasNotif = student?.notify_parent;
                     
                     return `
                         <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0">
@@ -609,6 +611,12 @@
                                 <div class="text-blue-600 font-black uppercase tracking-tighter text-[9px] bg-blue-50 px-1.5 py-0.5 rounded inline-block mt-1">${student?.section || 'N/A'}</div>
                             </td>
                             <td class="px-4 py-3 font-black text-gray-900 uppercase text-xs tracking-tight">${student?.full_name || 'Unknown'}</td>
+                            <td class="px-4 py-3 text-center">
+                                ${hasNotif ? 
+                                    '<span class="inline-flex items-center gap-1 text-[9px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-full uppercase tracking-tighter"><i class="fa-brands fa-facebook-messenger text-[10px]"></i> ACTIVE</span>' : 
+                                    '<span class="inline-flex items-center gap-1 text-[9px] font-black text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full uppercase tracking-tighter">OFF</span>'
+                                }
+                            </td>
                             <td class="px-4 py-3 text-right">
                                 <div class="font-black text-gray-900 text-xs tabular-nums">${time}</div>
                                 <div class="text-[8px] font-black text-blue-500 uppercase tracking-widest mt-0.5">${log.session || 'N/A'} SESSION</div>

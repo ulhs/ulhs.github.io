@@ -58,6 +58,9 @@ function normalizeCloudStudent(s) {
         grade_level: gradeNum || rawGrade,
         level,
         photo_url: photoSource,
+        parent_messenger_id: s.parent_messenger_id || null,
+        parent_phone: s.parent_phone || null,
+        notify_parent: s.notify_parent || false,
         fromCloud: true
     };
 }
@@ -1325,6 +1328,37 @@ async function logAttendanceToSupabase(student, timeData, scanTime = new Date())
     return logData;
 }
 
+/**
+ * Triggers a parent notification via Supabase Edge Function
+ * This is currently optimized for Facebook Messenger integration.
+ */
+async function triggerParentNotification(student, timeData, scanTime) {
+    if (!window.supabaseClient || !navigator.onLine) return;
+
+    try {
+        console.log(`[Notification] Triggering alert for ${student.parsedName} to parent ${student.parent_messenger_id}`);
+        
+        // We call a Supabase Edge Function that handles the Meta Graph API
+        // This keeps our Facebook Page Access Token secure on the server side
+        const { data, error } = await window.supabaseClient.functions.invoke('send-messenger-alert', {
+            body: {
+                psid: student.parent_messenger_id,
+                studentName: student.parsedName,
+                session: timeData.session,
+                status: timeData.status,
+                time: scanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                type: timeData.session === 'AM' ? 'arrival' : 'departure'
+            }
+        });
+
+        if (error) throw error;
+        console.log("✅ Parent notification sent successfully.");
+    } catch (err) {
+        console.warn("⚠️ Notification trigger failed:", err.message);
+        // We don't alert the user here as this is a background process
+    }
+}
+
 // --- SCANNER LOGIC ---
 async function onScanSuccess(decodedText, decodedResult) {
     // Critical: Only process scans if scanner is actively running and NOT switching cameras
@@ -1400,6 +1434,11 @@ async function onScanSuccess(decodedText, decodedResult) {
         if (savedLog) {
             currentSessionLogs = mergeLogsByIdentity([savedLog, ...currentSessionLogs]);
             updateSessionLogCounters(currentSessionLogs);
+            
+            // Trigger Parent Notification (Facebook Messenger)
+            if (student.notify_parent && student.parent_messenger_id) {
+                triggerParentNotification(student, timeData, scanTime);
+            }
         }
 
         updateDashboard(student, scanTime);

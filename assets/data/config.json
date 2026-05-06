@@ -12,6 +12,7 @@
     },
     "footer_links": [
         { "text": "Personnel Portal", "url": "pages/admin/login.html" },
+        { "text": "Parent Portal", "url": "pages/parent-registration.html" },
         { "text": "Downloads Center", "url": "pages/downloads-center.html" },
         { "text": "Student Life Gallery", "url": "pages/student-life.html" },
         { "text": "Blaan Dictionary", "url": "pages/blaan-dictionary.html" },
