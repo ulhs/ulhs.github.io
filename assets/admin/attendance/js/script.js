@@ -1344,24 +1344,32 @@ async function triggerParentNotification(student, timeData, scanTime, forceType 
     if (!window.supabaseClient || !navigator.onLine) return;
 
     try {
-        console.log(`[Notification] Triggering alert for ${student.parsedName} to parent ${student.parent_messenger_id}`);
+        const psidList = String(student.parent_messenger_id || '').split(',').map(id => id.trim()).filter(id => id);
+        if (psidList.length === 0) return;
+
+        console.log(`[Notification] Triggering alerts for ${student.parsedName} to ${psidList.length} recipients`);
         
         // Use forced type if provided, otherwise default to arrival
         const type = forceType || (timeData.session === 'DEPARTURE' ? 'departure' : 'arrival');
 
-        const { data, error } = await window.supabaseClient.functions.invoke('send-messenger-alert', {
-            body: {
-                psid: student.parent_messenger_id,
-                studentName: student.parsedName,
-                session: timeData.session,
-                status: timeData.status,
-                time: scanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                type: type
-            }
+        // Send to each PSID
+        const notificationPromises = psidList.map(psid => {
+            return window.supabaseClient.functions.invoke('send-messenger-alert', {
+                body: {
+                    psid: psid,
+                    studentName: student.parsedName,
+                    session: timeData.session,
+                    status: timeData.status,
+                    time: scanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    type: type
+                }
+            });
         });
 
-        if (error) throw error;
-        console.log("✅ Parent notification sent successfully.");
+        const results = await Promise.allSettled(notificationPromises);
+        const successCount = results.filter(r => r.status === 'fulfilled' && !r.value.error).length;
+        
+        console.log(`✅ Parent notification results: ${successCount}/${psidList.length} successful.`);
     } catch (err) {
         console.warn("⚠️ Notification trigger failed:", err.message);
     }
