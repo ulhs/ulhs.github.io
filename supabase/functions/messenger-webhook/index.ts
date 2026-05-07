@@ -55,18 +55,26 @@ Deno.serve(async (req) => {
               .eq('lrn', lrn)
               .select()
 
-            if (!error && data && data.length > 0) {
+            if (error) {
+              console.error(`❌ Database error during registration:`, error.message)
+              await sendResponse(psid, `❌ Registration Error: Could not update database. Please try again later.`)
+            } else if (data && data.length > 0) {
               console.log(`✅ PSID ${psid} linked to ${data[0].full_name}`)
               await sendConfirmation(psid, data[0].full_name, lrn)
+            } else {
+              console.warn(`⚠️ Registration failed: LRN ${lrn} not found in database.`)
+              await sendResponse(psid, `❌ Registration Failed: LRN ${lrn} was not found in our records. Please ensure the LRN is correct.`)
             }
           } 
           
           // 2b. Handle Commands (via Text Message)
           else if (messagingEvent.message?.text) {
             const text = messagingEvent.message.text.trim().toUpperCase();
+            console.log(`💬 Received text from PSID ${psid}: "${text}"`)
             
             if (text.startsWith('LINK')) {
-              const targetLrn = text.replace('LINK', '').replace('-', '').trim();
+              // Extract LRN: remove 'LINK', symbols, and spaces
+              const targetLrn = text.replace('LINK', '').replace(/[^0-9]/g, '').trim();
               
               if (targetLrn.length === 12) {
                 const { data, error } = await supabase
@@ -78,10 +86,13 @@ Deno.serve(async (req) => {
                   .eq('lrn', targetLrn)
                   .select()
 
-                if (!error && data && data.length > 0) {
+                if (error) {
+                  console.error(`❌ DB Error (LINK):`, error.message)
+                  await sendResponse(psid, `❌ Error: System encountered a problem linking LRN ${targetLrn}.`)
+                } else if (data && data.length > 0) {
                   await sendConfirmation(psid, data[0].full_name, targetLrn);
                 } else {
-                  await sendResponse(psid, `❌ Link failed. Please ensure the 12-digit LRN ${targetLrn} is correct and registered in our system.`);
+                  await sendResponse(psid, `❌ Link failed. The 12-digit LRN ${targetLrn} is not registered in our system.`);
                 }
               } else {
                 await sendResponse(psid, `❓ To link a student manually, please send: LINK [12-digit LRN]`);
@@ -140,12 +151,23 @@ async function sendConfirmation(psid: string, studentName: string, lrn: string) 
  }
 
 async function sendResponse(psid: string, text: string) {
-  await fetch(`https://graph.facebook.com/v12.0/me/messages?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      recipient: { id: psid },
-      message: { text: text }
+  try {
+    const res = await fetch(`https://graph.facebook.com/v12.0/me/messages?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipient: { id: psid },
+        message: { text: text }
+      })
     })
-  })
+    
+    if (!res.ok) {
+      const error = await res.json()
+      console.error(`❌ Messenger API Error for PSID ${psid}:`, JSON.stringify(error))
+    } else {
+      console.log(`✅ Message sent to PSID ${psid}`)
+    }
+  } catch (err) {
+    console.error(`🔥 Fetch Error sending to PSID ${psid}:`, err.message)
+  }
 }

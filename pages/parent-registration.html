@@ -75,9 +75,14 @@
 
                     <p id="step-instruction" class="text-xs text-gray-500 font-bold mb-4 uppercase tracking-widest">Final Step: Click below to link</p>
                     
-                    <div class="flex flex-col items-center gap-4">
+                    <div id="action-area" class="flex flex-col items-center gap-4">
                         <!-- The actual Messenger Opt-in Button -->
                         <div id="messenger-button-container"></div>
+                        
+                        <!-- Manual Check Button (Fallback for Mobile) -->
+                        <button id="manual-check-btn" class="text-[10px] font-black text-blue-600 uppercase border-2 border-blue-100 px-6 py-2 rounded-xl hover:bg-blue-50 transition-all hidden">
+                            I've clicked Connect, Check Status Now
+                        </button>
                         
                         <div id="alternative-method" class="w-full border-t border-gray-100 my-4 pt-4">
                             <p class="text-[9px] text-gray-400 font-bold uppercase mb-2">Alternative: Copy & Paste this to Messenger</p>
@@ -162,6 +167,26 @@
 
                 // Determine if we are on mobile to handle target behavior
                 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                const manualCheckBtn = document.getElementById('manual-check-btn');
+
+                if (isMobile) {
+                    manualCheckBtn.classList.remove('hidden');
+                    manualCheckBtn.onclick = async () => {
+                        manualCheckBtn.textContent = 'Checking...';
+                        const { data } = await window.supabaseClient
+                            .from('students')
+                            .select('parent_messenger_id')
+                            .eq('lrn', lrn)
+                            .single();
+                        
+                        if (data && data.parent_messenger_id) {
+                            showRegistrationSuccess();
+                        } else {
+                            manualCheckBtn.textContent = 'Not linked yet. Try again?';
+                            setTimeout(() => { manualCheckBtn.textContent = "I've clicked Connect, Check Status Now"; }, 3000);
+                        }
+                    };
+                }
 
                 container.innerHTML = `
                     <a href="${messengerLink}" 
