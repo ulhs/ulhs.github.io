@@ -2201,8 +2201,18 @@ const startScannerWithCamera = async (cameraIdOrFacingMode) => {
                 cameraSelect.value = cameraIdOrFacingMode;
             }
         } else if (typeof cameraIdOrFacingMode === 'object') {
-            // Started via facingMode
-            activeCameraId = html5QrCode.getRunningTrack()?.getSettings()?.deviceId || null;
+            // Started via facingMode - Try to find the actual device ID for internal tracking
+            let runningTrack = null;
+            if (typeof html5QrCode.getRunningTrack === 'function') {
+                runningTrack = html5QrCode.getRunningTrack();
+            } else {
+                // Fallback: Get track from video element directly
+                const videoEl = document.querySelector('#reader video');
+                if (videoEl && videoEl.srcObject) {
+                    runningTrack = videoEl.srcObject.getVideoTracks()[0];
+                }
+            }
+            activeCameraId = runningTrack?.getSettings()?.deviceId || null;
             
             // For UI feedback, find the option that matches this facingMode
             const facingModeJson = JSON.stringify(cameraIdOrFacingMode);
