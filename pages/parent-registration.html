@@ -285,7 +285,7 @@
 
                 container.innerHTML = `
                     <a href="${messengerLink}" 
-                       ${isMobile ? '' : 'target="_blank"'} 
+                       target="_blank" rel="noopener noreferrer"
                        class="flex items-center gap-3 bg-[#0084FF] text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg hover:bg-[#0073e6] transition-all active:scale-95">
                         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.04c-5.5 0-10 4.17-10 9.3 0 2.91 1.4 5.54 3.6 7.32v3.3l3.15-1.74c1.02.28 2.1.43 3.25.43 5.5 0 10-4.17 10-9.3s-4.5-9.31-10-9.31zm1.09 12.42l-2.58-2.75-5.04 2.75 5.54-5.89 2.65 2.75 4.97-2.75-5.54 5.89z"/></svg>
                         Connect Messenger
