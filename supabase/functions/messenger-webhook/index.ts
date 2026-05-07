@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
 })
 
 async function sendConfirmation(psid: string, studentName: string, lrn: string) {
-   const message = `✅ Registration Successful! You will now receive attendance alerts for ${studentName}. \n\nTo see all your linked students, send: LIST\nTo stop alerts, send: UNLINK ${lrn}`
+   const message = `✅ Registration Successful! Makadawat na ka og attendance alerts ni ${studentName}. \n\nTo see all your linked students, send: LIST\nTo stop alerts, send: UNLINK ${lrn}`
    await sendResponse(psid, message)
  }
 

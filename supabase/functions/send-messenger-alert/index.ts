@@ -19,8 +19,8 @@ serve(async (req) => {
     }
 
     const message = type === 'arrival'
-      ? `🔔 ULHS Arrival: ${studentName} has arrived at school (${session} session) at ${time}. Status: ${status}.`
-      : `🔔 ULHS Departure: ${studentName} has scanned out for the day at ${time}.`
+      ? `🔔 ULHS Arrival: Niabot na si ${studentName} sa eskwelahan (${session} session), ${time}. Status: ${status}.`
+      : `🔔 ULHS Departure: Naka-scan out na si ${studentName} para karong adlawa, ${time}.`
 
     const res = await fetch(`https://graph.facebook.com/v12.0/me/messages?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
       method: 'POST',
