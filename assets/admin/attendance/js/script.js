@@ -1069,18 +1069,23 @@ function getAttendanceStatus(lrn) {
         const isLate = timeStr >= TIME_CONFIG.PM.late;
         const pmType = isLate ? 'T' : 'P';
         
+        // Initial status based on current session punctuality
+        let status = isLate ? 'TARDY' : 'PRESENT';
         let code = '';
-        let status = 'PRESENT';
         
+        // Handle SF2 code and combined status labels for display
         if (existing.am === 'T' && isLate) {
             code = 'TT';
             status = 'TARDY (DOUBLE)';
         } else if (existing.am === 'T' || isLate) {
             code = 'T';
-            status = 'TARDY';
+            // Status remains 'TARDY' only if they are late NOW in the PM session
+            // If they are on time for PM, status is 'PRESENT' (even if AM was Tardy)
+            if (isLate) status = 'TARDY';
+            else status = 'PRESENT';
         } else if (!existing.am) {
             code = '/';
-            status = 'AM ABSENT';
+            status = isLate ? 'TARDY (AM ABSENT)' : 'PRESENT (AM ABSENT)';
         }
         
         return { session: 'PM', status, code, am: existing.am, pm: pmType };
@@ -2594,6 +2599,46 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     
+    // --- HID SCANNER (HARDWARE) READY LAYER ---
+    // Zero-interference listener for dedicated USB/Bluetooth QR scanners
+    let scanBuffer = "";
+    let lastKeyTime = Date.now();
+
+    window.addEventListener('keydown', (e) => {
+        // Guard 1: Ignore if user is currently typing in an input, textarea, or select field
+        const activeEl = document.activeElement;
+        const isTyping = activeEl && (
+            activeEl.tagName === 'INPUT' || 
+            activeEl.tagName === 'TEXTAREA' || 
+            activeEl.isContentEditable ||
+            activeEl.tagName === 'SELECT'
+        );
+        if (isTyping) return;
+
+        const currentTime = Date.now();
+        
+        // HID Scanners type extremely fast. If delay between keys > 50ms, it's likely a human typing.
+        // We reset the buffer if the pause is too long.
+        if (currentTime - lastKeyTime > 50) {
+            scanBuffer = "";
+        }
+        lastKeyTime = currentTime;
+
+        // Logic for handling the scan
+        if (e.key === 'Enter') {
+            if (scanBuffer.length >= 3) { // Most LRNs/IDs are at least 3+ chars
+                console.log(`[HID Scanner] Detected Scan: ${scanBuffer}`);
+                onScanSuccess(scanBuffer);
+            }
+            scanBuffer = "";
+        } else {
+            // Only collect alphanumeric characters to keep the buffer clean
+            if (e.key.length === 1) {
+                scanBuffer += e.key;
+            }
+        }
+    });
+
     // Start inactivity timer immediately
     resetInactivityTimer();
     
