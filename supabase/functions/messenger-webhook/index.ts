@@ -120,15 +120,24 @@ Deno.serve(async (req) => {
                 await sendResponse(psid, `❓ To stop alerts for a student, please send: UNLINK [12-digit LRN]`);
               }
             } else if (text === 'LIST' || text === 'STUDENTS' || text === 'HELP') {
+              console.log(`📋 Processing LIST command for PSID: ${psid}`);
+              
+              // We search for students where this PSID is anywhere in the parent_messenger_id field
+              // (handles comma-separated lists)
               const { data, error } = await supabase
                 .from('students')
-                .select('full_name, lrn')
-                .eq('parent_messenger_id', psid);
+                .select('full_name, lrn, parent_messenger_id')
+                .filter('parent_messenger_id', 'ilike', `%${psid}%`);
 
-              if (!error && data && data.length > 0) {
+              if (error) {
+                console.error(`❌ DB Error (LIST):`, error.message);
+                await sendResponse(psid, `❌ Error: Could not retrieve your student list at this time.`);
+              } else if (data && data.length > 0) {
+                console.log(`✅ Found ${data.length} students for PSID ${psid}`);
                 const studentList = data.map(s => `• ${s.full_name} (${s.lrn})`).join('\n');
                 await sendResponse(psid, `📋 You are currently receiving alerts for:\n\n${studentList}\n\nCommands:\n• LIST - See linked students\n• LINK [LRN] - Link another student\n• UNLINK [LRN] - Stop receiving alerts`);
               } else {
+                console.warn(`⚠️ No students found for PSID ${psid}`);
                 await sendResponse(psid, `❌ You don't have any students linked to this account yet.\n\nTo link a student, send: LINK [12-digit LRN]`);
               }
             }
