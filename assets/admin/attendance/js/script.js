@@ -2200,11 +2200,26 @@ const startScannerWithCamera = async (cameraIdOrFacingMode) => {
             if (cameraSelect && cameraSelect.value !== cameraIdOrFacingMode) {
                 cameraSelect.value = cameraIdOrFacingMode;
             }
-        } else {
-            // If started via facingMode, try to find the actual ID from the scanner
+        } else if (typeof cameraIdOrFacingMode === 'object') {
+            // Started via facingMode
             activeCameraId = html5QrCode.getRunningTrack()?.getSettings()?.deviceId || null;
-            if (activeCameraId && cameraSelect) {
-                cameraSelect.value = activeCameraId;
+            
+            // For UI feedback, find the option that matches this facingMode
+            const facingModeJson = JSON.stringify(cameraIdOrFacingMode);
+            if (cameraSelect) {
+                // Try to match by JSON string
+                let found = false;
+                Array.from(cameraSelect.options).forEach(opt => {
+                    if (opt.value === facingModeJson) {
+                        cameraSelect.value = facingModeJson;
+                        found = true;
+                    }
+                });
+                
+                // Fallback: If not found, just use the device ID
+                if (!found && activeCameraId) {
+                    cameraSelect.value = activeCameraId;
+                }
             }
         }
         
@@ -2223,22 +2238,22 @@ const startScannerWithCamera = async (cameraIdOrFacingMode) => {
     }
 };
 
-const switchCamera = async (cameraId) => {
-    // Only switch if actively scanning and switching to a different camera
+const switchCamera = async (cameraIdOrFacingMode) => {
+    // Only switch if actively scanning
     if (!isScannerActive) {
         console.log("Scanner not active, cannot switch");
         return;
     }
     
-    // Check if the target is actually different
-    if (cameraId === activeCameraId) {
+    // Simple equality check for ID strings
+    if (typeof cameraIdOrFacingMode === 'string' && cameraIdOrFacingMode === activeCameraId) {
         console.log("Same camera selected, skipping switch");
         return;
     }
     
     try {
         console.log("=== Camera Switch Starting ===");
-        console.log("Switching from:", activeCameraId, "to:", cameraId);
+        console.log("Target:", cameraIdOrFacingMode);
         
         // Set flag to prevent scanning during switch
         isSwitchingCamera = true;
@@ -2248,11 +2263,11 @@ const switchCamera = async (cameraId) => {
         console.log("Camera stream released");
         
         // Extended wait to ensure OS completely releases hardware
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Start new camera
         console.log("Starting new camera...");
-        await startScannerWithCamera(cameraId);
+        await startScannerWithCamera(cameraIdOrFacingMode);
         
         console.log("=== Camera Switch Complete ===");
         
@@ -2269,7 +2284,16 @@ const switchCamera = async (cameraId) => {
 
 // Set up camera selection listener (attached once globally)
 cameraSelect.addEventListener('change', async (e) => {
-    await switchCamera(e.target.value);
+    let target = e.target.value;
+    try {
+        // Try to parse if it's a JSON string (facingMode)
+        if (target.startsWith('{')) {
+            target = JSON.parse(target);
+        }
+    } catch (err) {
+        console.warn("Could not parse camera target as JSON, treating as ID string");
+    }
+    await switchCamera(target);
 });
 
 exportBtn.addEventListener('click', exportAllAsZip);
@@ -2280,75 +2304,89 @@ startBtn.addEventListener('click', async () => {
         const cameras = await Html5Qrcode.getCameras();
         console.log("Available cameras:", cameras);
         
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
         if (cameras && cameras.length > 0) {
             cameraSelectContainer.classList.remove('hidden');
-            cameraSelect.innerHTML = cameras.map(cam => `<option value="${cam.id}">${cam.label || `Camera ${cam.id.substring(0,5)}`}</option>`).join('');
             
-            // Try each camera in sequence using their IDs (no facingMode)
-            let cameraStarted = false;
-            let lastError = null;
+            // Build smart camera options
+            let optionsHtml = '';
             
-            for (const camera of cameras) {
-                try {
-                    console.log("Attempting to start camera:", camera.label || camera.id);
-                    await startScannerWithCamera(camera.id);
-                    cameraStarted = true;
-                    console.log("Camera started successfully!");
-                    break;
-                } catch (err) {
-                    console.error("Failed to start camera:", camera.label, err);
-                    lastError = err;
-                    // Wait a bit before trying the next camera
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                    continue;
-                }
+            if (isMobile) {
+                // Mobile: Prioritize Facing Modes for reliability
+                optionsHtml += `<option value='{"facingMode":"environment"}'>Rear/Back Camera (Recommended)</option>`;
+                optionsHtml += `<option value='{"facingMode":"user"}'>Front/Selfie Camera</option>`;
+                
+                // Also add specific IDs just in case
+                cameras.forEach(cam => {
+                    const label = cam.label || `Device ${cam.id.substring(0,5)}`;
+                    optionsHtml += `<option value="${cam.id}">${label}</option>`;
+                });
+            } else {
+                // Desktop: Use specific IDs
+                optionsHtml = cameras.map(cam => {
+                    let label = cam.label || "Camera";
+                    if (label.toLowerCase().includes('integrated')) label = "Built-in Camera";
+                    if (label.toLowerCase().includes('usb')) label = "External USB Camera";
+                    return `<option value="${cam.id}">${label}</option>`;
+                }).join('');
             }
             
-            if (!cameraStarted) {
-                console.error("No camera devices worked, trying fallback facing modes");
-                // Fallback to facing modes only if no device worked
+            cameraSelect.innerHTML = optionsHtml;
+            
+            // Initial Start Strategy
+            let cameraStarted = false;
+            let lastError = null;
+
+            // Strategy 1: Try Back Camera for Mobile
+            if (isMobile) {
                 try {
-                    console.log("Trying environment facing mode...");
+                    console.log("Mobile detected: Starting with Rear Camera (environment)...");
                     await startScannerWithCamera({ facingMode: "environment" });
                     cameraStarted = true;
+                    cameraSelect.value = '{"facingMode":"environment"}';
                 } catch (err) {
-                    console.error("Environment mode failed:", err);
-                    lastError = err;
+                    console.warn("Environment mode failed, trying user mode...");
+                }
+            }
+
+            // Strategy 2: Try specific IDs if Strategy 1 failed or if on Desktop
+            if (!cameraStarted) {
+                for (const camera of cameras) {
                     try {
-                        console.log("Trying user facing mode...");
-                        await startScannerWithCamera({ facingMode: "user" });
+                        console.log("Attempting to start camera ID:", camera.id);
+                        await startScannerWithCamera(camera.id);
                         cameraStarted = true;
-                    } catch (err2) {
-                        console.error("User mode failed:", err2);
-                        lastError = err2;
+                        cameraSelect.value = camera.id;
+                        break;
+                    } catch (err) {
+                        lastError = err;
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                        continue;
                     }
                 }
             }
             
+            // Strategy 3: Ultimate Fallback
             if (!cameraStarted) {
-                console.error("All camera methods failed:", lastError);
-                alert("Camera Error: Could not start any camera.\n\n" + lastError);
-                return;
+                try {
+                    await startScannerWithCamera({ facingMode: "user" });
+                    cameraStarted = true;
+                    if (isMobile) cameraSelect.value = '{"facingMode":"user"}';
+                } catch (err) {
+                    lastError = err;
+                }
+            }
+            
+            if (!cameraStarted) {
+                alert("Camera Error: Could not start any camera device.\n\n" + lastError);
             }
         } else {
-            // No cameras detected via enumeration, try facing modes
-            console.log("No cameras detected via enumeration, trying fallback facing modes");
-            let started = false;
+            // Fallback for devices that don't support camera enumeration
             try {
-                console.log("Trying environment facing mode (fallback)...");
                 await startScannerWithCamera({ facingMode: "environment" });
-                started = true;
             } catch (err) {
-                console.error("Environment mode failed:", err);
-                try {
-                    console.log("Trying user facing mode (fallback)...");
-                    await startScannerWithCamera({ facingMode: "user" });
-                    started = true;
-                } catch (err2) {
-                    console.error("User mode failed:", err2);
-                    alert("Camera Error: Could not access any camera.\n\n" + err2);
-                    return;
-                }
+                await startScannerWithCamera({ facingMode: "user" });
             }
         }
     } catch (err) {
