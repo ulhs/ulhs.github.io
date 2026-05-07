@@ -57,18 +57,26 @@
 
                 <!-- Hidden by default, shown after LRN verification -->
                 <div id="messenger-step" class="hidden space-y-6 text-center">
-                    <div class="bg-green-50 rounded-2xl p-4 border border-green-100 mb-6">
+                    <div id="verification-badge" class="bg-green-50 rounded-2xl p-4 border border-green-100 mb-6">
                         <p class="text-xs font-black text-green-700 uppercase">Student Verified!</p>
                         <p id="verified-student-name" class="text-sm font-bold text-gray-900 mt-1"></p>
                     </div>
 
-                    <p class="text-xs text-gray-500 font-bold mb-4 uppercase tracking-widest">Final Step: Click below to link</p>
+                    <!-- Status Indicator -->
+                    <div id="linking-status" class="py-2">
+                        <div class="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-500 animate-pulse">
+                            <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                            Waiting for Messenger Link...
+                        </div>
+                    </div>
+
+                    <p id="step-instruction" class="text-xs text-gray-500 font-bold mb-4 uppercase tracking-widest">Final Step: Click below to link</p>
                     
                     <div class="flex flex-col items-center gap-4">
                         <!-- The actual Messenger Opt-in Button -->
                         <div id="messenger-button-container"></div>
                         
-                        <div class="w-full border-t border-gray-100 my-4 pt-4">
+                        <div id="alternative-method" class="w-full border-t border-gray-100 my-4 pt-4">
                             <p class="text-[9px] text-gray-400 font-bold uppercase mb-2">Alternative: Copy & Paste this to Messenger</p>
                             <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100">
                                 <code id="copy-code-text" class="flex-1 text-[10px] font-mono font-bold text-gray-600"></code>
@@ -160,6 +168,50 @@
                         Connect Messenger
                     </a>
                 `;
+
+                // --- REAL-TIME STATUS MONITORING ---
+                // Listen for changes to this student's parent_messenger_id in Supabase
+                const registrationSubscription = window.supabaseClient
+                    .channel('registration-status')
+                    .on('postgres_changes', { 
+                        event: 'UPDATE', 
+                        schema: 'public', 
+                        table: 'students',
+                        filter: `lrn=eq.${lrn}`
+                    }, (payload) => {
+                        const newPsid = payload.new.parent_messenger_id;
+                        if (newPsid) {
+                            showRegistrationSuccess();
+                        }
+                    })
+                    .subscribe();
+
+                function showRegistrationSuccess() {
+                    registrationSubscription.unsubscribe();
+                    
+                    // Update UI to Success State
+                    document.getElementById('linking-status').innerHTML = `
+                        <div class="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-green-500">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                            Registration Complete!
+                        </div>
+                    `;
+                    
+                    document.getElementById('verification-badge').className = "bg-green-600 rounded-2xl p-6 border border-green-700 mb-6 text-white shadow-lg";
+                    document.getElementById('verification-badge').innerHTML = `
+                        <div class="flex flex-col items-center">
+                            <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-4">
+                                <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                            </div>
+                            <p class="text-sm font-black uppercase tracking-widest">Linked Successfully!</p>
+                            <p class="text-xs opacity-90 mt-1">Attendance alerts for <b>${student.full_name}</b> are now active.</p>
+                        </div>
+                    `;
+                    
+                    document.getElementById('step-instruction').classList.add('hidden');
+                    document.getElementById('messenger-button-container').classList.add('hidden');
+                    document.getElementById('alternative-method').classList.add('hidden');
+                }
 
             } catch (err) {
                 alert("Error: " + err.message);
