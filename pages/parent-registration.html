@@ -48,8 +48,18 @@
                         </ol>
                     </div>
 
+                    <!-- DPA Consent Section -->
+                    <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                        <div class="flex items-start gap-3">
+                            <input type="checkbox" id="dpa-consent" class="mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label for="dpa-consent" class="text-[9px] font-bold text-gray-600 leading-relaxed uppercase">
+                                I hereby authorize Upper Labay High School to process my child's attendance data for notification purposes in compliance with the <span class="text-blue-600">Data Privacy Act of 2012</span>.
+                            </label>
+                        </div>
+                    </div>
+
                     <div class="pt-4">
-                        <button id="verify-lrn-btn" class="w-full py-4 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg active:scale-95">
+                        <button id="verify-lrn-btn" disabled class="w-full py-4 bg-gray-200 text-gray-400 rounded-xl font-black uppercase tracking-widest cursor-not-allowed transition-all shadow-lg">
                             Start Registration
                         </button>
                     </div>
@@ -118,10 +128,33 @@
         const messengerSection = document.getElementById('messenger-step');
         const studentNameDisplay = document.getElementById('verified-student-name');
         const lrnError = document.getElementById('lrn-error');
+        const dpaConsent = document.getElementById('dpa-consent');
 
         // --- PRIVACY & SECURITY HARDENING ---
         const MAX_ATTEMPTS = 5;
         const COOLDOWN_TIME = 15 * 60 * 1000; // 15 minutes
+
+        function updateButtonState() {
+            const state = getSecurityState();
+            const inCooldown = state.cooldown > 0 && Date.now() < state.cooldown;
+            
+            if (inCooldown) {
+                const remaining = Math.ceil((state.cooldown - Date.now()) / 60000);
+                verifyBtn.disabled = true;
+                verifyBtn.className = "w-full py-4 bg-gray-200 text-gray-400 rounded-xl font-black uppercase tracking-widest cursor-not-allowed";
+                verifyBtn.textContent = `Locked (${remaining}m remaining)`;
+            } else if (!dpaConsent.checked) {
+                verifyBtn.disabled = true;
+                verifyBtn.className = "w-full py-4 bg-gray-200 text-gray-400 rounded-xl font-black uppercase tracking-widest cursor-not-allowed";
+                verifyBtn.textContent = 'Start Registration';
+            } else {
+                verifyBtn.disabled = false;
+                verifyBtn.className = "w-full py-4 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg active:scale-95";
+                verifyBtn.textContent = 'Start Registration';
+            }
+        }
+
+        dpaConsent.addEventListener('change', updateButtonState);
 
         function getSecurityState() {
             const state = JSON.parse(localStorage.getItem('parent_portal_security') || '{"attempts": 0, "cooldown": 0}');
@@ -134,16 +167,13 @@
 
         function updateSecurityState(state) {
             localStorage.setItem('parent_portal_security', JSON.stringify(state));
-            checkCooldown();
+            updateButtonState();
         }
 
         function checkCooldown() {
             const state = getSecurityState();
             if (state.cooldown > 0 && Date.now() < state.cooldown) {
-                const remaining = Math.ceil((state.cooldown - Date.now()) / 60000);
-                verifyBtn.disabled = true;
-                verifyBtn.className = "w-full py-4 bg-gray-200 text-gray-400 rounded-xl font-black uppercase tracking-widest cursor-not-allowed";
-                verifyBtn.textContent = `Locked (${remaining}m remaining)`;
+                updateButtonState();
                 return true;
             }
             return false;
@@ -159,7 +189,7 @@
         }
 
         // Initialize security check
-        checkCooldown();
+        updateButtonState();
 
         // Initialize Facebook SDK
         window.fbAsyncInit = function() {
@@ -217,7 +247,9 @@
                 const copyCodeText = document.getElementById('copy-code-text');
                 const copyBtn = document.getElementById('copy-btn');
 
-                copyCodeText.textContent = `reg_${lrn}`;
+                // Mask LRN in display but keep full LRN for copy function
+                const maskedLrn = lrn.substring(0, 3) + "******" + lrn.substring(9);
+                copyCodeText.textContent = `reg_${maskedLrn}`;
                 
                 copyBtn.onclick = () => {
                     navigator.clipboard.writeText(`reg_${lrn}`);
