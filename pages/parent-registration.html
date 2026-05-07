@@ -39,12 +39,13 @@
                     <div class="bg-blue-50 rounded-2xl p-4 border border-blue-100">
                         <h4 class="text-xs font-black text-blue-800 uppercase mb-2 flex items-center gap-2">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z"></path></svg>
-                            How it works
+                            Registration Steps
                         </h4>
                         <ol class="text-[10px] text-blue-700 space-y-2 font-semibold">
-                            <li>1. Enter your child's 12-digit LRN above.</li>
-                            <li>2. Click the <b>Connect Messenger</b> button.</li>
-                            <li>3. In Messenger, click <b>"Get Started"</b> or send any message to link your account.</li>
+                            <li>1. Read and check the <b>Data Privacy Consent</b> box below.</li>
+                            <li>2. Enter your child's 12-digit LRN to verify identity.</li>
+                            <li>3. Click <b>Connect Messenger</b> to open our official chat.</li>
+                            <li>4. Tap <b>"Get Started"</b> in Messenger to activate your alerts.</li>
                         </ol>
                     </div>
 
@@ -87,7 +88,9 @@
                         </div>
                     </div>
 
-                    <p id="step-instruction" class="text-xs text-gray-500 font-bold mb-4 uppercase tracking-widest">Final Step: Click below to link</p>
+                    <p id="step-instruction" class="text-xs text-blue-600 font-black mb-4 uppercase tracking-widest animate-bounce">
+                        Final Step: Tap "Get Started" in Messenger
+                    </p>
                     
                     <div id="action-area" class="flex flex-col items-center gap-4">
                         <!-- The actual Messenger Opt-in Button -->
@@ -99,7 +102,7 @@
                         </button>
                         
                         <div id="alternative-method" class="w-full border-t border-gray-100 my-4 pt-4">
-                            <p class="text-[9px] text-gray-400 font-bold uppercase mb-2">Alternative: Copy & Paste this to Messenger</p>
+                            <p class="text-[9px] text-gray-400 font-bold uppercase mb-2">If button fails: Send this code to our chat</p>
                             <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100">
                                 <code id="copy-code-text" class="flex-1 text-[10px] font-mono font-bold text-gray-600"></code>
                                 <button id="copy-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-600 p-1.5 rounded-md transition-all">
@@ -343,6 +346,13 @@
                     document.getElementById('step-instruction').classList.add('hidden');
                     document.getElementById('messenger-button-container').classList.add('hidden');
                     document.getElementById('alternative-method').classList.add('hidden');
+
+                    // Update Back Button to "Register Another"
+                    const backBtn = document.querySelector('button[onclick="location.reload()"]');
+                    if (backBtn) {
+                        backBtn.innerHTML = 'Link Another Student &rarr;';
+                        backBtn.className = "text-[10px] font-black text-blue-600 uppercase tracking-widest mt-8 hover:text-blue-800 transition-colors";
+                    }
                 }
 
             } catch (err) {
