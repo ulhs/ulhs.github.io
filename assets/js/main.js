@@ -25,6 +25,38 @@ function getRootPath() {
     return root;
 }
 
+/**
+ * GLOBAL SECURITY: AUDIT LOGGING
+ * Records sensitive administrative actions to the cloud database.
+ */
+async function logAdminAction(action, targetLrn = null, details = null) {
+    if (!window.supabaseClient) return;
+
+    try {
+        const adminEmail = sessionStorage.getItem('userEmail') || 'unknown@ulhs.edu.ph';
+        const adminName = sessionStorage.getItem('userName') || 'System Admin';
+        const role = sessionStorage.getItem('userRole') || 'staff';
+
+        const { error } = await window.supabaseClient
+            .from('audit_logs')
+            .insert([{
+                admin_email: adminEmail,
+                admin_name: adminName,
+                role: role,
+                action: action,
+                target_lrn: targetLrn,
+                details: details,
+                ip_address: 'browser-client', // Privacy-safe placeholder
+                timestamp: new Date().toISOString()
+            }]);
+
+        if (error) throw error;
+        console.log(`🛡️ Audit: ${action} recorded.`);
+    } catch (err) {
+        console.warn("⚠️ Audit log failed:", err.message);
+    }
+}
+
 /* --- GLOBAL CHATBOT INITIALIZATION --- */
 (function() {
     const root = getRootPath();
@@ -3739,6 +3771,10 @@ async function initIDGenerator() {
             } else {
                 renderStudentID(firstname, mi, lastname, birthdate);
             }
+
+            // Audit: ID Generation Preview
+            const targetId = document.getElementById('lrn')?.value || document.getElementById('emp-number')?.value || 'unknown';
+            logAdminAction('GENERATE_ID_PREVIEW', targetId, { type: isPersonnel ? 'personnel' : 'student', lastName: lastname });
         });
     }
 
@@ -3984,20 +4020,32 @@ async function initIDGenerator() {
     const btnDownloadFront = document.getElementById('btn-download-front');
     if (btnDownloadFront) {
         btnDownloadFront.addEventListener('click', () => {
+            const lastName = document.getElementById('lastname').value;
+            const targetId = document.getElementById('lrn')?.value || document.getElementById('emp-number')?.value || 'unknown';
+            const type = document.getElementById('id-type').value;
+            
             const link = document.createElement('a');
-            link.download = `ID-Front-${document.getElementById('lastname').value}.png`;
+            link.download = `ID-Front-${lastName}.png`;
             link.href = canvasFront.toDataURL('image/png');
             link.click();
+
+            logAdminAction('GENERATE_ID_FRONT', targetId, { type, lastName });
         });
     }
 
     const btnDownloadBack = document.getElementById('btn-download-back');
     if (btnDownloadBack) {
         btnDownloadBack.addEventListener('click', () => {
+            const lastName = document.getElementById('lastname').value;
+            const targetId = document.getElementById('lrn')?.value || document.getElementById('emp-number')?.value || 'unknown';
+            const type = document.getElementById('id-type').value;
+
             const link = document.createElement('a');
-            link.download = `ID-Back-${document.getElementById('lastname').value}.png`;
+            link.download = `ID-Back-${lastName}.png`;
             link.href = canvasBack.toDataURL('image/png');
             link.click();
+
+            logAdminAction('GENERATE_ID_BACK', targetId, { type, lastName });
         });
     }
 }

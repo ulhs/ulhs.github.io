@@ -920,6 +920,15 @@ async function handleBulkImport(files) {
         statusIcon.className = "w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600";
     }
 
+    // Audit: Bulk Data Import
+    if (typeof logAdminAction === 'function' && (loadedCount > 0 || zipSummary.total > 0)) {
+        logAdminAction('IMPORT_BULK_DATA', null, { 
+            excelFiles: loadedCount, 
+            photos: zipSummary,
+            totalStudents: masterStudentDatabase.length
+        });
+    }
+
     // Update UI stats
     if (importStats) importStats.classList.remove('hidden');
     if (loadedSectionsCount) loadedSectionsCount.textContent = Object.keys(sectionWorkbooks).length;
@@ -1739,6 +1748,14 @@ async function exportAllAsZip() {
     const content = await zip.generateAsync({ type: "blob" });
     saveAs(content, `ULHS_Attendance_Reports_${new Date().toISOString().split('T')[0]}.zip`);
     
+    // Audit: Data Export (ZIP)
+    if (typeof logAdminAction === 'function') {
+        logAdminAction('EXPORT_ATTENDANCE_DATA', null, { 
+            type: 'ZIP',
+            sections: sectionsWithData.length
+        });
+    }
+
     statusTitle.textContent = "Export Complete";
     setTimeout(() => statusTitle.textContent = "Campus Session Ready", 3000);
 }
@@ -2099,6 +2116,16 @@ async function exportAllSF2(levelFilter = null) {
         const fileNamePrefix = levelFilter ? `SF2_${levelFilter}_` : "SF2_Reports_";
         saveAs(zipContent, `${fileNamePrefix}${targetYear}_${targetMonth + 1}.zip`);
         
+        // Audit: SF2 Report Generation
+        if (typeof logAdminAction === 'function') {
+            logAdminAction('EXPORT_SF2_REPORTS', null, { 
+                level: levelFilter || 'ALL',
+                month: monthName,
+                year: targetYear,
+                sections: sections.length
+            });
+        }
+
         statusTitle.textContent = "Export Complete";
         statusIcon.classList.remove('animate-spin');
     } catch (err) {
@@ -2518,6 +2545,15 @@ async function syncPhotosToSupabase() {
 
         alert(`Sync Complete!\n✅ Success: ${successCount}\n❌ Failed: ${failCount}`);
         
+        // Audit: Photo Cloud Sync
+        if (typeof logAdminAction === 'function') {
+            logAdminAction('SYNC_PHOTOS_CLOUD', null, { 
+                success: successCount, 
+                failed: failCount,
+                total: totalToSync
+            });
+        }
+
         // Reset button state via centralized function
         updateSyncButtonState();
         
@@ -2528,22 +2564,6 @@ async function syncPhotosToSupabase() {
         syncBtn.disabled = pendingPhotoSync.size === 0;
         syncBtn.innerHTML = originalText;
     }
-}
-
-// --- SECURITY: SESSION TIMEOUT ---
-let inactivityTimer;
-const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 minutes in milliseconds
-
-function resetInactivityTimer() {
-    clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(logoutDueToInactivity, INACTIVITY_LIMIT);
-}
-
-function logoutDueToInactivity() {
-    console.warn("Security: Logging out due to 30 minutes of inactivity.");
-    sessionStorage.removeItem('adminLoggedIn');
-    alert("You have been logged out due to inactivity for security purposes.");
-    window.location.href = '../admin.html';
 }
 
 async function initializeAttendanceApp() {
@@ -2584,11 +2604,6 @@ window.addEventListener('offline', () => {
     } else {
         updateCloudSyncBadge();
     }
-});
-
-// Attach inactivity listeners
-['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
-    document.addEventListener(evt, resetInactivityTimer, true);
 });
 
 // Initialize on Load
@@ -2639,9 +2654,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Start inactivity timer immediately
-    resetInactivityTimer();
-    
     // Start offline-first attendance data flow
     initializeAttendanceApp();
     

@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (profile) {
                     sessionStorage.setItem('adminLoggedIn', 'true');
+                    sessionStorage.setItem('userEmail', profile.email);
                     sessionStorage.setItem('userRole', profile.role);
                     sessionStorage.setItem('userName', profile.full_name);
                     
@@ -48,17 +49,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.handleLogout = async function(e) {
         if (e) e.preventDefault();
         
+        console.log("🔐 Security: Performing Global Logout...");
+        
         try {
             if (window.supabaseClient) {
+                // Clear Supabase session on server
                 await window.supabaseClient.auth.signOut();
             }
         } catch (err) {
-            console.error("Sign out error:", err);
+            console.warn("Logout: Supabase signOut failed (expected if offline):", err.message);
         } finally {
+            // Clear all administrative session data
             sessionStorage.clear();
+            
+            // NOTE: localStorage (Offline Cache) is preserved intentionally
+            // so staff can still scan students if internet drops.
+            
             window.location.href = './login.html';
         }
     };
+
+    // --- SECURITY: SESSION HARDENING (Inactivity Timer) ---
+    let inactivityTimer;
+    const INACTIVITY_LIMIT = 15 * 60 * 1000; // Tightened to 15 minutes
+
+    function resetInactivityTimer() {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = setTimeout(async () => {
+            console.warn("🕒 Security: Session timed out due to 15 minutes of inactivity.");
+            alert("Your session has timed out for security purposes. You will be logged out.");
+            await window.handleLogout();
+        }, INACTIVITY_LIMIT);
+    }
+
+    // Attach inactivity listeners to track user presence
+    if (window.location.pathname.includes('/admin/')) {
+        ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
+            document.addEventListener(evt, resetInactivityTimer, true);
+        });
+        resetInactivityTimer(); // Start timer on load
+    }
 
     const navLinks = document.querySelector('.nav-links');
     const listItems = document.querySelectorAll('.nav-links .list');
