@@ -65,11 +65,14 @@
                     <!-- Status Indicator -->
                     <div id="linking-status" class="py-2">
                         <div class="flex flex-col items-center justify-center gap-2">
-                            <div class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-500 animate-pulse">
+                            <div id="status-spinner" class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-500 animate-pulse">
                                 <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
                                 Waiting for Messenger Link...
                             </div>
                             <p class="text-[9px] text-gray-400 font-bold uppercase mt-1 px-4">Once you click connect, return here to see your confirmed status.</p>
+                            
+                            <!-- Debug Info (Hidden) -->
+                            <div id="debug-info" class="text-[8px] text-gray-300 mt-2 font-mono break-all px-4 max-w-full hidden"></div>
                         </div>
                     </div>
 
@@ -199,6 +202,8 @@
 
                 // --- REAL-TIME STATUS MONITORING ---
                 // Listen for changes to this student's parent_messenger_id in Supabase
+                const debugEl = document.getElementById('debug-info');
+                
                 const registrationSubscription = window.supabaseClient
                     .channel('registration-status')
                     .on('postgres_changes', { 
@@ -207,12 +212,21 @@
                         table: 'students',
                         filter: `lrn=eq.${lrn}`
                     }, (payload) => {
+                        console.log("Realtime Update Received:", payload);
                         const newPsid = payload.new.parent_messenger_id;
                         if (newPsid) {
                             showRegistrationSuccess();
                         }
                     })
-                    .subscribe();
+                    .subscribe((status) => {
+                        console.log("Realtime Subscription Status:", status);
+                        if (status === 'SUBSCRIBED') {
+                            debugEl.textContent = "Listening for link...";
+                        } else {
+                            debugEl.textContent = "Sync Error: " + status;
+                            debugEl.classList.remove('hidden');
+                        }
+                    });
 
                 function showRegistrationSuccess() {
                     registrationSubscription.unsubscribe();
