@@ -73,10 +73,31 @@ Deno.serve(async (req) => {
           
           // 2b. Handle Commands (via Text Message)
           else if (messagingEvent.message?.text) {
-            const text = messagingEvent.message.text.trim().toUpperCase();
-            console.log(`💬 Received text from PSID ${psid}: "${text}"`)
+            const rawText = messagingEvent.message.text.trim();
+            const text = rawText.toUpperCase();
+            console.log(`💬 Received text from PSID ${psid}: "${rawText}"`)
             
-            if (text.startsWith('LINK')) {
+            // Handle manual "reg_LRN" code from Alternative section
+            if (text.startsWith('REG_')) {
+              const targetLrn = text.replace('REG_', '').replace(/[^0-9]/g, '').trim();
+              if (targetLrn.length === 12) {
+                const { data, error } = await supabase
+                  .from('students')
+                  .update({ 
+                    parent_messenger_id: psid,
+                    notify_parent: true 
+                  })
+                  .eq('lrn', targetLrn)
+                  .select()
+
+                if (!error && data && data.length > 0) {
+                  await sendConfirmation(psid, data[0].full_name, targetLrn);
+                } else {
+                  await sendResponse(psid, `❌ Manual link failed. Please ensure the code ${rawText} is correct.`);
+                }
+              }
+            }
+            else if (text.startsWith('LINK')) {
               // Extract LRN: remove 'LINK', symbols, and spaces
               const targetLrn = text.replace('LINK', '').replace(/[^0-9]/g, '').trim();
               
