@@ -184,6 +184,11 @@
                 <form id="id-form" class="main-form">
                     <div class="form-group">
                         <label id="photo-label">Photo</label>
+                        <div id="id-camera-select-group" class="form-group mb-2" style="display:none">
+                            <select id="id-camera-select" class="w-full px-4 py-2 rounded-xl border-2 border-gray-100 focus:border-blue-500 focus:outline-none font-bold text-gray-900 transition-all text-sm">
+                                <option value="" disabled selected>Select Camera</option>
+                            </select>
+                        </div>
                         <div class="webcam-box">
                             <video id="webcam-video" autoplay playsinline></video>
                             <img id="captured-photo" src="" alt="Captured">

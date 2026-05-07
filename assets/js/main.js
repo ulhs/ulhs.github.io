@@ -2990,6 +2990,8 @@ async function initIDGenerator() {
     const birthdateError = document.getElementById('birthdate-error');
     const removeBgToggle = document.getElementById('remove-bg-toggle');
     const processingOverlay = document.getElementById('processing-overlay');
+    const idCameraSelect = document.getElementById('id-camera-select');
+    const idCameraSelectGroup = document.getElementById('id-camera-select-group');
 
     // Signature Elements
     const btnUploadSig = document.getElementById('btn-upload-sig');
@@ -3077,14 +3079,80 @@ async function initIDGenerator() {
         });
     }
 
-    async function initWebcam() {
+    async function initWebcam(deviceIdOrFacingMode = null) {
         if (!video) return;
+        
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { aspectRatio: 3/4 } });
+            // Stop existing tracks before starting new one
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+
+            const constraints = {
+                video: {
+                    aspectRatio: 3/4,
+                    width: { ideal: 1280 },
+                    height: { ideal: 960 }
+                }
+            };
+
+            if (deviceIdOrFacingMode) {
+                if (typeof deviceIdOrFacingMode === 'string') {
+                    constraints.video.deviceId = { exact: deviceIdOrFacingMode };
+                } else {
+                    constraints.video.facingMode = deviceIdOrFacingMode.facingMode;
+                }
+            }
+
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = stream;
+
+            // Enumerate cameras if not already done
+            if (idCameraSelect && idCameraSelect.options.length <= 1) {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const cameras = devices.filter(device => device.kind === 'videoinput');
+                
+                if (cameras.length > 1) {
+                    idCameraSelectGroup.style.display = 'block';
+                    
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    let options = '<option value="" disabled>Select Camera</option>';
+                    
+                    if (isMobile) {
+                        options += '<option value=\'{"facingMode":"user"}\'>Front/Selfie Camera</option>';
+                        options += '<option value=\'{"facingMode":"environment"}\'>Rear/Back Camera</option>';
+                    }
+                    
+                    cameras.forEach((cam, index) => {
+                        const label = cam.label || `Camera ${index + 1}`;
+                        options += `<option value="${cam.deviceId}">${label}</option>`;
+                    });
+                    
+                    idCameraSelect.innerHTML = options;
+                    
+                    // Try to match current stream to select
+                    const currentTrack = stream.getVideoTracks()[0];
+                    const settings = currentTrack.getSettings();
+                    if (settings.deviceId) {
+                        idCameraSelect.value = settings.deviceId;
+                    }
+                }
+            }
         } catch (err) {
             console.error("Error accessing webcam:", err);
         }
+    }
+
+    if (idCameraSelect) {
+        idCameraSelect.addEventListener('change', async (e) => {
+            let target = e.target.value;
+            try {
+                if (target.startsWith('{')) {
+                    target = JSON.parse(target);
+                }
+            } catch (err) {}
+            await initWebcam(target);
+        });
     }
 
     if (btnCapture) {
