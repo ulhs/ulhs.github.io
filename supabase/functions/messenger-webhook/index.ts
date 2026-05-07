@@ -65,7 +65,28 @@ Deno.serve(async (req) => {
           else if (messagingEvent.message?.text) {
             const text = messagingEvent.message.text.trim().toUpperCase();
             
-            if (text.startsWith('UNLINK')) {
+            if (text.startsWith('LINK')) {
+              const targetLrn = text.replace('LINK', '').replace('-', '').trim();
+              
+              if (targetLrn.length === 12) {
+                const { data, error } = await supabase
+                  .from('students')
+                  .update({ 
+                    parent_messenger_id: psid,
+                    notify_parent: true 
+                  })
+                  .eq('lrn', targetLrn)
+                  .select()
+
+                if (!error && data && data.length > 0) {
+                  await sendConfirmation(psid, data[0].full_name, targetLrn);
+                } else {
+                  await sendResponse(psid, `❌ Link failed. Please ensure the 12-digit LRN ${targetLrn} is correct and registered in our system.`);
+                }
+              } else {
+                await sendResponse(psid, `❓ To link a student manually, please send: LINK [12-digit LRN]`);
+              }
+            } else if (text.startsWith('UNLINK')) {
               const targetLrn = text.replace('UNLINK', '').trim();
               
               if (targetLrn.length === 12) {
@@ -95,9 +116,9 @@ Deno.serve(async (req) => {
 
               if (!error && data && data.length > 0) {
                 const studentList = data.map(s => `• ${s.full_name} (${s.lrn})`).join('\n');
-                await sendResponse(psid, `📋 You are currently receiving alerts for:\n\n${studentList}\n\nTo unlink a student, send: UNLINK [LRN]`);
+                await sendResponse(psid, `📋 You are currently receiving alerts for:\n\n${studentList}\n\nCommands:\n• LIST - See linked students\n• LINK [LRN] - Link another student\n• UNLINK [LRN] - Stop receiving alerts`);
               } else {
-                await sendResponse(psid, `❌ You don't have any students linked to this account yet. Please visit the school portal to register.`);
+                await sendResponse(psid, `❌ You don't have any students linked to this account yet.\n\nTo link a student, send: LINK [12-digit LRN]`);
               }
             }
           }
