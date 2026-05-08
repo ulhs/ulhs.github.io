@@ -80,6 +80,8 @@ Deno.serve(async (req) => {
             // Handle manual "reg_LRN" code from Alternative section
             if (text.startsWith('REG_')) {
               const targetLrn = text.replace('REG_', '').replace(/[^0-9]/g, '').trim();
+              console.log(`🔍 Manual REG attempt for LRN: ${targetLrn}`);
+              
               if (targetLrn.length === 12) {
                 const { data, error } = await supabase
                   .from('students')
@@ -90,11 +92,18 @@ Deno.serve(async (req) => {
                   .eq('lrn', targetLrn)
                   .select()
 
-                if (!error && data && data.length > 0) {
+                if (error) {
+                  console.error(`❌ DB Error (REG_):`, error.message)
+                  await sendResponse(psid, `❌ System Error: Could not link LRN ${targetLrn} at this time. Please try again later.`);
+                } else if (data && data.length > 0) {
+                  console.log(`✅ Manual link success: ${data[0].full_name}`);
                   await sendConfirmation(psid, data[0].full_name, targetLrn);
                 } else {
-                  await sendResponse(psid, `❌ Manual link failed. Please ensure the code ${rawText} is correct.`);
+                  console.warn(`⚠️ LRN not found: ${targetLrn}`);
+                  await sendResponse(psid, `❌ Registration Failed: The LRN ${targetLrn} was not found in our records. Please ensure the LRN is correct.`);
                 }
+              } else {
+                await sendResponse(psid, `❓ Invalid Code: The LRN in your message must be exactly 12 digits long. Example: reg_123456789012`);
               }
             }
             else if (text.startsWith('LINK')) {
