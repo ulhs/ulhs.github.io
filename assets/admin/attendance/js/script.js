@@ -62,7 +62,8 @@ function normalizeCloudStudent(s) {
         parsedName: (s.full_name || '').toUpperCase(),
         section: s.section,
         gender,
-        grade_level: gradeNum || rawGrade,
+        grade_level: gradeNum, // Always store as number for consistency
+        grade_num: gradeNum, // Explicit numeric grade for easy filtering
         level,
         photo_url: photoSource,
         parent_messenger_id: s.parent_messenger_id || null,
@@ -1926,7 +1927,39 @@ async function exportAllSF2(levelFilter = null) {
         for (const sectionName of sections) {
             statusTitle.textContent = `Processing ${sectionName}...`;
             
-            const studentsInSection = filteredDatabase.filter(s => s.section === sectionName);
+            let studentsInSection = filteredDatabase.filter(s => s.section === sectionName);
+            
+            // DEFENSIVE CHECK: Ensure all students in the section have grades matching the level filter
+            if (studentsInSection.length > 0) {
+                const firstStudentGrade = studentsInSection[0].grade_num || studentsInSection[0].grade_level;
+                const gradeNum = typeof firstStudentGrade === 'number' ? firstStudentGrade : parseInt(String(firstStudentGrade).replace(/\D/g, '')) || 0;
+                
+                // If levelFilter is SHS, ensure we only keep grade 11/12
+                if (levelFilter === 'SHS') {
+                    studentsInSection = studentsInSection.filter(s => {
+                        const g = s.grade_num || s.grade_level;
+                        const gn = typeof g === 'number' ? g : parseInt(String(g).replace(/\D/g, '')) || 0;
+                        return gn >= 11;
+                    });
+                }
+                // If levelFilter is JHS, ensure we only keep grade <=10
+                else if (levelFilter === 'JHS') {
+                    studentsInSection = studentsInSection.filter(s => {
+                        const g = s.grade_num || s.grade_level;
+                        const gn = typeof g === 'number' ? g : parseInt(String(g).replace(/\D/g, '')) || 0;
+                        return gn <= 10;
+                    });
+                }
+                
+                // Skip if no students left after filtering
+                if (studentsInSection.length === 0) {
+                    console.log(`Skipping section ${sectionName} - no eligible students after grade validation`);
+                    continue;
+                }
+            } else {
+                continue;
+            }
+            
             const level = studentsInSection[0].level;
             const mapping = SF2_MAPPINGS[level] || SF2_MAPPINGS['JHS'];
 
@@ -2302,7 +2335,23 @@ async function exportAllSF4(levelFilter = null) {
         for (const level of levelsRequired) {
             statusTitle.textContent = `Processing ${level} SF4...`;
             
-            const levelStudents = filteredDatabase.filter(s => s.level === level);
+            let levelStudents = filteredDatabase.filter(s => s.level === level);
+            
+            // DEFENSIVE CHECK: Only include students with correct grade for the level
+            if (level === 'SHS') {
+                levelStudents = levelStudents.filter(s => {
+                    const g = s.grade_num || s.grade_level;
+                    const gn = typeof g === 'number' ? g : parseInt(String(g).replace(/\D/g, '')) || 0;
+                    return gn >= 11;
+                });
+            } else if (level === 'JHS') {
+                levelStudents = levelStudents.filter(s => {
+                    const g = s.grade_num || s.grade_level;
+                    const gn = typeof g === 'number' ? g : parseInt(String(g).replace(/\D/g, '')) || 0;
+                    return gn <= 10;
+                });
+            }
+            
             const levelSections = [...new Set(levelStudents.map(s => s.section))];
             const mapping = SF4_MAPPINGS[level];
             
