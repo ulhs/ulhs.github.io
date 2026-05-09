@@ -48,6 +48,8 @@ node_modules/
 # This uses a "negation" rule: ignore all xlsx, but keep the template
 !assets/admin/attendance/templates/SF2_Blank.xlsx
 !assets/admin/attendance/templates/SF2_Blank_SHS.xlsx
+!assets/admin/attendance/templates/SF4_Blank.xlsx
+!assets/admin/attendance/templates/SF4_Blank_SHS.xlsx
 
 # Ignore local environment variables (where you store Supabase/Firebase API Keys)
 .env

@@ -41,7 +41,14 @@ function normalizeCloudStudent(s) {
     const gradeNum = parseInt(rawGrade.replace(/\D/g, '')) || 0;
     const sectionLower = (s.section || '').toLowerCase();
     const isSHSTrack = ['humss', 'stem', 'gas', 'tvl', 'ict', 'abm', 'he'].some(track => sectionLower.includes(track));
-    const level = (gradeNum >= 11 || isSHSTrack) ? 'SHS' : 'JHS';
+    let level;
+    if (gradeNum >= 11) {
+        level = 'SHS';
+    } else if (gradeNum <= 10) {
+        level = 'JHS';
+    } else {
+        level = isSHSTrack ? 'SHS' : 'JHS';
+    }
     const sLrn = String(s.lrn);
     const photoSource = s.photo_url || `profiles/${sLrn}.webp`;
 
@@ -212,6 +219,8 @@ function updateUIWithCacheData() {
     if (startBtn) startBtn.disabled = masterStudentDatabase.length === 0;
     if (exportJhsBtn) exportJhsBtn.classList.remove('hidden');
     if (exportShsBtn) exportShsBtn.classList.remove('hidden');
+    if (exportSf4JhsBtn) exportSf4JhsBtn.classList.remove('hidden');
+    if (exportSf4ShsBtn) exportSf4ShsBtn.classList.remove('hidden');
     if (totalCountDisplay) totalCountDisplay.textContent = masterStudentDatabase.length;
 
     // Show Admin Tools if admin or has permission
@@ -467,6 +476,8 @@ function updateUIWithCloudData() {
     if (startBtn) startBtn.disabled = false;
     if (exportJhsBtn) exportJhsBtn.classList.remove('hidden');
     if (exportShsBtn) exportShsBtn.classList.remove('hidden');
+    if (exportSf4JhsBtn) exportSf4JhsBtn.classList.remove('hidden');
+    if (exportSf4ShsBtn) exportSf4ShsBtn.classList.remove('hidden');
     if (totalCountDisplay) totalCountDisplay.textContent = masterStudentDatabase.length;
 
     // Show Admin Tools if admin or has permission
@@ -537,6 +548,23 @@ window.addEventListener('load', () => {
         exportShsBtn.addEventListener('click', () => {
             console.log("🚀 Export SHS Clicked");
             exportAllSF2('SHS');
+        });
+    }
+
+    // Attach SF4 Export Listeners
+    const exportSf4JhsBtn = document.getElementById('export-sf4-jhs-btn');
+    const exportSf4ShsBtn = document.getElementById('export-sf4-shs-btn');
+    
+    if (exportSf4JhsBtn) {
+        exportSf4JhsBtn.addEventListener('click', () => {
+            console.log("🚀 Export SF4 JHS Clicked");
+            exportAllSF4('JHS');
+        });
+    }
+    if (exportSf4ShsBtn) {
+        exportSf4ShsBtn.addEventListener('click', () => {
+            console.log("🚀 Export SF4 SHS Clicked");
+            exportAllSF4('SHS');
         });
     }
 
@@ -627,6 +655,60 @@ const SF2_MAPPINGS = {
     }
 };
 
+// SF4 Mapping Configuration per Level (Indices converted for ExcelJS - 1-based)
+const SF4_MAPPINGS = {
+    'JHS': {
+        template: 'SF4_Blank.xlsx',
+        headers: {
+            schoolId: 'D5',
+            region: 'I5',
+            division: 'N5',
+            district: 'Y5',
+            schoolYear: 'Y7',
+            month: 'AJ7',
+            schoolName: 'C7',
+            schoolHead: 'AC26'
+        },
+        sections: {
+            startRow: 12, // B12
+            sectionCol: 2,  // B
+            adviserCol: 3,  // C
+            maleCountCol: 5,  // E
+            femaleCountCol: 6,  // F
+            maleDailyAvgCol: 8,  // H
+            femaleDailyAvgCol: 9,  // I
+            malePercentCol: 11,  // K
+            femalePercentCol: 12,  // L
+            gradeRanges: ['7', '8', '9', '10'],
+            maxRows: 6 // B12 to B17
+        }
+    },
+    'SHS': {
+        template: 'SF4_Blank_SHS.xlsx',
+        headers: {
+            schoolId: 'C6',
+            region: 'AS4',
+            division: 'AC4',
+            district: 'P4',
+            schoolYear: 'AF6',
+            month: 'AW6',
+            schoolName: 'C4',
+            schoolHead: 'AS22'
+        },
+        sections: {
+            sectionCol: 2,  // B
+            maleCountCol: 3,  // C
+            femaleCountCol: 4,  // D
+            maleDailyAvgCol: 6,  // F
+            femaleDailyAvgCol: 7,  // G
+            malePercentCol: 9,  // I
+            femalePercentCol: 10,  // J
+            grade11Rows: [12, 13],
+            grade12Rows: [15, 16]
+        }
+    }
+};
+
 // UI Elements
 const statusTitle = document.getElementById('system-status-title');
 const statusDesc = document.getElementById('system-status-desc');
@@ -669,6 +751,8 @@ const overlayTimeStatus = document.getElementById('overlay-time-status');
 const exportBtn = document.getElementById('export-btn');
 const exportJhsBtn = document.getElementById('export-jhs-btn');
 const exportShsBtn = document.getElementById('export-shs-btn');
+const exportSf4JhsBtn = document.getElementById('export-sf4-jhs-btn');
+const exportSf4ShsBtn = document.getElementById('export-sf4-shs-btn');
 const adminTools = document.getElementById('admin-tools-container');
 
 // New Bulk Importer UI Elements
@@ -960,6 +1044,8 @@ async function handleBulkImport(files) {
             if (masterStudentDatabase.length > 0) {
                 if (exportJhsBtn) exportJhsBtn.classList.remove('hidden');
                 if (exportShsBtn) exportShsBtn.classList.remove('hidden');
+                if (exportSf4JhsBtn) exportSf4JhsBtn.classList.remove('hidden');
+                if (exportSf4ShsBtn) exportSf4ShsBtn.classList.remove('hidden');
             }
             if (adminTools) adminTools.classList.remove('hidden');
         }
@@ -2130,6 +2216,265 @@ async function exportAllSF2(levelFilter = null) {
         statusIcon.classList.remove('animate-spin');
     } catch (err) {
         console.error("Export Error:", err);
+        statusTitle.textContent = "Export Failed";
+        statusIcon.classList.remove('animate-spin');
+    }
+}
+
+// --- EXPORT SF4 FROM TEMPLATE ---
+async function exportAllSF4(levelFilter = null) {
+    if (masterStudentDatabase.length === 0) return;
+    
+    // Filter database by level if filter provided
+    const filteredDatabase = levelFilter 
+        ? masterStudentDatabase.filter(s => s.level === levelFilter)
+        : masterStudentDatabase;
+
+    if (filteredDatabase.length === 0) {
+        alert(`No students found for ${levelFilter || 'any level'}.`);
+        return;
+    }
+
+    statusTitle.textContent = levelFilter ? `Exporting SF4 (${levelFilter})...` : "Fetching Data...";
+    statusIcon.classList.add('animate-spin');
+
+    try {
+        // 1. Fetch Logs & School Info for Targeted Date
+        const exportMonth = document.getElementById('export-month');
+        const exportYear = document.getElementById('export-year');
+        
+        const targetMonth = exportMonth ? parseInt(exportMonth.value) : new Date().getMonth();
+        const targetYear = exportYear ? parseInt(exportYear.value) : new Date().getFullYear();
+        
+        const startOfMonth = new Date(targetYear, targetMonth, 1).toISOString();
+        const endOfMonth = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59).toISOString();
+        
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const monthName = monthNames[targetMonth];
+        
+        // Parallel fetch for speed
+        const [logsRes, schoolRes, headRes, profilesRes] = await Promise.all([
+            window.supabaseClient.from('attendance_logs').select('*').gte('scanned_at', startOfMonth).lte('scanned_at', endOfMonth),
+            window.supabaseClient.from('school_info').select('*'), // Fetch all to be safe
+            window.supabaseClient.from('profiles').select('full_name').eq('role', 'school_head').maybeSingle(),
+            window.supabaseClient.from('profiles').select('full_name, section_assigned').not('section_assigned', 'is', null)
+        ]);
+
+        // Check for critical errors
+        if (logsRes.error) {
+            console.error("Logs Fetch Error:", logsRes.error);
+            throw new Error("Could not fetch attendance logs.");
+        }
+        
+        const monthLogs = logsRes.data || [];
+        const schoolInfo = (schoolRes.data && schoolRes.data.length > 0) ? schoolRes.data[0] : {};
+        const schoolHead = headRes.data?.full_name || schoolInfo.school_head || schoolInfo.schoolHead || '';
+        
+        console.log("SF4 Export - School Info Loaded:", schoolInfo);
+        if (Object.keys(schoolInfo).length === 0) {
+            console.warn("⚠️ SF4 Export: school_info table is empty or inaccessible. Headers will not be filled.");
+        }
+        
+        // Map section names to adviser names from profiles
+        const adviserMap = {};
+        if (profilesRes.data) {
+            profilesRes.data.forEach(p => {
+                if (p.section_assigned) adviserMap[p.section_assigned.toUpperCase()] = p.full_name;
+            });
+        } else if (profilesRes.error) {
+            console.warn("⚠️ Could not fetch Adviser mappings. Ensure 'section_assigned' column exists in 'profiles' table.", profilesRes.error);
+        }
+
+        // 2. Determine Required Templates
+        const zip = new JSZip();
+        const sections = [...new Set(filteredDatabase.map(s => s.section))];
+        const levelsRequired = [...new Set(filteredDatabase.map(s => s.level))];
+        
+        statusTitle.textContent = "Loading Templates...";
+        const templates = {};
+        await Promise.all(levelsRequired.map(async (lvl) => {
+            const fileName = SF4_MAPPINGS[lvl]?.template || 'SF4_Blank.xlsx';
+            const res = await fetch(`../../assets/admin/attendance/templates/${fileName}`);
+            templates[lvl] = await res.arrayBuffer();
+        }));
+
+        // 3. Process each level separately for SF4
+        for (const level of levelsRequired) {
+            statusTitle.textContent = `Processing ${level} SF4...`;
+            
+            const levelStudents = filteredDatabase.filter(s => s.level === level);
+            const levelSections = [...new Set(levelStudents.map(s => s.section))];
+            const mapping = SF4_MAPPINGS[level];
+            
+            const workbook = new ExcelJS.Workbook();
+            await workbook.xlsx.load(templates[level]);
+            
+            const sheetName = detectSheetName(workbook);
+            const worksheet = workbook.getWorksheet(sheetName);
+            
+            // Fill School Header Info
+            if (schoolInfo && Object.keys(schoolInfo).length > 0) {
+                const h = mapping.headers;
+                const sId = schoolInfo.school_id || schoolInfo.schoolId || schoolInfo.school_ID || '';
+                const sName = schoolInfo.school_name || schoolInfo.schoolName || schoolInfo.school_Name || '';
+                const region = schoolInfo.region || '';
+                const division = schoolInfo.division || '';
+                const district = schoolInfo.district || '';
+                
+                if (h.schoolId) worksheet.getCell(h.schoolId).value = sId;
+                if (h.schoolName) worksheet.getCell(h.schoolName).value = sName;
+                if (h.region) worksheet.getCell(h.region).value = region;
+                if (h.division) worksheet.getCell(h.division).value = division;
+                if (h.district) worksheet.getCell(h.district).value = district;
+                if (h.schoolYear) worksheet.getCell(h.schoolYear).value = `${targetYear}-${targetYear + 1}`;
+                if (h.month) worksheet.getCell(h.month).value = monthName;
+                if (h.schoolHead) worksheet.getCell(h.schoolHead).value = schoolHead;
+            }
+            
+            // Group logs by student for this month
+            const studentLogMap = new Map();
+            monthLogs.forEach(log => {
+                const lrn = String(log.student_lrn);
+                if (!studentLogMap.has(lrn)) {
+                    studentLogMap.set(lrn, []);
+                }
+                studentLogMap.get(lrn).push(log);
+            });
+            
+            // Get number of school days in this month (weekdays)
+            const schoolDays = [];
+            for (let d = 1; d <= new Date(targetYear, targetMonth + 1, 0).getDate(); d++) {
+                const date = new Date(targetYear, targetMonth, d);
+                const dayOfWeek = date.getDay();
+                if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                    schoolDays.push(date.toISOString().split('T')[0]);
+                }
+            }
+            
+            // Process section data for this level
+            if (level === 'JHS') {
+                let currentRow = mapping.sections.startRow;
+                for (const sectionName of levelSections) {
+                    if (currentRow > mapping.sections.startRow + mapping.sections.maxRows - 1) break;
+                    
+                    const sectionStudents = levelStudents.filter(s => s.section === sectionName);
+                    const males = sectionStudents.filter(s => s.gender === 'male');
+                    const females = sectionStudents.filter(s => s.gender === 'female');
+                    
+                    // Calculate attendance totals
+                    let totalMaleAttendance = 0;
+                    let totalFemaleAttendance = 0;
+                    
+                    males.forEach(s => {
+                        const logs = studentLogMap.get(s.lrn) || [];
+                        totalMaleAttendance += logs.length;
+                    });
+                    
+                    females.forEach(s => {
+                        const logs = studentLogMap.get(s.lrn) || [];
+                        totalFemaleAttendance += logs.length;
+                    });
+                    
+                    // Calculate averages and percentages
+                    const maleDailyAvg = schoolDays.length > 0 ? (totalMaleAttendance / schoolDays.length) : 0;
+                    const femaleDailyAvg = schoolDays.length > 0 ? (totalFemaleAttendance / schoolDays.length) : 0;
+                    const malePercent = males.length > 0 ? ((maleDailyAvg / males.length) * 100) : 0;
+                    const femalePercent = females.length > 0 ? ((femaleDailyAvg / females.length) * 100) : 0;
+                    
+                    // Fill the row
+                    worksheet.getCell(currentRow, mapping.sections.sectionCol).value = sectionName;
+                    worksheet.getCell(currentRow, mapping.sections.adviserCol).value = adviserMap[sectionName.toUpperCase()] || '';
+                    worksheet.getCell(currentRow, mapping.sections.maleCountCol).value = males.length;
+                    worksheet.getCell(currentRow, mapping.sections.femaleCountCol).value = females.length;
+                    worksheet.getCell(currentRow, mapping.sections.maleDailyAvgCol).value = parseFloat(maleDailyAvg.toFixed(2));
+                    worksheet.getCell(currentRow, mapping.sections.femaleDailyAvgCol).value = parseFloat(femaleDailyAvg.toFixed(2));
+                    worksheet.getCell(currentRow, mapping.sections.malePercentCol).value = parseFloat(malePercent.toFixed(2));
+                    worksheet.getCell(currentRow, mapping.sections.femalePercentCol).value = parseFloat(femalePercent.toFixed(2));
+                    
+                    currentRow++;
+                }
+            } else if (level === 'SHS') {
+                // For SHS, fill grade 11 and 12 rows
+                const grade11Students = levelStudents.filter(s => String(s.grade_level).startsWith('11'));
+                const grade12Students = levelStudents.filter(s => String(s.grade_level).startsWith('12'));
+                
+                const grade11Males = grade11Students.filter(s => s.gender === 'male');
+                const grade11Females = grade11Students.filter(s => s.gender === 'female');
+                const grade12Males = grade12Students.filter(s => s.gender === 'male');
+                const grade12Females = grade12Students.filter(s => s.gender === 'female');
+                
+                // Helper function to fill SHS grade rows
+                const fillSHSGradeRows = (students, rows, gradeName) => {
+                    const gradeSections = [...new Set(students.map(s => s.section))];
+                    let rowIndex = 0;
+                    
+                    for (const sectionName of gradeSections) {
+                        if (rowIndex >= rows.length) break;
+                        
+                        const sectionStudents = students.filter(s => s.section === sectionName);
+                        const males = sectionStudents.filter(s => s.gender === 'male');
+                        const females = sectionStudents.filter(s => s.gender === 'female');
+                        
+                        let totalMaleAttendance = 0;
+                        let totalFemaleAttendance = 0;
+                        
+                        males.forEach(s => {
+                            const logs = studentLogMap.get(s.lrn) || [];
+                            totalMaleAttendance += logs.length;
+                        });
+                        
+                        females.forEach(s => {
+                            const logs = studentLogMap.get(s.lrn) || [];
+                            totalFemaleAttendance += logs.length;
+                        });
+                        
+                        const maleDailyAvg = schoolDays.length > 0 ? (totalMaleAttendance / schoolDays.length) : 0;
+                        const femaleDailyAvg = schoolDays.length > 0 ? (totalFemaleAttendance / schoolDays.length) : 0;
+                        const malePercent = males.length > 0 ? ((maleDailyAvg / males.length) * 100) : 0;
+                        const femalePercent = females.length > 0 ? ((femaleDailyAvg / females.length) * 100) : 0;
+                        
+                        const currentRow = rows[rowIndex];
+                        worksheet.getCell(currentRow, mapping.sections.sectionCol).value = sectionName;
+                        worksheet.getCell(currentRow, mapping.sections.maleCountCol).value = males.length;
+                        worksheet.getCell(currentRow, mapping.sections.femaleCountCol).value = females.length;
+                        worksheet.getCell(currentRow, mapping.sections.maleDailyAvgCol).value = parseFloat(maleDailyAvg.toFixed(2));
+                        worksheet.getCell(currentRow, mapping.sections.femaleDailyAvgCol).value = parseFloat(femaleDailyAvg.toFixed(2));
+                        worksheet.getCell(currentRow, mapping.sections.malePercentCol).value = parseFloat(malePercent.toFixed(2));
+                        worksheet.getCell(currentRow, mapping.sections.femalePercentCol).value = parseFloat(femalePercent.toFixed(2));
+                        
+                        rowIndex++;
+                    }
+                };
+                
+                // Fill grade 11 and 12
+                fillSHSGradeRows(grade11Students, mapping.sections.grade11Rows, '11');
+                fillSHSGradeRows(grade12Students, mapping.sections.grade12Rows, '12');
+            }
+            
+            // Finalize Workbook for this level
+            const buffer = await workbook.xlsx.writeBuffer();
+            zip.file(`SF4_${level}.xlsx`, buffer);
+        }
+
+        statusTitle.textContent = "Finalizing ZIP...";
+        const zipContent = await zip.generateAsync({ type: "blob" });
+        const fileNamePrefix = levelFilter ? `SF4_${levelFilter}_` : "SF4_Reports_";
+        saveAs(zipContent, `${fileNamePrefix}${targetYear}_${targetMonth + 1}.zip`);
+        
+        // Audit: SF4 Report Generation
+        if (typeof logAdminAction === 'function') {
+            logAdminAction('EXPORT_SF4_REPORTS', null, { 
+                level: levelFilter || 'ALL',
+                month: monthName,
+                year: targetYear,
+                levels: levelsRequired.length
+            });
+        }
+
+        statusTitle.textContent = "Export Complete";
+        statusIcon.classList.remove('animate-spin');
+    } catch (err) {
+        console.error("SF4 Export Error:", err);
         statusTitle.textContent = "Export Failed";
         statusIcon.classList.remove('animate-spin');
     }
