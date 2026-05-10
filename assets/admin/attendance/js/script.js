@@ -49,6 +49,10 @@ function normalizeCloudStudent(s) {
     } else {
         level = isSHSTrack ? 'SHS' : 'JHS';
     }
+    
+    // DEBUG LOGGING - show classification for each student
+    console.log(`🔍 Normalizing: ${s.full_name} | LRN: ${s.lrn} | Grade: ${gradeNum} | Section: ${s.section} → Level: ${level}`);
+    
     const sLrn = String(s.lrn);
     const photoSource = s.photo_url || `profiles/${sLrn}.webp`;
 
@@ -258,6 +262,14 @@ async function initSupabaseSync() {
 
         if (students && students.length > 0) {
             console.log(`Cloud Sync: ${students.length} students loaded.`);
+            console.log(`📊 RAW SUPABASE DATA (first 5 students):`, students.slice(0, 5).map(s => ({
+                full_name: s.full_name,
+                lrn: s.lrn,
+                grade_level: s.grade_level,
+                grade: s.grade,
+                gradeLevel: s.gradeLevel,
+                section: s.section
+            })));
 
             const cloudStudents = students.map(normalizeCloudStudent);
             masterStudentDatabase = [...cloudStudents];
@@ -346,7 +358,18 @@ async function hydrateFromOfflineCache() {
         ]);
 
         if (cachedStudents && cachedStudents.length > 0) {
-            masterStudentDatabase = cachedStudents;
+            console.log(`🔄 Re-normalizing ${cachedStudents.length} cached students...`);
+            // Re-normalize EVERY student from cache to ensure correct classification
+            const reNormalizedStudents = cachedStudents.map(s => {
+                // Re-extract raw data from cached student and run through normalization again
+                const rawStudent = {
+                    ...s,
+                    grade_level: s.grade_num || s.grade_level // Ensure we have raw grade for re-normalization
+                };
+                return normalizeCloudStudent(rawStudent);
+            });
+            
+            masterStudentDatabase = reNormalizedStudents;
             
             // Re-map photos from database records if available
             masterStudentDatabase.forEach(s => {
@@ -1851,10 +1874,38 @@ async function exportAllAsZip() {
 async function exportAllSF2(levelFilter = null) {
     if (masterStudentDatabase.length === 0) return;
     
-    // Filter database by level if filter provided
-    const filteredDatabase = levelFilter 
-        ? masterStudentDatabase.filter(s => s.level === levelFilter)
-        : masterStudentDatabase;
+    // DEFENSIVE FILTER: Ignore 'level' field entirely, trust ONLY numeric grade
+    let filteredDatabase;
+    if (levelFilter === 'SHS') {
+        filteredDatabase = masterStudentDatabase.filter(s => {
+            const g = s.grade_num || s.grade_level;
+            const gn = typeof g === 'number' ? g : parseInt(String(g).replace(/\D/g, '')) || 0;
+            return gn >= 11;
+        });
+    } else if (levelFilter === 'JHS') {
+        filteredDatabase = masterStudentDatabase.filter(s => {
+            const g = s.grade_num || s.grade_level;
+            const gn = typeof g === 'number' ? g : parseInt(String(g).replace(/\D/g, '')) || 0;
+            return gn <= 10;
+        });
+    } else {
+        filteredDatabase = masterStudentDatabase;
+    }
+
+    console.log(`📤 EXPORT ${levelFilter || 'ALL'}: ${filteredDatabase.length} students selected`);
+    console.log(`📤 Filtered Students (Grade/Level):`, filteredDatabase.map(s => ({ 
+        name: s.excelName, 
+        grade_num: s.grade_num, 
+        grade_level: s.grade_level, 
+        level: s.level, 
+        section: s.section 
+    })));
+    
+    // 🔥 PLAIN TEXT LIST OF ALL SELECTED STUDENTS 🔥
+    console.log(`📋 PLAIN TEXT LIST - ${levelFilter || 'ALL'} STUDENTS:`);
+    filteredDatabase.forEach((s, i) => {
+        console.log(`  ${i+1}. ${s.excelName} | Grade: ${s.grade_num} | Section: ${s.section} | Level: ${s.level}`);
+    });
 
     if (filteredDatabase.length === 0) {
         alert(`No students found for ${levelFilter || 'any level'}.`);
@@ -2258,10 +2309,38 @@ async function exportAllSF2(levelFilter = null) {
 async function exportAllSF4(levelFilter = null) {
     if (masterStudentDatabase.length === 0) return;
     
-    // Filter database by level if filter provided
-    const filteredDatabase = levelFilter 
-        ? masterStudentDatabase.filter(s => s.level === levelFilter)
-        : masterStudentDatabase;
+    // DEFENSIVE FILTER: Ignore 'level' field entirely, trust ONLY numeric grade
+    let filteredDatabase;
+    if (levelFilter === 'SHS') {
+        filteredDatabase = masterStudentDatabase.filter(s => {
+            const g = s.grade_num || s.grade_level;
+            const gn = typeof g === 'number' ? g : parseInt(String(g).replace(/\D/g, '')) || 0;
+            return gn >= 11;
+        });
+    } else if (levelFilter === 'JHS') {
+        filteredDatabase = masterStudentDatabase.filter(s => {
+            const g = s.grade_num || s.grade_level;
+            const gn = typeof g === 'number' ? g : parseInt(String(g).replace(/\D/g, '')) || 0;
+            return gn <= 10;
+        });
+    } else {
+        filteredDatabase = masterStudentDatabase;
+    }
+
+    console.log(`📤 EXPORT ${levelFilter || 'ALL'}: ${filteredDatabase.length} students selected`);
+    console.log(`📤 Filtered Students (Grade/Level):`, filteredDatabase.map(s => ({ 
+        name: s.excelName, 
+        grade_num: s.grade_num, 
+        grade_level: s.grade_level, 
+        level: s.level, 
+        section: s.section 
+    })));
+    
+    // 🔥 PLAIN TEXT LIST OF ALL SELECTED STUDENTS 🔥
+    console.log(`📋 PLAIN TEXT LIST - ${levelFilter || 'ALL'} STUDENTS:`);
+    filteredDatabase.forEach((s, i) => {
+        console.log(`  ${i+1}. ${s.excelName} | Grade: ${s.grade_num} | Section: ${s.section} | Level: ${s.level}`);
+    });
 
     if (filteredDatabase.length === 0) {
         alert(`No students found for ${levelFilter || 'any level'}.`);
@@ -2361,6 +2440,23 @@ async function exportAllSF4(levelFilter = null) {
             const sheetName = detectSheetName(workbook);
             const worksheet = workbook.getWorksheet(sheetName);
             
+            // 🔥🔥🔥 CLEAR ALL SECTION ROWS BEFORE WRITING 🔥🔥🔥
+            if (level === 'SHS') {
+                console.log(`🧹 CLEARING SHS SF4 SECTION ROWS: ${mapping.sections.grade11Rows}, ${mapping.sections.grade12Rows}`);
+                const allSHSRows = [...mapping.sections.grade11Rows, ...mapping.sections.grade12Rows];
+                allSHSRows.forEach(rowNum => {
+                    // Clear ALL columns in the row that we might write to
+                    worksheet.getCell(rowNum, mapping.sections.sectionCol).value = null;
+                    worksheet.getCell(rowNum, mapping.sections.maleCountCol).value = null;
+                    worksheet.getCell(rowNum, mapping.sections.femaleCountCol).value = null;
+                    worksheet.getCell(rowNum, mapping.sections.maleDailyAvgCol).value = null;
+                    worksheet.getCell(rowNum, mapping.sections.femaleDailyAvgCol).value = null;
+                    worksheet.getCell(rowNum, mapping.sections.malePercentCol).value = null;
+                    worksheet.getCell(rowNum, mapping.sections.femalePercentCol).value = null;
+                    console.log(`   Cleared row ${rowNum}`);
+                });
+            }
+            
             // Fill School Header Info
             if (schoolInfo && Object.keys(schoolInfo).length > 0) {
                 const h = mapping.headers;
@@ -2443,24 +2539,77 @@ async function exportAllSF4(levelFilter = null) {
                     currentRow++;
                 }
             } else if (level === 'SHS') {
-                // For SHS, fill grade 11 and 12 rows
-                const grade11Students = levelStudents.filter(s => String(s.grade_level).startsWith('11'));
-                const grade12Students = levelStudents.filter(s => String(s.grade_level).startsWith('12'));
+                // 🔥🔥🔥 NUCLEAR FILTER: REPLACE levelStudents WITH ONLY GRADE 11/12 🔥🔥🔥
+                console.log(`🔥 SHS SF4 START: Original levelStudents has ${levelStudents.length} students`);
+                
+                // COMPLETELY RE-PROCESS levelStudents TO INCLUDE ONLY GRADE 11/12
+                levelStudents = levelStudents.filter(s => {
+                    const g = s.grade_num || s.grade_level;
+                    const gn = typeof g === 'number' ? g : parseInt(String(g).replace(/\D/g, '')) || 0;
+                    const is11or12 = gn === 11 || gn === 12;
+                    if (!is11or12) {
+                        console.warn(`⚠️ REMOVING STUDENT FROM SHS: ${s.excelName} | Grade: ${gn} | Section: ${s.section}`);
+                    }
+                    return is11or12;
+                });
+                
+                console.log(`✅ After Nuclear Filter: ${levelStudents.length} students remaining in SHS`);
+                
+                // 🔥🔥🔥 PLAIN TEXT LIST OF STUDENTS IN SHS AFTER NUCLEAR FILTER 🔥🔥🔥
+                console.log(`📋 SHS STUDENTS AFTER NUCLEAR FILTER:`);
+                levelStudents.forEach((s, i) => {
+                    console.log(`  ${i+1}. ${s.excelName} | Grade: ${s.grade_num} | Section: ${s.section} | Level: ${s.level}`);
+                });
+                
+                // For SHS, fill grade 11 and 12 rows - EXPLICITLY ensure only grade 11/12
+                const grade11Students = levelStudents.filter(s => {
+                    const g = s.grade_num || s.grade_level;
+                    const gn = typeof g === 'number' ? g : parseInt(String(g).replace(/\D/g, '')) || 0;
+                    return gn === 11;
+                });
+                const grade12Students = levelStudents.filter(s => {
+                    const g = s.grade_num || s.grade_level;
+                    const gn = typeof g === 'number' ? g : parseInt(String(g).replace(/\D/g, '')) || 0;
+                    return gn === 12;
+                });
+                
+                // 🔥🔥🔥 LOG GRADE 11 AND GRADE 12 STUDENTS 🔥🔥🔥
+                console.log(`📊 GRADE 11 STUDENTS (${grade11Students.length}):`);
+                grade11Students.forEach((s, i) => {
+                    console.log(`   ${i+1}. ${s.excelName} | Grade: ${s.grade_num} | Section: ${s.section}`);
+                });
+                console.log(`📊 GRADE 12 STUDENTS (${grade12Students.length}):`);
+                grade12Students.forEach((s, i) => {
+                    console.log(`   ${i+1}. ${s.excelName} | Grade: ${s.grade_num} | Section: ${s.section}`);
+                });
                 
                 const grade11Males = grade11Students.filter(s => s.gender === 'male');
                 const grade11Females = grade11Students.filter(s => s.gender === 'female');
                 const grade12Males = grade12Students.filter(s => s.gender === 'male');
                 const grade12Females = grade12Students.filter(s => s.gender === 'female');
                 
-                // Helper function to fill SHS grade rows
+                // Helper function to fill SHS grade rows with sorted sections
                 const fillSHSGradeRows = (students, rows, gradeName) => {
-                    const gradeSections = [...new Set(students.map(s => s.section))];
+                    // 🔥🔥🔥 FINAL GRADE VERIFICATION 🔥🔥🔥
+                    const verifiedStudents = students.filter(s => {
+                        const g = s.grade_num || s.grade_level;
+                        const gn = typeof g === 'number' ? g : parseInt(String(g).replace(/\D/g, '')) || 0;
+                        const isCorrectGrade = (gradeName === '11' && gn === 11) || (gradeName === '12' && gn === 12);
+                        if (!isCorrectGrade) {
+                            console.warn(`⚠️ REMOVING FROM GRADE ${gradeName}: ${s.excelName} | Grade: ${gn} | Section: ${s.section}`);
+                        }
+                        return isCorrectGrade;
+                    });
+                    
+                    const gradeSections = [...new Set(verifiedStudents.map(s => s.section))];
+                    // Sort sections alphabetically for consistency
+                    gradeSections.sort();
                     let rowIndex = 0;
                     
                     for (const sectionName of gradeSections) {
                         if (rowIndex >= rows.length) break;
                         
-                        const sectionStudents = students.filter(s => s.section === sectionName);
+                        const sectionStudents = verifiedStudents.filter(s => s.section === sectionName);
                         const males = sectionStudents.filter(s => s.gender === 'male');
                         const females = sectionStudents.filter(s => s.gender === 'female');
                         
@@ -2483,6 +2632,7 @@ async function exportAllSF4(levelFilter = null) {
                         const femalePercent = females.length > 0 ? ((femaleDailyAvg / females.length) * 100) : 0;
                         
                         const currentRow = rows[rowIndex];
+                        console.log(`✍️ WRITING TO CELL B${currentRow}: ${sectionName} | Grade ${gradeName}`);
                         worksheet.getCell(currentRow, mapping.sections.sectionCol).value = sectionName;
                         worksheet.getCell(currentRow, mapping.sections.maleCountCol).value = males.length;
                         worksheet.getCell(currentRow, mapping.sections.femaleCountCol).value = females.length;
