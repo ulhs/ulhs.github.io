@@ -26,7 +26,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const access = {
                         attendance: profile.can_scan,
                         idGen: profile.can_manage_ids,
-                        stats: profile.can_view_dashboard
+                        stats: profile.can_view_dashboard,
+                        sardo: profile.can_view_sardo
                     };
                     sessionStorage.setItem('userAccess', JSON.stringify(access));
                     

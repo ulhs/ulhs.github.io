@@ -3352,7 +3352,8 @@ body.dark-mode .bg-blue-50,
 body.dark-mode .bg-purple-50,
 body.dark-mode .bg-green-50,
 body.dark-mode .bg-amber-50,
-body.dark-mode .bg-orange-50 {
+body.dark-mode .bg-orange-50,
+body.dark-mode .bg-red-50 {
     background-color: rgba(255, 255, 255, 0.03) !important;
 }
 
@@ -3375,6 +3376,36 @@ body.dark-mode .divide-gray-100 {
     border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
+body.dark-mode .border-blue-100,
+body.dark-mode .border-blue-200 {
+    border-color: rgba(41, 128, 185, 0.5) !important;
+}
+
+body.dark-mode .border-purple-100,
+body.dark-mode .border-purple-200 {
+    border-color: rgba(155, 89, 182, 0.5) !important;
+}
+
+body.dark-mode .border-green-100,
+body.dark-mode .border-green-200 {
+    border-color: rgba(39, 174, 96, 0.5) !important;
+}
+
+body.dark-mode .border-amber-100,
+body.dark-mode .border-amber-200 {
+    border-color: rgba(241, 196, 15, 0.5) !important;
+}
+
+body.dark-mode .border-orange-100,
+body.dark-mode .border-orange-200 {
+    border-color: rgba(230, 126, 34, 0.5) !important;
+}
+
+body.dark-mode .border-red-100,
+body.dark-mode .border-red-200 {
+    border-color: rgba(217, 67, 67, 0.5) !important;
+}
+
 body.dark-mode .hover\:bg-gray-50:hover {
     background-color: rgba(255, 255, 255, 0.05) !important;
 }
@@ -3385,7 +3416,11 @@ body.dark-mode .text-blue-800,
 body.dark-mode .text-blue-900,
 body.dark-mode .text-green-900,
 body.dark-mode .text-amber-900,
-body.dark-mode .text-orange-900 {
+body.dark-mode .text-orange-900,
+body.dark-mode .text-red-600,
+body.dark-mode .text-red-700,
+body.dark-mode .text-red-800,
+body.dark-mode .text-red-900 {
     color: var(--white) !important;
 }
 

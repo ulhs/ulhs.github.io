@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://www.gstatic.com https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.supabase.net;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.gstatic.com https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.supabase.net wss://*.supabase.co wss://*.supabase.net https://cdn.jsdelivr.net https://api.counterapi.dev;">
     <title>Access Control | Upper Labay High School</title>
     <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
@@ -87,6 +87,12 @@
                             <span class="text">ATTENDANCE</span>
                         </a>
                     </li>
+                    <li class="list" data-page="sardo-dashboard.html">
+                        <a href="sardo-dashboard.html">
+                            <span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                            <span class="text">SARDO</span>
+                        </a>
+                    </li>
                     <li class="list" data-page="admin-dashboard.html">
                         <a href="admin-dashboard.html">
                             <span class="icon"><i class="fa-solid fa-chart-line"></i></span>
@@ -127,6 +133,7 @@
                             <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">🕒 Scanner</th>
                             <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">🆔 ID Gen</th>
                             <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">📊 Dashboard</th>
+                            <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">🔒 SARDO</th>
                             <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">Actions</th>
                         </tr>
                     </thead>
@@ -209,6 +216,21 @@
 
         function showAddUserModal() { addUserModal.classList.remove('hidden'); }
         function hideAddUserModal() { addUserModal.classList.add('hidden'); }
+        
+        // Quick diagnostic check on load
+        async function checkTables() {
+            try {
+                console.log("🔍 Checking tables...");
+                const { data: whitelistData } = await window.supabaseClient.from('admin_whitelist').select('*').limit(1);
+                const { data: profilesData } = await window.supabaseClient.from('profiles').select('*').limit(1);
+                
+                if (whitelistData.length > 0) console.log("✓ admin_whitelist columns:", Object.keys(whitelistData[0]));
+                if (profilesData.length > 0) console.log("✓ profiles columns:", Object.keys(profilesData[0]));
+            } catch (err) {
+                console.warn("⚠️ Table check failed (normal if tables are empty):", err.message);
+            }
+        }
+        checkTables();
 
         async function fetchWhitelist() {
             if (!window.supabaseClient) {
@@ -226,7 +248,7 @@
                 renderWhitelist(whitelist);
             } catch (err) {
                 console.error("Fetch Error:", err);
-                matrixBody.innerHTML = `<tr><td colspan="5" class="px-6 py-4 text-center text-red-500 font-bold uppercase text-[10px]">Error loading whitelist</td></tr>`;
+                matrixBody.innerHTML = `<tr><td colspan="6" class="px-6 py-4 text-center text-red-500 font-bold uppercase text-[10px]">Error loading whitelist</td></tr>`;
             }
         }
 
@@ -256,6 +278,11 @@
                         <div onclick="togglePermission('${item.email}', 'can_view_dashboard')" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-green-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
                     </td>
                     <td class="px-4 py-4 text-center">
+                        <input type="checkbox" id="sardo-${item.email}" class="perm-toggle sr-only peer" 
+                               data-email="${item.email}" data-col="can_view_sardo" ${item.can_view_sardo ? 'checked' : ''}>
+                        <div onclick="togglePermission('${item.email}', 'can_view_sardo')" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-red-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                    </td>
+                    <td class="px-4 py-4 text-center">
                         <button onclick="removeFromWhitelist('${item.email}')" class="text-red-400 hover:text-red-600 transition-colors">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
@@ -272,11 +299,18 @@
             if (!email) return alert("Please enter a valid Gmail address.");
 
             try {
-                const { error } = await window.supabaseClient
-                    .from('admin_whitelist')
-                    .insert([{ email, role, can_scan: false, can_manage_ids: false, can_view_dashboard: false }]);
+                // Add to BOTH tables: admin_whitelist AND profiles
+                const [addWhitelist, addProfiles] = await Promise.all([
+                    window.supabaseClient
+                        .from('admin_whitelist')
+                        .insert([{ email, role, can_scan: false, can_manage_ids: false, can_view_dashboard: false, can_view_sardo: false }]),
+                    window.supabaseClient
+                        .from('profiles')
+                        .insert([{ email, role, full_name: email, can_scan: false, can_manage_ids: false, can_view_dashboard: false, can_view_sardo: false }])
+                ]);
 
-                if (error) throw error;
+                if (addWhitelist.error) throw addWhitelist.error;
+                if (addProfiles.error) console.warn("Profiles add failed:", addProfiles.error);
                 
                 logAdminAction('ACCESS_ADD_USER', email, { role });
                 hideAddUserModal();
@@ -284,7 +318,7 @@
                 showStatus("User Added!");
             } catch (err) {
                 console.error("Add Error:", err);
-                alert("Failed to add user. They might already be on the list.");
+                alert("Failed to add user. They might already be on the list: " + (err.message || ""));
             }
         }
 
@@ -292,39 +326,58 @@
             if (!confirm(`Revoke access for ${email}?`)) return;
 
             try {
-                const { error } = await window.supabaseClient
-                    .from('admin_whitelist')
-                    .delete()
-                    .eq('email', email);
+                // Delete from BOTH tables: admin_whitelist AND profiles
+                const [deleteWhitelist, deleteProfiles] = await Promise.all([
+                    window.supabaseClient
+                        .from('admin_whitelist')
+                        .delete()
+                        .eq('email', email),
+                    window.supabaseClient
+                        .from('profiles')
+                        .delete()
+                        .eq('email', email)
+                ]);
 
-                if (error) throw error;
+                if (deleteWhitelist.error) throw deleteWhitelist.error;
+                if (deleteProfiles.error) console.warn("Profiles delete failed:", deleteProfiles.error);
+                
                 logAdminAction('ACCESS_REMOVE_USER', email);
                 fetchWhitelist();
                 showStatus("Access Revoked");
             } catch (err) {
                 console.error("Delete Error:", err);
-                alert("Failed to remove user.");
+                alert("Failed to remove user: " + (err.message || ""));
             }
         }
 
         async function togglePermission(email, column) {
             const checkbox = document.querySelector(`input[data-email="${email}"][data-col="${column}"]`);
             const newValue = !checkbox.checked;
+            
+            console.log(`🔐 Toggling ${column} for ${email} to ${newValue}`);
 
             try {
-                const { error } = await window.supabaseClient
-                    .from('admin_whitelist')
-                    .update({ [column]: newValue })
-                    .eq('email', email);
+                // Update BOTH tables: admin_whitelist AND profiles
+                const [updateWhitelist, updateProfiles] = await Promise.all([
+                    window.supabaseClient
+                        .from('admin_whitelist')
+                        .update({ [column]: newValue })
+                        .eq('email', email),
+                    window.supabaseClient
+                        .from('profiles')
+                        .update({ [column]: newValue })
+                        .eq('email', email)
+                ]);
 
-                if (error) throw error;
+                if (updateWhitelist.error) throw updateWhitelist.error;
+                if (updateProfiles.error) console.warn("Profiles update failed:", updateProfiles.error);
 
                 logAdminAction('ACCESS_TOGGLE_PERM', email, { column, value: newValue });
                 checkbox.checked = newValue;
                 showStatus("Permission Updated");
             } catch (err) {
                 console.error("Update Error:", err);
-                alert("Failed to update permission.");
+                alert("Failed to update permission: " + (err.message || "Unknown error"));
             }
         }
 

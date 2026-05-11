@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://www.gstatic.com https://*.supabase.co blob:; connect-src 'self' https://*.supabase.co https://*.supabase.net;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.gstatic.com https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.supabase.net wss://*.supabase.co wss://*.supabase.net https://cdn.jsdelivr.net https://api.counterapi.dev;">
     <title>ID Generator | Upper Labay High School</title>
     <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
@@ -106,6 +106,17 @@
                                     <a href="attendance.html">
                                         <span class="icon"><i class="fa-solid fa-clipboard-user"></i></span>
                                         <span class="text">ATTENDANCE</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        // SARDO Risk Dashboard (Admin, School Head, Guidance, or with Sardo permission)
+                        if (role === 'admin' || role === 'school_head' || role === 'guidance_counselor' || access.sardo) {
+                            html += `
+                                <li class="list" data-page="sardo-dashboard.html">
+                                    <a href="sardo-dashboard.html">
+                                        <span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                                        <span class="text">SARDO</span>
                                     </a>
                                 </li>`;
                         }

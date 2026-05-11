@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://www.gstatic.com https://*.supabase.co blob:; connect-src 'self' https://*.supabase.co https://*.supabase.net;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.gstatic.com https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.supabase.net wss://*.supabase.co wss://*.supabase.net https://cdn.jsdelivr.net https://api.counterapi.dev;">
     <title>Attendance Dashboard | Upper Labay High School</title>
     <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
@@ -165,6 +165,17 @@
                                     <a href="attendance.html">
                                         <span class="icon"><i class="fa-solid fa-clipboard-user"></i></span>
                                         <span class="text">ATTENDANCE</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        // SARDO Risk Dashboard (Admin, School Head, Guidance, or with Sardo permission)
+                        if (role === 'admin' || role === 'school_head' || role === 'guidance_counselor' || access.sardo) {
+                            html += `
+                                <li class="list" data-page="sardo-dashboard.html">
+                                    <a href="sardo-dashboard.html">
+                                        <span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                                        <span class="text">SARDO</span>
                                     </a>
                                 </li>`;
                         }
@@ -380,19 +391,19 @@
                             </button>
                             <button id="export-jhs-btn" class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all hidden flex items-center justify-center gap-2">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                Export JHS
+                                Download JHS SF2
                             </button>
                             <button id="export-shs-btn" class="w-full sm:w-auto px-6 py-3 bg-purple-600 text-white rounded-xl font-bold shadow-lg hover:bg-purple-700 transition-all hidden flex items-center justify-center gap-2">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                Export SHS
+                                Download SHS SF2
                             </button>
                             <button id="export-sf4-jhs-btn" class="w-full sm:w-auto px-6 py-3 bg-yellow-600 text-white rounded-xl font-bold shadow-lg hover:bg-yellow-700 transition-all hidden flex items-center justify-center gap-2">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                SF4 JHS
+                                Download JHS SF4
                             </button>
                             <button id="export-sf4-shs-btn" class="w-full sm:w-auto px-6 py-3 bg-orange-600 text-white rounded-xl font-bold shadow-lg hover:bg-orange-700 transition-all hidden flex items-center justify-center gap-2">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                SF4 SHS
+                                Download SHS SF4
                             </button>
                         </div>
                     </div>
