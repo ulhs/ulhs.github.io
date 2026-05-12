@@ -3718,15 +3718,226 @@ async function initIDGenerator() {
 
     initWebcam();
 
-    // Canvas Generation
-    const canvasFront = document.getElementById('canvas-front');
-    const canvasBack = document.getElementById('canvas-back');
-    if (!canvasFront || !canvasBack) return;
+    // Canvas Generation - make accessible to download functions
+    let canvasFront = document.getElementById('canvas-front');
+    let canvasBack = document.getElementById('canvas-back');
+    
+    // Initialize download buttons even if canvas not found initially
+    // They will validate canvas existence when clicked
+    const btnDownloadFront = document.getElementById('btn-download-front');
+    const btnDownloadBack = document.getElementById('btn-download-back');
+    
+    if (btnDownloadFront) {
+        btnDownloadFront.addEventListener('click', () => {
+            console.log('Front download button clicked');
+            
+            try {
+                // Get canvas fresh each time
+                const canvas = document.getElementById('canvas-front');
+                
+                if (!canvas) {
+                    console.error('Canvas front not found');
+                    alert('Canvas not found. Please refresh the page.');
+                    return;
+                }
+                
+                console.log('Canvas found:', canvas);
+                console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+                
+                // Check if canvas has been drawn to
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    console.error('Cannot get canvas context');
+                    alert('Canvas error. Please refresh the page.');
+                    return;
+                }
+                
+                // Try to get data URL
+                console.log('Attempting toDataURL...');
+                const dataURL = canvas.toDataURL('image/png');
+                
+                if (!dataURL || dataURL === 'data:,' || dataURL.length < 1000) {
+                    console.error('Canvas data invalid:', { 
+                        hasData: !!dataURL, 
+                        length: dataURL?.length, 
+                        prefix: dataURL?.substring(0, 50) 
+                    });
+                    alert('Please generate an ID first before downloading.');
+                    return;
+                }
+                
+                console.log('DataURL successful, length:', dataURL.length);
+                
+                const lastName = document.getElementById('lastname').value || 'ID';
+                
+                // Create download link with better compatibility
+                const link = document.createElement('a');
+                link.download = `ID-Front-${lastName}.png`;
+                link.href = dataURL;
+                link.style.display = 'none';
+                
+                // Multiple download methods for compatibility
+                document.body.appendChild(link);
+                
+                // Try click method
+                try {
+                    link.click();
+                } catch (e) {
+                    console.warn('Click method failed, trying event dispatch');
+                    const event = new MouseEvent('click', {
+                        view: window,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    link.dispatchEvent(event);
+                }
+                
+                // Clean up
+                setTimeout(() => {
+                    if (link.parentNode) {
+                        document.body.removeChild(link);
+                    }
+                }, 100);
+                
+                console.log('Front download completed successfully');
+                
+            } catch (error) {
+                console.error('Front download failed:', error);
+                console.error('Error details:', {
+                    message: error.message,
+                    name: error.name,
+                    stack: error.stack
+                });
+                alert('Download failed: ' + error.message);
+            }
+        });
+    }
+    
+    if (btnDownloadBack) {
+        btnDownloadBack.addEventListener('click', () => {
+            console.log('Back download button clicked');
+            
+            try {
+                // Get canvas fresh each time
+                const canvas = document.getElementById('canvas-back');
+                
+                if (!canvas) {
+                    console.error('Canvas back not found');
+                    alert('Canvas not found. Please refresh the page.');
+                    return;
+                }
+                
+                console.log('Canvas back found:', canvas);
+                console.log('Canvas back dimensions:', canvas.width, 'x', canvas.height);
+                
+                // Check if canvas has been drawn to
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    console.error('Cannot get canvas back context');
+                    alert('Canvas error. Please refresh the page.');
+                    return;
+                }
+                
+                // Try to get data URL
+                console.log('Attempting back toDataURL...');
+                const dataURL = canvas.toDataURL('image/png');
+                
+                if (!dataURL || dataURL === 'data:,' || dataURL.length < 1000) {
+                    console.error('Canvas back data invalid:', { 
+                        hasData: !!dataURL, 
+                        length: dataURL?.length, 
+                        prefix: dataURL?.substring(0, 50) 
+                    });
+                    alert('Please generate an ID first before downloading.');
+                    return;
+                }
+                
+                console.log('Back DataURL successful, length:', dataURL.length);
+                
+                const lastName = document.getElementById('lastname').value || 'ID';
+                
+                // Create download link with better compatibility
+                const link = document.createElement('a');
+                link.download = `ID-Back-${lastName}.png`;
+                link.href = dataURL;
+                link.style.display = 'none';
+                
+                // Multiple download methods for compatibility
+                document.body.appendChild(link);
+                
+                // Try click method
+                try {
+                    link.click();
+                } catch (e) {
+                    console.warn('Click method failed, trying event dispatch');
+                    const event = new MouseEvent('click', {
+                        view: window,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    link.dispatchEvent(event);
+                }
+                
+                // Clean up
+                setTimeout(() => {
+                    if (link.parentNode) {
+                        document.body.removeChild(link);
+                    }
+                }, 100);
+                
+                console.log('Back download completed successfully');
+                
+            } catch (error) {
+                console.error('Back download failed:', error);
+                console.error('Error details:', {
+                    message: error.message,
+                    name: error.name,
+                    stack: error.stack
+                });
+                alert('Back download failed: ' + error.message);
+            }
+        });
+    }
+    
+    // Exit early if canvas not found, but download buttons are already set up
+    if (!canvasFront || !canvasBack) {
+        console.warn('Canvas elements not found during initialization. Download buttons will check for elements on click.');
+        return;
+    }
+
+    // Add test function to verify canvas state
+    window.testCanvasDownload = function() {
+        console.log('Testing canvas download...');
+        const frontCanvas = document.getElementById('canvas-front');
+        const backCanvas = document.getElementById('canvas-back');
+        
+        if (frontCanvas) {
+            try {
+                const frontDataURL = frontCanvas.toDataURL('image/png');
+                console.log('Front canvas test - DataURL length:', frontDataURL?.length);
+                console.log('Front canvas test - First 100 chars:', frontDataURL?.substring(0, 100));
+            } catch (e) {
+                console.error('Front canvas test failed:', e);
+            }
+        }
+        
+        if (backCanvas) {
+            try {
+                const backDataURL = backCanvas.toDataURL('image/png');
+                console.log('Back canvas test - DataURL length:', backDataURL?.length);
+                console.log('Back canvas test - First 100 chars:', backDataURL?.substring(0, 100));
+            } catch (e) {
+                console.error('Back canvas test failed:', e);
+            }
+        }
+    };
+    
+    console.log('Canvas download test function added. Run testCanvasDownload() in console to test.');
 
     const ctxFront = canvasFront.getContext('2d');
     const ctxBack = canvasBack.getContext('2d');
     
-    // Load all templates
+    // Load all templates with crossOrigin attribute to prevent canvas tainting
     const templates = {
         studentFront: new Image(),
         studentBack: new Image(),
@@ -3734,6 +3945,13 @@ async function initIDGenerator() {
         personnelYellowFront: new Image(),
         personnelBack: new Image()
     };
+    
+    // Set crossOrigin for all templates to allow canvas toDataURL
+    Object.values(templates).forEach((img, index) => {
+        img.crossOrigin = 'anonymous';
+        img.addEventListener('load', () => console.log(`Template ${index} loaded successfully`));
+        img.addEventListener('error', (e) => console.error(`Template ${index} failed to load:`, e));
+    });
     
     templates.studentFront.src = '../../assets/admin/id-gen/id-front.webp';
     templates.studentBack.src = '../../assets/admin/id-gen/id-back.webp';
@@ -4017,35 +4235,4 @@ async function initIDGenerator() {
         context.fillText(line, x, y);
     }
 
-    const btnDownloadFront = document.getElementById('btn-download-front');
-    if (btnDownloadFront) {
-        btnDownloadFront.addEventListener('click', () => {
-            const lastName = document.getElementById('lastname').value;
-            const targetId = document.getElementById('lrn')?.value || document.getElementById('emp-number')?.value || 'unknown';
-            const type = document.getElementById('id-type').value;
-            
-            const link = document.createElement('a');
-            link.download = `ID-Front-${lastName}.png`;
-            link.href = canvasFront.toDataURL('image/png');
-            link.click();
-
-            logAdminAction('GENERATE_ID_FRONT', targetId, { type, lastName });
-        });
-    }
-
-    const btnDownloadBack = document.getElementById('btn-download-back');
-    if (btnDownloadBack) {
-        btnDownloadBack.addEventListener('click', () => {
-            const lastName = document.getElementById('lastname').value;
-            const targetId = document.getElementById('lrn')?.value || document.getElementById('emp-number')?.value || 'unknown';
-            const type = document.getElementById('id-type').value;
-
-            const link = document.createElement('a');
-            link.download = `ID-Back-${lastName}.png`;
-            link.href = canvasBack.toDataURL('image/png');
-            link.click();
-
-            logAdminAction('GENERATE_ID_BACK', targetId, { type, lastName });
-        });
-    }
 }
