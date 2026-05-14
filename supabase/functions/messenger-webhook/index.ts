@@ -56,33 +56,24 @@ Deno.serve(async (req) => {
                 console.warn(`⚠️ Invalid LRN length (${lrn.length}): ${lrn}`)
                 await sendResponse(psid, `❌ Registration Failed: Ang LRN ${lrn} dapat 12 ka digits gyud.`)
               } else {
-                // First, check if student exists to avoid RLS/select issues
-                const { data: student, error: fetchError } = await supabase
+                const { data, error } = await supabase
                   .from('students')
-                  .select('full_name, lrn')
+                  .update({ 
+                      parent_messenger_id: psid,
+                      notify_parent: true 
+                  })
                   .eq('lrn', lrn)
-                  .single()
+                  .select()
 
-                if (fetchError || !student) {
-                  console.warn(`⚠️ Student not found for LRN ${lrn}:`, fetchError?.message)
-                  await sendResponse(psid, `❌ Registration Failed: Dili makit-an ang LRN ${lrn} sa among listahan.`)
+                if (error) {
+                  console.error(`❌ Database error during registration for LRN ${lrn}:`, error.message)
+                  await sendResponse(psid, `❌ Registration Error: Dili ma-update ang database sa pagkakaron.`)
+                } else if (data && data.length > 0) {
+                  console.log(`✅ PSID ${psid} successfully linked to ${data[0].full_name} (LRN: ${lrn})`)
+                  await sendConfirmation(psid, data[0].full_name, lrn)
                 } else {
-                  // Now perform the update
-                  const { error: updateError } = await supabase
-                    .from('students')
-                    .update({ 
-                        parent_messenger_id: psid,
-                        notify_parent: true 
-                    })
-                    .eq('lrn', lrn)
-
-                  if (updateError) {
-                    console.error(`❌ Database error during update for LRN ${lrn}:`, updateError.message)
-                    await sendResponse(psid, `❌ Registration Error: Dili ma-update ang database sa pagkakaron.`)
-                  } else {
-                    console.log(`✅ PSID ${psid} successfully linked to ${student.full_name} (LRN: ${lrn})`)
-                    await sendConfirmation(psid, student.full_name, lrn)
-                  }
+                  console.warn(`⚠️ Registration failed: LRN ${lrn} not found in database.`)
+                  await sendResponse(psid, `❌ Registration Failed: Dili makit-an ang LRN ${lrn} sa among listahan.`)
                 }
               }
             } 
@@ -263,47 +254,51 @@ async function sendResponse(psid: string, text: string) {
     return;
   }
 
-  // Version v12.0 is used in the other alert function and is stable
-  const API_URL = `https://graph.facebook.com/v12.0/me/messages?access_token=${FB_PAGE_ACCESS_TOKEN}`;
-
-  const trySend = async (payload: any) => {
-     try {
-       const res = await fetch(API_URL, {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify(payload)
-       });
-       const data = await res.json();
-       return { ok: res.ok, data };
-     } catch (err) {
-       return { ok: false, data: { error: err.message } };
-     }
-   };
-
-  // 1. Try with RESPONSE type (standard for 24h window)
-  let { ok, data } = await trySend({
+  const payload = {
     recipient: { id: psid },
     message: { text: text },
-    messaging_type: "RESPONSE"
-  });
+    messaging_type: "RESPONSE" 
+  };
 
-  // 2. Fallback: If RESPONSE fails, try with MESSAGE_TAG (for outside 24h window or referral edge cases)
-  if (!ok) {
-    console.warn(`⚠️ Primary send failed for PSID ${psid}, trying fallback...`, JSON.stringify(data));
+  try {
+    const res = await fetch(`https://graph.facebook.com/v21.0/me/messages?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
     
-    const fallbackResult = await trySend({
-      recipient: { id: psid },
-      message: { text: text },
-      messaging_type: "MESSAGE_TAG",
-      tag: "CONFIRMED_EVENT_UPDATE" // Allowed for automated responses to user-initiated events
-    });
-
-    if (!fallbackResult.ok) {
-      console.error(`❌ All sending attempts failed for PSID ${psid}:`, JSON.stringify(fallbackResult.data));
+    const responseData = await res.json();
+    
+    if (!res.ok) {
+      console.error(`❌ Messenger API Error (Status: ${res.status}):`, JSON.stringify(responseData));
+      
+      // Fallback for 24-hour window issues
+      if (responseData.error?.code === 10 || responseData.error?.error_subcode === 2018001 || responseData.error?.code === 200) {
+        console.log(`🔄 Attempting fallback with MESSAGE_TAG for PSID ${psid}...`);
+        const fallbackPayload = {
+          recipient: { id: psid },
+          message: { text: text },
+          messaging_type: "MESSAGE_TAG",
+          tag: "CONFIRMED_EVENT_UPDATE"
+        };
+        
+        const fallbackRes = await fetch(`https://graph.facebook.com/v21.0/me/messages?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fallbackPayload)
+        });
+        
+        const fallbackData = await fallbackRes.json();
+        if (!fallbackRes.ok) {
+          console.error(`❌ Fallback failed:`, JSON.stringify(fallbackData));
+        } else {
+          console.log(`✅ Fallback success for PSID ${psid}. Message ID: ${fallbackData.message_id}`);
+        }
+      }
     } else {
-      console.log(`✅ Fallback success for PSID ${psid}. ID: ${fallbackResult.data.message_id}`);
+      console.log(`✅ Message sent successfully to PSID ${psid}. ID: ${responseData.message_id}`)
     }
-  } else {
-    console.log(`✅ Message sent successfully to PSID ${psid}. ID: ${data.message_id}`);
+  } catch (err) {
+    console.error(`🔥 Network error sending to PSID ${psid}:`, err.message)
   }
 }
