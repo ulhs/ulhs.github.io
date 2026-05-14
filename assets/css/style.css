@@ -3528,7 +3528,7 @@ body.dark-mode .btn-small:hover {
 /* --- ANNOUNCEMENT BANNER (GLASSMORPHIC) --- */
 .announcement-banner {
     position: relative;
-    background: var(--deep-madder);/*  rgba(148, 21, 21, 0.95); Nearly solid black for maximum readability */
+    background: var(--bead-blue);/*  rgba(148, 21, 21, 0.95); Nearly solid black for maximum readability */
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     color: var(--white);

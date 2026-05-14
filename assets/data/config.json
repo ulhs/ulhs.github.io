@@ -21,8 +21,8 @@
     ],
     "announcement": {
         "enabled": true,
-        "text": "🚀 New tools (Student and Personnel ID Generator & QR Attendance Monitoring System) launching this June as classes begin.",
-        "button_text": "Ask SirChris",
+        "text": "For ARAL tutors, please log your Work-From-Home attendance by clicking this <a href=\"https://forms.gle/kJysGsAsTZx7KwtbA\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"background-color: white; color: black; border-radius: 4px; padding: 4px 8px; text-decoration: none; display: inline-block;\">link</a>.",
+        "button_text": "Ask SirChris for help",
         "link": "https://facebook.com/sirchrisperegrino"
     }
 }
