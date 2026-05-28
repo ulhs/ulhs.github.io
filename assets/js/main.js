@@ -1454,6 +1454,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <h3 class="accent-title">Review Confirmation Details</h3>
                             <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-gray);">Please check all information before confirming.</p>
                             <div class="enroll-review-grid" id="old-review-grid"></div>
+                            <button type="button" class="btn mt-3" id="download-confirmation-slip" style="width: 100%;">Download Confirmation Slip</button>
                         </div>
                     </div>
 
@@ -1605,6 +1606,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         btnPrev.addEventListener('click', () => { if (currentStep > 1) showStep(currentStep - 1); });
         btnNext.addEventListener('click', () => { if (validateStep(currentStep)) showStep(currentStep + 1); });
+
+        const downloadBtn = document.getElementById('download-confirmation-slip');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', fillConfirmationSlipPDF);
+        }
 
         // Auto-check agreement if "YES" is selected
         const intentRadios = form.querySelectorAll('input[name="Intent to Enroll"]');
@@ -1804,6 +1810,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
 
                             <div class="form-group">
+                                <label for="enroll-place-of-birth-modal">Place of Birth (Municipality/City)</label>
+                                <input type="text" id="enroll-place-of-birth-modal" name="Place of Birth" required placeholder="e.g. General Santos City, Koronadal City">
+                            </div>
+
+                            <div class="form-group">
                                 <label for="enroll-mother-tongue-modal">Mother Tongue</label>
                                 <input type="text" id="enroll-mother-tongue-modal" name="Mother Tongue" required placeholder="e.g. Blaan, Cebuano, Tagalog">
                             </div>
@@ -1983,6 +1994,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="enroll-conditional" data-cond="grade11" hidden>
                             <div class="enroll-grid">
                                 <div class="form-group">
+                                    <label for="enroll-last-school-modal">Last School Attended</label>
+                                    <input type="text" id="enroll-last-school-modal" name="Last School Attended" placeholder="Name of last school attended">
+                                </div>
+                                <div class="form-group">
                                     <label for="enroll-track-modal">SHS Track Preference</label>
                                     <select id="enroll-track-modal" name="SHS Track">
                                         <option value="" disabled selected>Select SHS Pathway</option>
@@ -2049,6 +2064,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             <h3 class="accent-title">Review Enrollment Data</h3>
                             <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-gray);">Please check all information before submitting.</p>
                             <div class="enroll-review-grid" id="enroll-review-modal"></div>
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button type="button" class="btn" id="download-pdf-modal" style="flex: 1;">
+                        Download Filled Enrollment Form
+                    </button>
+                </div>
                         </div>
                     </div>
 
@@ -2444,6 +2464,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { label: 'Birthdate', value: getValue('enroll-birthdate') },
                 { label: 'Age', value: getValue('enroll-age') },
                 { label: 'Sex', value: getValue('enroll-sex').toUpperCase() },
+                { label: 'Place of Birth', value: getValue('enroll-place-of-birth') },
                 { label: 'Mother Tongue', value: getValue('enroll-mother-tongue') },
                 { label: 'Religion', value: getValue('enroll-religion') },
                 { label: 'IP Member', value: getValue('enroll-ip') === 'yes' ? `Yes (${getValue('enroll-ip-specify')})` : 'No' },
@@ -2467,7 +2488,10 @@ document.addEventListener('DOMContentLoaded', () => {
             );
 
             if (type === 'grade7' || type.includes('grade7')) items.push({ label: 'Elementary School Graduated', value: getValue('enroll-elem-school') });
-            if (type === 'grade11' || type.includes('grade11')) items.push({ label: 'SHS Track/Strand', value: getValue('enroll-track') });
+            if (type === 'grade11' || type.includes('grade11')) {
+                items.push({ label: 'Last School Attended', value: getValue('enroll-last-school') });
+                items.push({ label: 'SHS Track/Strand', value: getValue('enroll-track') });
+            }
             if (type === 'transferee') {
                 items.push({ label: 'Previous School ID', value: getValue('enroll-prev-school-id') });
                 items.push({ label: 'Previous School Address', value: getValue('enroll-prev-school-address') });
@@ -2684,6 +2708,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Add PDF download button listener
+        const downloadPdfBtn = document.getElementById(`download-pdf${suffix}`);
+        if (downloadPdfBtn) {
+            downloadPdfBtn.addEventListener('click', async () => {
+                const enrollmentType = enrollmentTypeEl ? enrollmentTypeEl.value : '';
+                await fillEnrollmentPDF(suffix, enrollmentType);
+            });
+        }
+        
         updateConditionalVisibility('');
         showStep(1);
     }
@@ -2994,6 +3027,349 @@ document.addEventListener('DOMContentLoaded', () => {
 
             initScrollReveal();
         } catch (err) { console.error("Error loading beadwork data:", err); }
+    }
+
+
+    
+    async function fillEnrollmentPDF(suffix, enrollmentType) {
+        try {
+            console.log('PDFLib available:', typeof PDFLib);
+            console.log('window.PDFLib:', window.PDFLib);
+            
+            // Load the images
+            const images = {
+                1: getRootPath() + "assets/documents/BEEF-front.webp",
+                2: getRootPath() + "assets/documents/BEEF-back.webp"
+            };
+            
+            // Load images with a helper function
+            const loadImage = (url) => new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.src = url;
+            });
+            
+            const [frontImg, backImg] = await Promise.all([
+                loadImage(images[1]),
+                loadImage(images[2])
+            ]);
+            
+            // Function to convert image to PNG bytes
+            const imageToPngBytes = (img) => new Promise(resolve => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                canvas.toBlob(resolve, 'image/png');
+            });
+            
+            // Convert images to PNG for PDFLib
+            const frontPngBlob = await imageToPngBytes(frontImg);
+            const backPngBlob = await imageToPngBytes(backImg);
+            const frontPngBytes = await frontPngBlob.arrayBuffer();
+            const backPngBytes = await backPngBlob.arrayBuffer();
+            
+            // Create new PDF document
+            const pdfDoc = await PDFLib.PDFDocument.create();
+            
+            // Embed the PNG images
+            const frontPngImage = await pdfDoc.embedPng(frontPngBytes);
+            const backPngImage = await pdfDoc.embedPng(backPngBytes);
+            
+            // Create pages with same dimensions as images
+            const page1 = pdfDoc.addPage([frontImg.naturalWidth, frontImg.naturalHeight]);
+            const page2 = pdfDoc.addPage([backImg.naturalWidth, backImg.naturalHeight]);
+            const pages = [page1, page2];
+            
+            // Draw images as full-page backgrounds
+            page1.drawImage(frontPngImage, {
+                x: 0,
+                y: 0,
+                width: frontImg.naturalWidth,
+                height: frontImg.naturalHeight
+            });
+            page2.drawImage(backPngImage, {
+                x: 0,
+                y: 0,
+                width: backImg.naturalWidth,
+                height: backImg.naturalHeight
+            });
+            
+            // Get form values
+            const lastName = getValueWithSuffix('enroll-lastname', suffix);
+            const firstName = getValueWithSuffix('enroll-firstname', suffix);
+            const middleName = getValueWithSuffix('enroll-middlename', suffix);
+            const extension = getValueWithSuffix('enroll-extension', suffix);
+            const birthdateRaw = getValueWithSuffix('enroll-birthdate', suffix);
+            
+            // Helper to format date as mm/dd/yyyy
+            function formatDate(inputDate) {
+                if (!inputDate) return '';
+                let dateObj;
+                if (inputDate.includes('-')) { // ISO format yyyy-mm-dd
+                    dateObj = new Date(inputDate);
+                } else if (inputDate.includes('/')) { // Already mm/dd/yyyy or dd/mm/yyyy
+                    const parts = inputDate.split('/');
+                    if (parts.length === 3) {
+                        dateObj = new Date(parts[2], parts[0]-1, parts[1]);
+                    }
+                }
+                if (!dateObj || isNaN(dateObj)) return inputDate;
+                const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const dd = String(dateObj.getDate()).padStart(2, '0');
+                const yyyy = dateObj.getFullYear();
+                return `${mm}/${dd}/${yyyy}`;
+            }
+            const birthdate = formatDate(birthdateRaw);
+            const age = getValueWithSuffix('enroll-age', suffix);
+            const sex = getValueWithSuffix('enroll-sex', suffix);
+            const placeOfBirth = getValueWithSuffix('enroll-place-of-birth', suffix);
+            const motherTongue = getValueWithSuffix('enroll-mother-tongue', suffix);
+            const religion = getValueWithSuffix('enroll-religion', suffix);
+            const ip = getValueWithSuffix('enroll-ip', suffix);
+            const ipSpecify = getValueWithSuffix('enroll-ip-specify', suffix);
+            const disability = getValueWithSuffix('enroll-disability', suffix);
+            const disabilityTypeCode = getValueWithSuffix('enroll-disability-type', suffix);
+            const lrn = getValueWithSuffix('enroll-lrn', suffix);
+            const psa = getValueWithSuffix('enroll-psa', suffix);
+            const currHouse = getValueWithSuffix('enroll-curr-house', suffix);
+            const currSitio = getValueWithSuffix('enroll-curr-sitio', suffix);
+            const currBarangay = getValueWithSuffix('enroll-curr-barangay', suffix);
+            const currCity = getValueWithSuffix('enroll-curr-city', suffix);
+            const currProvince = getValueWithSuffix('enroll-curr-province', suffix);
+            const currCountry = getValueWithSuffix('enroll-curr-country', suffix);
+            const currZip = getValueWithSuffix('enroll-curr-zip', suffix);
+            const permHouse = getValueWithSuffix('enroll-perm-house', suffix);
+            const permSitio = getValueWithSuffix('enroll-perm-sitio', suffix);
+            const permBarangay = getValueWithSuffix('enroll-perm-barangay', suffix);
+            const permCity = getValueWithSuffix('enroll-perm-city', suffix);
+            const permProvince = getValueWithSuffix('enroll-perm-province', suffix);
+            const permCountry = getValueWithSuffix('enroll-perm-country', suffix);
+            const permZip = getValueWithSuffix('enroll-perm-zip', suffix);
+            const mother = getValueWithSuffix('enroll-mother', suffix);
+            const father = getValueWithSuffix('enroll-father', suffix);
+            const guardian = getValueWithSuffix('enroll-guardian', suffix);
+            const guardianContact = getValueWithSuffix('enroll-guardian-contact', suffix);
+            const fourPs = getValueWithSuffix('enroll-4ps', suffix);
+            const elemSchool = getValueWithSuffix('enroll-elem-school', suffix);
+            const lastSchool = getValueWithSuffix('enroll-last-school', suffix);
+            const shsTrackCode = getValueWithSuffix('enroll-track', suffix);
+            
+            // Map short codes to full names
+            const disabilityTypeMap = {
+                'visual-blind': 'Visual Impairment - Blind',
+                'visual-low-vision': 'Visual Impairment - Low Vision',
+                'hearing': 'Hearing Impairment',
+                'learning': 'Learning Disability',
+                'intellectual': 'Intellectual Disability',
+                'autism': 'Autism Spectrum Disorder',
+                'emotional': 'Emotional-Behavioral Disorder',
+                'orthopedic': 'Orthopedic/Physical Handicap',
+                'multiple': 'Multiple Disorder',
+                'speech': 'Speech/Language Disorder',
+                'cerebral': 'Cerebral Palsy',
+                'special-health': 'Special Health Problem/Chronic Disease',
+                'special-health-cancer': 'Special Health Problem - Cancer'
+            };
+            const disabilityType = disabilityTypeMap[disabilityTypeCode] || disabilityTypeCode;
+            
+            const shsTrackMap = {
+                'academic': 'Academic',
+                'techpro': 'Technical Professional'
+            };
+            const shsTrack = shsTrackMap[shsTrackCode] || shsTrackCode;
+            
+            // Helper function to draw text on a specific page (uses top-left origin)
+            function drawText(text, x, y, pageNum = 1, size = 30) { // Default font size now 30
+                const page = pages[pageNum - 1];
+                const pageHeight = page.getHeight();
+                page.drawText(text || '', {
+                    x: x,
+                    y: pageHeight - y, // Convert top-left to PDF's bottom-left origin
+                    size: size,
+                });
+            }
+            
+            // Note: All coordinates provided by user
+            
+            // School Year (we can leave blank or use current school year)
+            // Grade Level (we can get from enrollment type)
+            let gradeLevel = '';
+            if (enrollmentType === 'grade7') gradeLevel = '7';
+            else if (enrollmentType === 'grade11') gradeLevel = '11';
+            
+            const schoolYear = "2026-2027";
+            // Font size can be adjusted by the 5th argument here!
+            drawText(schoolYear, 248, 290, 1, 40); // School Year (font size 30)
+            drawText(gradeLevel, 398, 371, 1); // Grade Level
+            drawText(lrn, 718, 329, 1); // LRN
+            drawText(psa, 547, 499, 1); // PSA Birth Certificate Number
+            drawText(lastName, 99, 588, 1); // Last Name
+            drawText(firstName, 99, 670, 1); // First Name
+            drawText(middleName, 99, 754, 1); // Middle Name
+            drawText(extension, 99, 837, 1); // Extension Name
+            drawText(birthdate, 829, 588, 1); // Birth Date
+            drawText(age, 827, 670, 1); // Age
+            drawText(sex, 912, 670, 1); // Sex
+            drawText(placeOfBirth, 830, 754, 1); // Place of Birth
+            drawText(religion, 828, 830, 1); // Religion
+            drawText(motherTongue, 827, 912, 1); // Mother Tongue
+            drawText(ip, 136, 914, 1); // IP Member
+            drawText(ipSpecify, 447, 906, 1); // IP Group
+            drawText(fourPs, 126, 1043, 1); // 4Ps Household ID Number
+            // Current Address
+            drawText(currHouse, 92, 1129, 1); // Current House No.
+            drawText(currSitio, 312, 1129, 1); // Current Sitio/Street Name
+            drawText(currBarangay, 768, 1129, 1); // Current Barangay
+            drawText(currCity, 92, 1180, 1); // Current Municipality/City
+            drawText(currProvince, 377, 1180, 1); // Current Province
+            drawText(currCountry, 672, 1180, 1); // Current Country
+            drawText(currZip, 985, 1180, 1); // Current Zip Code
+            
+            // Permanent Address
+            drawText(permHouse, 92, 1268, 1); // Permanent House No.
+            drawText(permSitio, 311, 1268, 1); // Permanent Sitio/Street Name
+            drawText(permBarangay, 766, 1268, 1); // Permanent Barangay
+            drawText(permCity, 92, 1318, 1); // Permanent Municipality/City
+            drawText(permProvince, 377, 1318, 1); // Permanent Province
+            drawText(permCountry, 672, 1318, 1); // Permanent Country
+            drawText(permZip, 985, 1318, 1); // Permanent Zip Code
+            
+            // Parent/Guardian info (page 1)
+            drawText(father, 97, 1466, 1); // Father's Name
+            drawText(mother, 97, 1549, 1); // Mother's Maiden Name
+            drawText(guardian, 97, 1638, 1); // Guardian Name
+            drawText(guardianContact, 905, 1638, 1); // Contact Number
+            
+            // BEEF-back.webp (page 2)
+            drawText(disability, 746, 156, 2); // With Disability (Yes/No)
+            drawText(disabilityType, 138, 459, 2); // Type of Disability
+            if (enrollmentType === 'grade7') {
+                drawText(elemSchool, 124, 761, 2); // Elementary School Graduated (Grade 7)
+            } else if (enrollmentType === 'grade11') {
+                drawText(lastSchool, 124, 761, 2); // Last School Attended (Grade 11)
+                drawText(shsTrack, 266, 968, 2, 48); // SHS Pathway Preference
+            }
+            drawText(father, 198, 1410, 2); // Father's Name
+            drawText(mother, 198, 1451, 2); // Mother's Maiden Name
+          //  drawText(guardian, 198, 1638, 2); // Guardian Name
+          //  drawText(guardianContact, 905, 1638, 2); // Parent/Guardian Contact Number
+            // Generate Date Enrolled as mm/dd/yyyy
+            const today = new Date();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const yyyy = today.getFullYear();
+            const dateEnrolled = `${mm}/${dd}/${yyyy}`;
+            drawText(dateEnrolled, 844, 1451, 2); // Date Enrolled
+            
+            // Save the PDF
+            const pdfBytesFilled = await pdfDoc.save();
+            const blob = new Blob([pdfBytesFilled], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Enrollment-Form-${lastName}-${firstName}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+        } catch (error) {
+            console.error('Error filling PDF:', error);
+            console.error('Error stack:', error.stack);
+            alert('Error generating PDF. Details: ' + error.message);
+        }
+    }
+
+    async function fillConfirmationSlipPDF() {
+        try {
+            if (typeof PDFLib === 'undefined') {
+                throw new Error('PDFLib library not available. Please check your internet connection and try again.');
+            }
+
+            const getValue = (id) => document.getElementById(id)?.value.trim() || '';
+            const lastName = getValue('old-lastname');
+            const firstName = getValue('old-firstname');
+            const middleName = getValue('old-middlename');
+            const extension = getValue('old-extension');
+            const lrn = getValue('old-lrn');
+            const gradeLevel = getValue('old-target-level');
+            const intentToEnroll = document.querySelector('input[name="Intent to Enroll"]:checked')?.value || '';
+
+            const loadImage = (url) => new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = url;
+            });
+
+            const imageToPngBytes = (img) => new Promise(resolve => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                canvas.toBlob(resolve, 'image/png');
+            });
+
+            const confirmationSlipPath = getRootPath() + 'assets/documents/Confirmation-Slip.webp';
+            const templateImg = await loadImage(confirmationSlipPath);
+            const templatePngBlob = await imageToPngBytes(templateImg);
+            const templatePngBytes = await templatePngBlob.arrayBuffer();
+
+            const pdfDoc = await PDFLib.PDFDocument.create();
+            const page = pdfDoc.addPage([templateImg.naturalWidth, templateImg.naturalHeight]);
+            const pages = [page];
+
+            const templateImage = await pdfDoc.embedPng(templatePngBytes);
+            page.drawImage(templateImage, {
+                x: 0,
+                y: 0,
+                width: templateImg.naturalWidth,
+                height: templateImg.naturalHeight,
+            });
+
+            function drawText(text, x, y, pageNum = 1, size = 22) {
+                const page = pages[pageNum - 1];
+                const pageHeight = page.getHeight();
+                page.drawText(text || '', {
+                    x: x,
+                    y: pageHeight - y,
+                    size: size,
+                });
+            }
+
+            drawText(lastName, 138.09, 232.65);
+            drawText(firstName, 138.09, 255.99);
+            drawText(middleName, 138.09, 279.98);
+            drawText(extension, 138.09, 305.26);
+            drawText(lrn, 138.09, 329.25);
+            drawText(gradeLevel, 138.09, 351.94);
+            drawText(intentToEnroll, 192.55, 469.28, 1, 36);
+
+            const pdfBytes = await pdfDoc.save();
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Confirmation-Slip-${lastName}-${firstName}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error filling Confirmation Slip PDF:', error);
+            console.error('Error stack:', error.stack);
+            alert('Error generating Confirmation Slip PDF. Details: ' + error.message);
+        }
+    }
+    
+    function getValueWithSuffix(id, suffix) {
+        const el = document.getElementById(id + suffix);
+        return el ? el.value.trim() : '';
     }
 
     loadDynamicContent();

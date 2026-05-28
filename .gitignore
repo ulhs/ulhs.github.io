@@ -50,6 +50,10 @@ node_modules/
 !assets/admin/attendance/templates/SF2_Blank_SHS.xlsx
 !assets/admin/attendance/templates/SF4_Blank.xlsx
 !assets/admin/attendance/templates/SF4_Blank_SHS.xlsx
+!assets/documents/Basic-Education-Enrollment-Form.pdf
+!assets/documents/BEEF-front.webp
+!assets/documents/BEEF-back.webp
+!assets/documents/Confirmation-Slip.webp
 
 # Ignore local environment variables (where you store Supabase/Firebase API Keys)
 .env
