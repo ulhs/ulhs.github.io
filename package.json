@@ -1,5 +1,24 @@
 {
+  "name": "ulhs.github.io",
+  "version": "1.0.0",
+  "description": "Welcome to the official website for **Upper Labay High School**. This project is dedicated to providing students, parents, and the community with access to school information, academic programs, and the rich cultural heritage of the **Blaan** people.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ulhs/ulhs.github.io.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ulhs/ulhs.github.io/issues"
+  },
+  "homepage": "https://github.com/ulhs/ulhs.github.io#readme",
   "devDependencies": {
-    "supabase": "^2.98.2"
+    "supabase": "^2.105.0"
   }
 }
