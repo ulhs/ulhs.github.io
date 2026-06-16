@@ -4313,6 +4313,33 @@ async function initIDGenerator() {
     const ctxFront = canvasFront.getContext('2d');
     const ctxBack = canvasBack.getContext('2d');
     
+    // Helper function to get signed template URL from Supabase Storage or local fallback
+    async function getTemplateUrl(storagePath, localFallback) {
+        if (!window.supabaseClient) {
+            console.log('Supabase client not available, using local template');
+            return localFallback;
+        }
+        
+        try {
+            // Try to get signed URL from Supabase Storage bucket 'id-templates' (valid for 1 hour)
+            const { data, error } = await window.supabaseClient
+                .storage
+                .from('id-templates')
+                .createSignedUrl(storagePath, 3600);
+            
+            if (!error && data?.signedUrl) {
+                console.log(`Using Supabase Storage signed URL for: ${storagePath}`);
+                return data.signedUrl;
+            }
+            console.warn('Error getting signed URL:', error);
+        } catch (err) {
+            console.error('Error getting template from Supabase:', err);
+        }
+        
+        console.log('Falling back to local template');
+        return localFallback;
+    }
+
     // Load all templates with crossOrigin attribute to prevent canvas tainting
     const templates = {
         studentFront: new Image(),
@@ -4329,11 +4356,33 @@ async function initIDGenerator() {
         img.addEventListener('error', (e) => console.error(`Template ${index} failed to load:`, e));
     });
     
-    templates.studentFront.src = '../../assets/admin/id-gen/id-front.webp';
-    templates.studentBack.src = '../../assets/admin/id-gen/id-back.webp';
-    templates.personnelRedFront.src = '../../assets/admin/id-gen/emp-red-id-front.webp';
-    templates.personnelYellowFront.src = '../../assets/admin/id-gen/emp-yellow-id-front.webp';
-    templates.personnelBack.src = '../../assets/admin/id-gen/emp-id-back.webp';
+    // Async function to load all templates with signed URLs
+    async function loadTemplates() {
+        // Load all templates in parallel
+        const [
+            studentFrontUrl,
+            studentBackUrl,
+            personnelRedFrontUrl,
+            personnelYellowFrontUrl,
+            personnelBackUrl
+        ] = await Promise.all([
+            getTemplateUrl('id-front.webp', '../../assets/admin/id-gen/id-front.webp'),
+            getTemplateUrl('id-back.webp', '../../assets/admin/id-gen/id-back.webp'),
+            getTemplateUrl('emp-red-id-front.webp', '../../assets/admin/id-gen/emp-red-id-front.webp'),
+            getTemplateUrl('emp-yellow-id-front.webp', '../../assets/admin/id-gen/emp-yellow-id-front.webp'),
+            getTemplateUrl('emp-id-back.webp', '../../assets/admin/id-gen/emp-id-back.webp')
+        ]);
+        
+        // Assign the loaded URLs to the template images
+        templates.studentFront.src = studentFrontUrl;
+        templates.studentBack.src = studentBackUrl;
+        templates.personnelRedFront.src = personnelRedFrontUrl;
+        templates.personnelYellowFront.src = personnelYellowFrontUrl;
+        templates.personnelBack.src = personnelBackUrl;
+    }
+    
+    // Start loading templates immediately
+    loadTemplates();
 
     const btnGenerate = document.getElementById('btn-generate');
     if (btnGenerate) {
@@ -4425,10 +4474,12 @@ async function initIDGenerator() {
         ctxBack.fillStyle = "#000"; ctxBack.textAlign = "left"; 
         const backFont = "bold 24px Acme";
         ctxBack.font = backFont;
-        ctxBack.fillText(document.getElementById('guardian').value, 185, 552);
+        ctxBack.fillText(document.getElementById('guardian').value.toUpperCase(), 185, 552);
         const address = addressSelect.value === 'others' ? addressManual.value : addressSelect.value;
         wrapText(ctxBack, address, 185, 627, 350, 28, backFont);
-        const mobile = document.getElementById('parent-mobile').value || "N/A";
+        const rawMobile = document.getElementById('parent-mobile').value || "";
+        const mobileDigits = rawMobile.replace(/\D/g, ''); // Extract only digits
+        const mobile = mobileDigits.length === 11 ? mobileDigits : (mobileDigits || "N/A");
         ctxBack.font = backFont;
         ctxBack.fillText(mobile, 185, 719);
         document.getElementById('btn-download-back').disabled = false;
@@ -4440,12 +4491,50 @@ async function initIDGenerator() {
         const nickname = document.getElementById('nickname').value.toUpperCase();
         const position = document.getElementById('position').value.toUpperCase();
         const bloodType = document.getElementById('blood-type').value.toUpperCase() || "N/A";
-        const gsis = document.getElementById('gsis').value || "N/A";
-        const pagibig = document.getElementById('pagibig').value || "N/A";
-        const philhealth = document.getElementById('philhealth').value || "N/A";
-        const tin = document.getElementById('tin').value || "N/A";
+        
+        // Helper function to format numbers
+        function formatNumber(raw, formatterFn, defaultVal = "N/A") {
+            const digits = raw.replace(/\D/g, '');
+            if (!digits) return defaultVal;
+            return formatterFn(digits);
+        }
+        
+        // Format GSIS (10 or 11 digits, keep as is or adjust as needed)
+        const gsisDigits = document.getElementById('gsis').value.replace(/\D/g, '');
+        const gsis = gsisDigits || "N/A";
+        
+        // Format Pag-IBIG (12 digits: XXXX-XXXX-XXXX)
+        function formatPagibig(digits) {
+            if (digits.length >= 12) {
+                return `${digits.slice(0,4)}-${digits.slice(4,8)}-${digits.slice(8,12)}`;
+            }
+            return digits; // Return raw if not 12 digits
+        }
+        const pagibig = formatNumber(document.getElementById('pagibig').value, formatPagibig);
+        
+        // Format PhilHealth (12 digits: XXXX-XXXX-XXXX)
+        function formatPhilhealth(digits) {
+            if (digits.length >= 12) {
+                return `${digits.slice(0,4)}-${digits.slice(4,8)}-${digits.slice(8,12)}`;
+            }
+            return digits;
+        }
+        const philhealth = formatNumber(document.getElementById('philhealth').value, formatPhilhealth);
+        
+        // Format TIN (9 or 12 digits: XXX-XXX-XXX or XXX-XXX-XXX-XXX)
+        function formatTin(digits) {
+            if (digits.length === 9) {
+                return `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6,9)}`;
+            } else if (digits.length >= 12) {
+                return `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6,9)}-${digits.slice(9,12)}`;
+            }
+            return digits;
+        }
+        const tin = formatNumber(document.getElementById('tin').value, formatTin);
         const emergencyName = document.getElementById('guardian').value.toUpperCase();
-        const emergencyMobile = document.getElementById('emergency-mobile').value || "N/A";
+        const rawEmergencyMobile = document.getElementById('emergency-mobile').value || "";
+        const emergencyMobileDigits = rawEmergencyMobile.replace(/\D/g, ''); // Extract only digits
+        const emergencyMobile = emergencyMobileDigits.length === 11 ? emergencyMobileDigits : (emergencyMobileDigits || "N/A");
         const address = addressSelect.value === 'others' ? addressManual.value : addressSelect.value;
 
         const frontTemplate = empType === 'regular' ? templates.personnelRedFront : templates.personnelYellowFront;
