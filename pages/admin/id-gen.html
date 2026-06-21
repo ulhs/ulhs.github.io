@@ -260,6 +260,28 @@
                         <input type="text" id="lrn" required pattern="\d{12}" maxlength="12" placeholder="123456789012">
                     </div>
 
+                    <!-- STUDENT SPECIFIC: Grade Level -->
+            <div id="student-grade-group" class="form-group">
+                <label for="grade-level">Grade Level</label>
+                <select id="grade-level" required>
+                    <option value="" disabled selected>Select Grade Level</option>
+                    <option value="7">Grade 7</option>
+                    <option value="8">Grade 8</option>
+                    <option value="9">Grade 9</option>
+                    <option value="10">Grade 10</option>
+                    <option value="11">Grade 11</option>
+                    <option value="12">Grade 12</option>
+                </select>
+            </div>
+
+            <!-- STUDENT SPECIFIC: Section -->
+            <div id="student-section-group" class="form-group">
+                <label for="student-section">Section</label>
+                <select id="student-section" required disabled>
+                    <option value="" disabled selected>Select Grade First</option>
+                </select>
+            </div>
+
                     <!-- PERSONNEL SPECIFIC: Employee Number & Position -->
                     <div id="personnel-fields" style="display:none">
                         <div class="form-group">
@@ -403,7 +425,7 @@
                         Privacy & Data Security Notice
                     </h4>
                     <p style="font-size: 13px; line-height: 1.6; color: var(--text-main); font-weight: 600; margin-bottom: 20px; max-width: 700px;">
-                        In compliance with the <b>Philippines Data Privacy Act of 2012 (RA 10173)</b>, this ID Generator operates locally. All student names, LRNs, and photos are processed <b>entirely</b> within the administrator's local browser memory and are never uploaded online.
+                        In compliance with the <b>Philippines Data Privacy Act of 2012 (RA 10173)</b>, this ID Generator operates locally. All student names, photos, and internal student data are processed <b>entirely</b> within the administrator's local browser memory and are never uploaded online. The student ID card and QR code use a public student ID number and a random secure token instead of the sensitive Learner Reference Number (LRN).
                     </p>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                         <div style="background: var(--white); padding: 15px; border-radius: 12px; border: 1px solid var(--accent-gold);">

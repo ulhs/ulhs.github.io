@@ -4342,7 +4342,14 @@ async function initIDGenerator() {
 
     // Load all templates with crossOrigin attribute to prevent canvas tainting
     const templates = {
-        studentFront: new Image(),
+        // Grade-specific front templates
+        studentFrontG7: new Image(),
+        studentFrontG8: new Image(),
+        studentFrontG9: new Image(),
+        studentFrontG10: new Image(),
+        studentFrontG11: new Image(),
+        studentFrontG12: new Image(),
+        // Common templates
         studentBack: new Image(),
         personnelRedFront: new Image(),
         personnelYellowFront: new Image(),
@@ -4360,13 +4367,23 @@ async function initIDGenerator() {
     async function loadTemplates() {
         // Load all templates in parallel
         const [
-            studentFrontUrl,
+            studentFrontG7Url,
+            studentFrontG8Url,
+            studentFrontG9Url,
+            studentFrontG10Url,
+            studentFrontG11Url,
+            studentFrontG12Url,
             studentBackUrl,
             personnelRedFrontUrl,
             personnelYellowFrontUrl,
             personnelBackUrl
         ] = await Promise.all([
-            getTemplateUrl('id-front.webp', '../../assets/admin/id-gen/id-front.webp'),
+            getTemplateUrl('id-front-g7.webp', '../../assets/admin/id-gen/id-front-g7.webp'),
+            getTemplateUrl('id-front-g8.webp', '../../assets/admin/id-gen/id-front-g8.webp'),
+            getTemplateUrl('id-front-g9.webp', '../../assets/admin/id-gen/id-front-g9.webp'),
+            getTemplateUrl('id-front-g10.webp', '../../assets/admin/id-gen/id-front-g10.webp'),
+            getTemplateUrl('id-front-g11.webp', '../../assets/admin/id-gen/id-front-g11.webp'),
+            getTemplateUrl('id-front-g12.webp', '../../assets/admin/id-gen/id-front-g12.webp'),
             getTemplateUrl('id-back.webp', '../../assets/admin/id-gen/id-back.webp'),
             getTemplateUrl('emp-red-id-front.webp', '../../assets/admin/id-gen/emp-red-id-front.webp'),
             getTemplateUrl('emp-yellow-id-front.webp', '../../assets/admin/id-gen/emp-yellow-id-front.webp'),
@@ -4374,7 +4391,12 @@ async function initIDGenerator() {
         ]);
         
         // Assign the loaded URLs to the template images
-        templates.studentFront.src = studentFrontUrl;
+        templates.studentFrontG7.src = studentFrontG7Url;
+        templates.studentFrontG8.src = studentFrontG8Url;
+        templates.studentFrontG9.src = studentFrontG9Url;
+        templates.studentFrontG10.src = studentFrontG10Url;
+        templates.studentFrontG11.src = studentFrontG11Url;
+        templates.studentFrontG12.src = studentFrontG12Url;
         templates.studentBack.src = studentBackUrl;
         templates.personnelRedFront.src = personnelRedFrontUrl;
         templates.personnelYellowFront.src = personnelYellowFrontUrl;
@@ -4383,6 +4405,59 @@ async function initIDGenerator() {
     
     // Start loading templates immediately
     loadTemplates();
+
+    // --------------------------
+    // DYNAMIC SECTION SELECTOR
+    // --------------------------
+    const gradeLevelSelect = document.getElementById('grade-level');
+    const sectionSelect = document.getElementById('student-section');
+    const sectionGroup = document.getElementById('student-section-group');
+    
+    const sectionsByGrade = {
+        '7': ['Salazar', 'HMBalunto'],
+        '8': ['Cuachon', 'JBalunto'],
+        '9': ['Aguas', 'Laogan'],
+        '10': ['Capili'],
+        '11': ['Academics', 'TechPro'],
+        '12': ['FCS', 'HUMSS']
+    };
+    
+    if (gradeLevelSelect && sectionSelect) {
+        gradeLevelSelect.addEventListener('change', () => {
+            const selectedGrade = gradeLevelSelect.value;
+            
+            // Reset section select
+            sectionSelect.innerHTML = '';
+            sectionSelect.disabled = true;
+            
+            if (selectedGrade && sectionsByGrade[selectedGrade]) {
+                // Add default option
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.disabled = true;
+                defaultOption.selected = true;
+                defaultOption.textContent = 'Select Section';
+                sectionSelect.appendChild(defaultOption);
+                
+                // Add grade-specific sections
+                sectionsByGrade[selectedGrade].forEach(section => {
+                    const option = document.createElement('option');
+                    option.value = section;
+                    option.textContent = section;
+                    sectionSelect.appendChild(option);
+                });
+                
+                sectionSelect.disabled = false;
+            } else {
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.disabled = true;
+                defaultOption.selected = true;
+                defaultOption.textContent = 'Select Grade First';
+                sectionSelect.appendChild(defaultOption);
+            }
+        });
+    }
 
     const btnGenerate = document.getElementById('btn-generate');
     if (btnGenerate) {
@@ -4412,7 +4487,8 @@ async function initIDGenerator() {
             if (isPersonnel) {
                 renderPersonnelID(firstname, mi, lastname, birthdate);
             } else {
-                renderStudentID(firstname, mi, lastname, birthdate);
+                const section = document.getElementById('student-section')?.value;
+                renderStudentID(firstname, mi, lastname, birthdate, section);
             }
 
             // Audit: ID Generation Preview
@@ -4421,68 +4497,243 @@ async function initIDGenerator() {
         });
     }
 
-    async function renderStudentID(firstname, mi, lastname, birthdate) {
+    async function renderStudentID(firstname, mi, lastname, birthdate, section) {
         const lrn = document.getElementById('lrn').value;
-        const colorName = "#0ff184", colorLRN = "#ee4141ff", colorBirthdate = "#2980b9";
-        const fontIdDetails = "Acme", baseFontSize = 28;
+        let gradeLevel = document.getElementById('grade-level')?.value;
+
+        const colorName = "#000000", colorStudentId = "#000000", colorBirthdate = "#000000", colorGradeSection = "#000000";
+
+        // Fetch public_token, student_id_number, and grade_level from Supabase using LRN
+        let publicToken = null;
+        let studentIdNumber = null;
+        
+        if (window.supabaseClient) {
+            try {
+                const { data, error } = await window.supabaseClient
+                    .from('students')
+                    .select('public_token, student_id_number, grade_level')
+                    .eq('lrn', lrn)
+                    .single();
+                
+                if (!error && data) {
+                    publicToken = data.public_token;
+                    studentIdNumber = data.student_id_number;
+                    // Use grade from Supabase if form grade is not set
+                    if (!gradeLevel && data.grade_level) {
+                        gradeLevel = String(data.grade_level);
+                    }
+                } else {
+                    console.warn("Student not found in Supabase, using fallback values");
+                }
+            } catch (err) {
+                console.error("Error fetching student data from Supabase:", err);
+            }
+        }
+        const fontIdDetails = 'Roboto, "Segoe UI", sans-serif', baseFontSize = 46;
+
+        // --------------------------
+        // THEME & LAYOUT CONFIGURATION
+        // --------------------------
+        
+        // Get grade-specific border color
+        function getGradeBorderColor(grade) {
+            const gradeColors = {
+                '7': '#3b82f6',
+                '8': '#10b981',
+                '9': '#f59e0b',
+                '10': '#ef4444',
+                '11': '#8b5cf6',
+                '12': '#ec4899'
+            };
+            // Fallback to blue if grade is invalid
+            return gradeColors[grade] || '#3b82f6';
+        }
+
+        const layoutConfig = {
+            canvasWidth: 648,
+            canvasHeight: 1008,
+            // Photo placement
+            photo: {
+                x: 174,
+                y: 241,
+                width: 472 - 174,
+                height: 592 - 241,
+                borderRadius: 15,
+                borderWidth: 6,
+                borderColor: getGradeBorderColor(gradeLevel)
+            },
+            // Text placement
+            text: {
+                maxWidth: 588,
+                fullName: { x: 323, y: 690 },
+                gradeSection: { x: 323, y: 810 },
+                studentId: { x: 29, y: 981 },
+                syText: { x: 616, y: 981 }
+            },
+            // QR code placement (on BACK)
+            qrCode: {
+                centerX: 298,
+                centerY: 444,
+                width: 318,
+                height: 318
+            }
+        };
+
+        // Get the appropriate grade-specific front template
+        function getGradeTemplate(grade) {
+            const gradeTemplates = {
+                '7': templates.studentFrontG7,
+                '8': templates.studentFrontG8,
+                '9': templates.studentFrontG9,
+                '10': templates.studentFrontG10,
+                '11': templates.studentFrontG11,
+                '12': templates.studentFrontG12
+            };
+            // Fallback to G7 if grade is invalid or template not loaded
+            return gradeTemplates[grade] || templates.studentFrontG7;
+        }
+
+        const frontTemplate = getGradeTemplate(gradeLevel);
 
         // Set canvas size for student
-        canvasFront.width = 600;
-        canvasFront.height = 960;
-        canvasBack.width = 600;
-        canvasBack.height = 960;
+        canvasFront.width = layoutConfig.canvasWidth;
+        canvasFront.height = layoutConfig.canvasHeight;
+        canvasBack.width = layoutConfig.canvasWidth;
+        canvasBack.height = layoutConfig.canvasHeight;
 
-        ctxFront.drawImage(templates.studentFront, 0, 0, 600, 960);
-        const photoX = 8.09, photoY = 312.99, photoW = 272.54 - 8.09, photoH = 646.68 - 312.99;
+        ctxFront.drawImage(frontTemplate, 0, 0, layoutConfig.canvasWidth, layoutConfig.canvasHeight);
+        const photoX = layoutConfig.photo.x;
+        const photoY = layoutConfig.photo.y;
+        const photoW = layoutConfig.photo.width;
+        const photoH = layoutConfig.photo.height;
         
         const photoImg = new Image();
         photoImg.onload = async () => {
-            const borderRadius = 15, borderWidth = 6, borderColor = "#2980b9";
+            const borderRadius = layoutConfig.photo.borderRadius;
+            const borderWidth = layoutConfig.photo.borderWidth;
+            const borderColor = layoutConfig.photo.borderColor;
+            
+            // Smart cropping (cover behavior - fill box without stretching)
+            const imgRatio = photoImg.width / photoImg.height;
+            const targetRatio = photoW / photoH;
+            
+            let sx, sy, sw, sh; // Source coordinates (from original image)
+            if (imgRatio > targetRatio) {
+                // Image is wider than box - crop sides equally, keep full height
+                sh = photoImg.height;
+                sw = photoImg.height * targetRatio;
+                sx = (photoImg.width - sw) / 2;
+                sy = 0;
+            } else {
+                // Image is taller - crop bottom, keep full width
+                sw = photoImg.width;
+                sh = photoImg.width / targetRatio;
+                sx = 0;
+                sy = 0;
+            }
+
             ctxFront.save();
             ctxFront.beginPath(); ctxFront.roundRect(photoX, photoY, photoW, photoH, borderRadius); ctxFront.clip();
-            ctxFront.drawImage(photoImg, photoX, photoY, photoW, photoH);
+            ctxFront.drawImage(photoImg, sx, sy, sw, sh, photoX, photoY, photoW, photoH);
             ctxFront.restore();
             ctxFront.strokeStyle = borderColor; ctxFront.lineWidth = borderWidth;
             ctxFront.beginPath(); ctxFront.roundRect(photoX, photoY, photoW, photoH, borderRadius); ctxFront.stroke();
 
-            ctxFront.textAlign = "left"; ctxFront.strokeStyle = "black"; ctxFront.lineWidth = 10; ctxFront.lineJoin = "round";
-            const maxWidthFront = 280;
+            // Full Name (centered, big)
+            ctxFront.textAlign = "center";
             ctxFront.fillStyle = colorName;
-            const nameFontSize = drawAutoScaledText(ctxFront, firstname, 280.89, 367.15, maxWidthFront, baseFontSize, fontIdDetails, "bold", true);
-            drawAutoScaledText(ctxFront, mi, 284.03, 401.71, maxWidthFront, nameFontSize, fontIdDetails, "bold", true);
-            drawAutoScaledText(ctxFront, lastname, 285.61, 439.05, maxWidthFront, nameFontSize, fontIdDetails, "bold", true);
-            ctxFront.fillStyle = colorLRN;
-            drawAutoScaledText(ctxFront, lrn, 348.44, 540.73, maxWidthFront, baseFontSize, fontIdDetails, "bold", true);
-            ctxFront.fillStyle = colorBirthdate;
-            drawAutoScaledText(ctxFront, birthdate, 346.08, 633.41, maxWidthFront, baseFontSize, fontIdDetails, "bold", true);
+            const fullName = `${firstname} ${mi} ${lastname}`.trim().replace(/\s+/g, ' ');
+            drawAutoScaledText(
+                ctxFront, 
+                fullName, 
+                layoutConfig.text.fullName.x, 
+                layoutConfig.text.fullName.y, 
+                layoutConfig.text.maxWidth, 
+                baseFontSize, 
+                fontIdDetails, 
+                "bold", 
+                false
+            );
+            // Display Grade & Section (centered, smaller)
+            if (gradeLevel && section) {
+                const gradeSectionText = `Grade ${gradeLevel} - ${section}`;
+                ctxFront.fillStyle = colorGradeSection;
+                drawAutoScaledText(
+                    ctxFront, 
+                    gradeSectionText, 
+                    layoutConfig.text.gradeSection.x, 
+                    layoutConfig.text.gradeSection.y, 
+                    layoutConfig.text.maxWidth, 
+                    baseFontSize - 20, 
+                    fontIdDetails, 
+                    "bold", 
+                    false
+                );
+            }
+            // Student ID Number (left aligned at bottom left)
+            ctxFront.textAlign = "left";
+            ctxFront.fillStyle = colorStudentId;
+            drawAutoScaledText(
+                ctxFront, 
+                studentIdNumber || "TBD", 
+                layoutConfig.text.studentId.x, 
+                layoutConfig.text.studentId.y, 
+                300, 
+                baseFontSize - 20, 
+                fontIdDetails, 
+                "bold", 
+                false
+            );
+            // School Year (right aligned at bottom right)
+            ctxFront.textAlign = "right";
+            ctxFront.fillStyle = colorName;
+            drawAutoScaledText(
+                ctxFront, 
+                "S.Y. 2026-2027", 
+                layoutConfig.text.syText.x, 
+                layoutConfig.text.syText.y, 
+                300, 
+                baseFontSize - 20, 
+                fontIdDetails, 
+                "bold", 
+                false
+            );
 
-            const qrX = 178.29, qrY = 689.10, qrW = 420.99 - 178.29, qrH = 932.58 - 689.10;
-            const qrData = `NAME: ${firstname} ${mi} ${lastname}\nLRN: ${lrn}`;
-            try {
-                const qrUrl = await QRCode.toDataURL(qrData, { margin: 1, width: 400, errorCorrectionLevel: 'H' });
-                const qrImg = new Image();
-                qrImg.onload = () => {
-                    ctxFront.drawImage(qrImg, qrX, qrY, qrW, qrH);
-                    document.getElementById('btn-download-front').disabled = false;
-                };
-                qrImg.src = qrUrl;
-            } catch (err) { console.error("QR Error:", err); }
+            document.getElementById('btn-download-front').disabled = false;
         };
         photoImg.src = capturedPhoto.src;
 
         ctxBack.drawImage(templates.studentBack, 0, 0, 600, 960);
+        
+        // Draw QR code on BACK
+        const qrW = layoutConfig.qrCode.width;
+        const qrH = layoutConfig.qrCode.height;
+        const qrX = layoutConfig.qrCode.centerX - qrW / 2;
+        const qrY = layoutConfig.qrCode.centerY - qrH / 2;
+        // Use public_token in QR code instead of LRN!
+        const qrData = `NAME: ${firstname} ${mi} ${lastname}\nTOKEN: ${publicToken || "TBD"}`;
+        try {
+            const qrUrl = await QRCode.toDataURL(qrData, { margin: 1, width: 400, errorCorrectionLevel: 'H' });
+            const qrImg = new Image();
+            qrImg.onload = () => {
+                ctxBack.drawImage(qrImg, qrX, qrY, qrW, qrH);
+                document.getElementById('btn-download-back').disabled = false;
+            };
+            qrImg.src = qrUrl;
+        } catch (err) { console.error("QR Error:", err); }
+        
+        // Draw back text
         ctxBack.fillStyle = "#000"; ctxBack.textAlign = "left"; 
-        const backFont = "bold 24px Acme";
+        const backFont = 'bold 24px Roboto, "Segoe UI", sans-serif';
         ctxBack.font = backFont;
-        ctxBack.fillText(document.getElementById('guardian').value.toUpperCase(), 185, 552);
+        ctxBack.fillText(document.getElementById('guardian').value.toUpperCase(), 118, 702);
         const address = addressSelect.value === 'others' ? addressManual.value : addressSelect.value;
-        wrapText(ctxBack, address, 185, 627, 350, 28, backFont);
+        wrapText(ctxBack, address, 118, 741, 350, 28, backFont);
         const rawMobile = document.getElementById('parent-mobile').value || "";
         const mobileDigits = rawMobile.replace(/\D/g, ''); // Extract only digits
         const mobile = mobileDigits.length === 11 ? mobileDigits : (mobileDigits || "N/A");
         ctxBack.font = backFont;
-        ctxBack.fillText(mobile, 185, 719);
-        document.getElementById('btn-download-back').disabled = false;
+        ctxBack.fillText(mobile, 118, 778);
     }
 
     async function renderPersonnelID(firstname, mi, lastname, birthdate) {

@@ -20,8 +20,8 @@
         { "text": "Transparency Board", "url": "pages/transparency.html" }
     ],
     "announcement": {
-        "enabled": false,
-        "text": "For ARAL tutors, please log your Work-From-Home attendance by clicking this <a href=\"https://forms.gle/kJysGsAsTZx7KwtbA\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"background-color: white; color: black; border-radius: 4px; padding: 3px 4px; text-decoration: none; display: inline-block;\">link</a>. <br><br> Enrollment is open for Grades 7-12 students. Ready to join us? Click <a href=\"https://canva.link/44c25hvpgvons0w\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"background-color: white; color: black; border-radius: 4px; padding: 3px 4px; text-decoration: none; display: inline-block;\">here</a> to view the step-by-step process. ",
+        "enabled": true,
+        "text": "For ULHS personnel, please log your Work-From-Home attendance by clicking this <a href=\"https://forms.gle/VSEWqBX12aVQPMeS8\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"background-color: pink; color: darkred; border-radius: 4px; padding: 3px 4px; text-decoration: none; display: inline-block;\">link</a>.",
         "button_text": "Ask SirChris for help",
         "link": "https://facebook.com/sirchrisperegrino"
     }

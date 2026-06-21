@@ -62,6 +62,8 @@ function normalizeCloudStudent(s) {
 
     return {
         lrn: sLrn,
+        public_token: s.public_token || null,
+        student_id_number: s.student_id_number || null,
         excelName: s.full_name,
         parsedName: (s.full_name || '').toUpperCase(),
         section: s.section,
@@ -453,6 +455,7 @@ function renderLogTableFromSession(logs) {
         // Try to find student in master database
         const student = masterStudentDatabase.find(s => String(s.lrn) === String(log.student_lrn));
         const lrnStr = String(log.student_lrn);
+        const studentIdNumber = student?.student_id_number || 'N/A';
 
         return `
             <tr class="hover:bg-gray-50 transition-colors">
@@ -465,7 +468,7 @@ function renderLogTableFromSession(logs) {
                     </div>
                 </td>
                 <td class="px-4 py-3">
-                    <p class="font-bold text-gray-900">${log.student_lrn}</p>
+                    <p class="font-bold text-gray-900">${studentIdNumber}</p>
                     <p class="text-[10px] text-gray-400 uppercase">${student?.section || 'N/A'}</p>
                 </td>
                 <td class="px-4 py-3">
@@ -1507,12 +1510,31 @@ async function onScanSuccess(decodedText, decodedResult) {
     }
 
     const nowTimestamp = Date.now();
-    const scannedInput = decodedText.trim().toUpperCase();
-    const cleanLRN = scannedInput.replace(/[^0-9]/g, '');
+    const scannedInput = decodedText.trim();
 
-    // 1. SCAN COOLDOWN: Prevent double-scanning same LRN within 5 seconds
-    if (cleanLRN === lastScannedLrn && (nowTimestamp - lastScanTimestamp) < 5000) {
-        console.log(`Scan ignored: Cooldown active for LRN ${cleanLRN}`);
+    // Parse the QR code data to extract token or LRN (for backward compatibility)
+    let publicToken = null;
+    let cleanLRN = null;
+    
+    const tokenMatch = scannedInput.match(/TOKEN:\s*([^\n]+)/i);
+    if (tokenMatch) {
+        publicToken = tokenMatch[1].trim();
+    }
+    
+    const lrnMatch = scannedInput.match(/LRN:\s*(\d+)/i);
+    if (lrnMatch) {
+        cleanLRN = lrnMatch[1].trim();
+    }
+    
+    // If no specific fields found, try extracting numbers as LRN (backward compatibility)
+    if (!publicToken && !cleanLRN) {
+        cleanLRN = scannedInput.replace(/[^0-9]/g, '');
+    }
+
+    // 1. SCAN COOLDOWN: Prevent double-scanning same token/LRN within 5 seconds
+    const cooldownKey = publicToken || cleanLRN;
+    if (cooldownKey === lastScannedLrn && (nowTimestamp - lastScanTimestamp) < 5000) {
+        console.log(`Scan ignored: Cooldown active for ${cooldownKey}`);
         return;
     }
     
@@ -1525,7 +1547,13 @@ async function onScanSuccess(decodedText, decodedResult) {
         return;
     }
 
-    let student = masterStudentDatabase.find(s => s.lrn === cleanLRN);
+    // First try to find student by public_token
+    let student = publicToken ? masterStudentDatabase.find(s => s.public_token === publicToken) : null;
+    
+    // If not found, try LRN (backward compatibility)
+    if (!student && cleanLRN) {
+        student = masterStudentDatabase.find(s => s.lrn === cleanLRN);
+    }
 
     if (!student) {
         student = masterStudentDatabase.find(s => {
@@ -1543,19 +1571,19 @@ async function onScanSuccess(decodedText, decodedResult) {
         if (existing) {
             if (timeData.session === 'AM' && existing.am) {
                 showScanFeedback(student, "AM Session Already Scanned", "yellow");
-                showScanOverlay(student.parsedName, student.lrn, 'warning', student.section, timeData);
+                showScanOverlay(student.parsedName, student, 'warning', student.section, timeData);
                 lastScannedLrn = student.lrn; lastScanTimestamp = nowTimestamp;
                 return;
             }
             if (timeData.session === 'PM' && existing.pm) {
                 showScanFeedback(student, "PM Session Already Scanned", "yellow");
-                showScanOverlay(student.parsedName, student.lrn, 'warning', student.section, timeData);
+                showScanOverlay(student.parsedName, student, 'warning', student.section, timeData);
                 lastScannedLrn = student.lrn; lastScanTimestamp = nowTimestamp;
                 return;
             }
             if (timeData.session === 'DEPARTURE' && existing.departure) {
                 showScanFeedback(student, "Departure Already Scanned", "yellow");
-                showScanOverlay(student.parsedName, student.lrn, 'warning', student.section, timeData);
+                showScanOverlay(student.parsedName, student, 'warning', student.section, timeData);
                 lastScannedLrn = student.lrn; lastScanTimestamp = nowTimestamp;
                 return;
             }
@@ -1592,8 +1620,8 @@ async function onScanSuccess(decodedText, decodedResult) {
 
         updateDashboard(student, scanTime);
         showScanFeedback(student, "Success!", "green");
-        addLog(student.lrn, student.parsedName, student.section, scanTime, timeData.session);
-        showScanOverlay(student.parsedName, student.lrn, 'success', student.section, timeData);
+        addLog(student, scanTime, timeData.session);
+        showScanOverlay(student.parsedName, student, 'success', student.section, timeData);
         playBeep('success');
     } else {
         // Cooldown for unknown scans too
@@ -1601,7 +1629,8 @@ async function onScanSuccess(decodedText, decodedResult) {
         lastScannedLrn = scannedInput;
         lastScanTimestamp = nowTimestamp;
 
-        showScanOverlay(scannedInput, "NOT FOUND", 'error', "Unknown Section", {status: 'INVALID', session: 'N/A'});
+        const dummyStudent = { lrn: '0', student_id_number: 'N/A' };
+        showScanOverlay(scannedInput, dummyStudent, 'error', "Unknown Section", {status: 'INVALID', session: 'N/A'});
         playBeep('error');
     }
 }
@@ -1741,12 +1770,13 @@ function showScanFeedback(student, status, color) {
     scanStatus.className = `px-3 py-1 ${colors[color]} rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse`;
 }
 
-function showScanOverlay(name, lrn, type, section, timeData) {
+function showScanOverlay(name, student, type, section, timeData) {
     if (!scanOverlay) return;
 
-    const lrnStr = String(lrn);
+    const lrnStr = String(student.lrn);
+    const studentIdNumber = student.student_id_number || 'TBD';
     overlayName.textContent = name;
-    overlayLrn.textContent = `LRN: ${lrnStr} | ${section}`;
+    overlayLrn.textContent = `ID: ${studentIdNumber} | ${section}`;
     
     // Use the secure loader for the overlay photo
     loadStudentPhotoSecurely(lrnStr, overlayPhoto, overlayPhotoPlaceholder);
@@ -1785,17 +1815,20 @@ function showScanOverlay(name, lrn, type, section, timeData) {
     }, 3000);
 }
 
-function addLog(lrn, name, section, scanTime = new Date(), sessionType = null) {
+function addLog(student, scanTime = new Date(), sessionType = null) {
     if (emptyLogMsg) emptyLogMsg.classList.add('hidden');
-    const lrnStr = String(lrn);
+    const lrnStr = String(student.lrn);
+    const studentIdNumber = student.student_id_number || 'N/A';
+    const name = student.parsedName;
+    const section = student.section;
 
-    // PREVENT DOUBLE UI ENTRIES: Check if this LRN already exists in the table as the very first row
+    // PREVENT DOUBLE UI ENTRIES: Check if this student ID already exists in the table as the very first row
     // (This handles the rapid double-fire UI glitch)
     const firstRow = scanLogsTable.querySelector('tr');
     if (firstRow) {
-        const firstLrnElement = firstRow.querySelector('.font-mono');
-        if (firstLrnElement && firstLrnElement.textContent.trim() === lrnStr) {
-            console.log(`UI Log ignored: LRN ${lrnStr} already at top of table.`);
+        const firstIdElement = firstRow.querySelector('.font-mono');
+        if (firstIdElement && firstIdElement.textContent.trim() === studentIdNumber) {
+            console.log(`UI Log ignored: ID ${studentIdNumber} already at top of table.`);
             return;
         }
     }
@@ -1821,7 +1854,7 @@ function addLog(lrn, name, section, scanTime = new Date(), sessionType = null) {
             ${photoHTML}
         </td>
         <td class="px-4 py-3">
-            <div class="font-mono text-[11px] font-black text-gray-900">${lrnStr}</div>
+            <div class="font-mono text-[11px] font-black text-gray-900">${studentIdNumber}</div>
             <div class="text-blue-600 font-black uppercase tracking-tighter text-[9px] bg-blue-50 px-1.5 py-0.5 rounded inline-block mt-1">${section}</div>
         </td>
         <td class="px-4 py-3 font-black text-gray-900 uppercase text-xs tracking-tight">${name}</td>

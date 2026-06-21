@@ -230,7 +230,7 @@
                             <thead>
                                  <tr class="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest text-left">
                                      <th class="px-2 sm:px-4 py-3 w-12 sm:w-16 text-center">Photo</th>
-                                     <th class="px-2 sm:px-4 py-3">LRN / Section</th>
+                                     <th class="px-2 sm:px-4 py-3">Student ID Number / Section</th>
                                      <th class="px-2 sm:px-4 py-3">Learner Name</th>
                                      <th class="px-2 sm:px-4 py-3 text-center">Alerts</th>
                                      <th class="px-2 sm:px-4 py-3 text-right">Time</th>
@@ -268,7 +268,7 @@
                         Data Privacy Notice
                     </h4>
                     <p class="text-sm leading-relaxed text-gray-800 font-bold mb-6">
-                        In compliance with the <b>Philippines Data Privacy Act of 2012 (RA 10173)</b>, Upper Labay High School ensures that all student data processed by this Attendance System is handled with the highest level of security. This system operates on a <b>"Cloud-Native & Hybrid-Offline"</b> architecture:
+                        In compliance with the <b>Philippines Data Privacy Act of 2012 (RA 10173)</b>, Upper Labay High School ensures that all student data processed by this Attendance System is handled with the highest level of security. This system operates on a <b>"Cloud-Native & Hybrid-Offline"</b> architecture, and the sensitive Learner Reference Number (LRN) is never exposed on student ID cards, QR codes, or in public-facing interfaces—only public student ID numbers and secure tokens are used.
                     </p>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div class="bg-white/40 p-4 rounded-2xl border border-white/60">
@@ -380,8 +380,8 @@
                 if (!countError) dashboardData.totalStudents = count;
 
                 const { data: studentsData } = await window.supabaseClient
-                    .from('students')
-                    .select('section');
+            .from('students')
+            .select('lrn, full_name, section, photo_url, student_id_number, public_token');
 
                 dashboardData.students = studentsData || [];
 
@@ -404,7 +404,7 @@
                     .from('attendance_logs')
                     .select(`
                         *,
-                        students (full_name, section, photo_url, notify_parent)
+                        students (full_name, section, photo_url, notify_parent, student_id_number, lrn)
                     `)
                     .gte('scanned_at', startOfToday)
                     .order('scanned_at', { ascending: false });
@@ -431,7 +431,7 @@
                             .from('attendance_logs')
                             .select(`
                                 *,
-                                students (full_name, section, photo_url, notify_parent)
+                                students (full_name, section, photo_url, notify_parent, student_id_number, lrn)
                             `)
                             .eq('id', payload.new.id)
                             .single();
@@ -462,7 +462,7 @@
                                 .from('attendance_logs')
                                 .select(`
                                     *,
-                                    students (full_name, section, photo_url, notify_parent)
+                                    students (full_name, section, photo_url, notify_parent, student_id_number, lrn)
                                 `)
                                 .eq('id', payload.new.id)
                                 .single();
@@ -646,7 +646,7 @@
                                 </div>
                             </td>
                             <td class="px-4 py-3">
-                                <div class="font-mono text-[11px] font-black text-gray-900">${lrn}</div>
+                                <div class="font-mono text-[11px] font-black text-gray-900">${student?.student_id_number || 'N/A'}</div>
                                 <div class="text-blue-600 font-black uppercase tracking-tighter text-[9px] bg-blue-50 px-1.5 py-0.5 rounded inline-block mt-1">${student?.section || 'N/A'}</div>
                             </td>
                             <td class="px-4 py-3 font-black text-gray-900 uppercase text-xs tracking-tight">${student?.full_name || 'Unknown'}</td>
