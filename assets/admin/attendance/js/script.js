@@ -565,34 +565,49 @@ window.addEventListener('load', () => {
     const exportJhsBtn = document.getElementById('export-jhs-btn');
     const exportShsBtn = document.getElementById('export-shs-btn');
     
+    console.log("🔍 Looking for export buttons...");
+    console.log("  exportJhsBtn:", exportJhsBtn);
+    console.log("  exportShsBtn:", exportShsBtn);
+    
     if (exportJhsBtn) {
         exportJhsBtn.addEventListener('click', () => {
             console.log("🚀 Export JHS Clicked");
             exportAllSF2('JHS');
         });
+    } else {
+        console.error("❌ export-jhs-btn NOT FOUND!");
     }
     if (exportShsBtn) {
         exportShsBtn.addEventListener('click', () => {
             console.log("🚀 Export SHS Clicked");
             exportAllSF2('SHS');
         });
+    } else {
+        console.error("❌ export-shs-btn NOT FOUND!");
     }
 
     // Attach SF4 Export Listeners
     const exportSf4JhsBtn = document.getElementById('export-sf4-jhs-btn');
     const exportSf4ShsBtn = document.getElementById('export-sf4-shs-btn');
     
+    console.log("  exportSf4JhsBtn:", exportSf4JhsBtn);
+    console.log("  exportSf4ShsBtn:", exportSf4ShsBtn);
+    
     if (exportSf4JhsBtn) {
         exportSf4JhsBtn.addEventListener('click', () => {
             console.log("🚀 Export SF4 JHS Clicked");
             exportAllSF4('JHS');
         });
+    } else {
+        console.error("❌ export-sf4-jhs-btn NOT FOUND!");
     }
     if (exportSf4ShsBtn) {
         exportSf4ShsBtn.addEventListener('click', () => {
             console.log("🚀 Export SF4 SHS Clicked");
             exportAllSF4('SHS');
         });
+    } else {
+        console.error("❌ export-sf4-shs-btn NOT FOUND!");
     }
 
     // 3. Test Mode & Bulk Import
@@ -1905,50 +1920,56 @@ async function exportAllAsZip() {
 
 // --- EXPORT SF2 FROM TEMPLATE ---
 async function exportAllSF2(levelFilter = null) {
-    if (masterStudentDatabase.length === 0) return;
-    
-    // DEFENSIVE FILTER: Ignore 'level' field entirely, trust ONLY numeric grade
-    let filteredDatabase;
-    if (levelFilter === 'SHS') {
-        filteredDatabase = masterStudentDatabase.filter(s => {
-            const g = s.grade_num || s.grade_level;
-            const gn = typeof g === 'number' ? g : parseInt(String(g).replace(/\D/g, '')) || 0;
-            return gn >= 11;
-        });
-    } else if (levelFilter === 'JHS') {
-        filteredDatabase = masterStudentDatabase.filter(s => {
-            const g = s.grade_num || s.grade_level;
-            const gn = typeof g === 'number' ? g : parseInt(String(g).replace(/\D/g, '')) || 0;
-            return gn <= 10;
-        });
-    } else {
-        filteredDatabase = masterStudentDatabase;
-    }
-
-    console.log(`📤 EXPORT ${levelFilter || 'ALL'}: ${filteredDatabase.length} students selected`);
-    console.log(`📤 Filtered Students (Grade/Level):`, filteredDatabase.map(s => ({ 
-        name: s.excelName, 
-        grade_num: s.grade_num, 
-        grade_level: s.grade_level, 
-        level: s.level, 
-        section: s.section 
-    })));
-    
-    // 🔥 PLAIN TEXT LIST OF ALL SELECTED STUDENTS 🔥
-    console.log(`📋 PLAIN TEXT LIST - ${levelFilter || 'ALL'} STUDENTS:`);
-    filteredDatabase.forEach((s, i) => {
-        console.log(`  ${i+1}. ${s.excelName} | Grade: ${s.grade_num} | Section: ${s.section} | Level: ${s.level}`);
-    });
-
-    if (filteredDatabase.length === 0) {
-        alert(`No students found for ${levelFilter || 'any level'}.`);
-        return;
-    }
-
-    statusTitle.textContent = levelFilter ? `Exporting SF2 (${levelFilter})...` : "Fetching Data...";
-    statusIcon.classList.add('animate-spin');
-
     try {
+        console.log(`🔍 exportAllSF2 called with levelFilter: ${levelFilter}`);
+        console.log(`🔍 masterStudentDatabase length: ${masterStudentDatabase.length}`);
+        
+        if (masterStudentDatabase.length === 0) {
+            alert("No students loaded! Please sync with Supabase first.");
+            return;
+        }
+        
+        // DEFENSIVE FILTER: Ignore 'level' field entirely, trust ONLY numeric grade
+        let filteredDatabase;
+        if (levelFilter === 'SHS') {
+            filteredDatabase = masterStudentDatabase.filter(s => {
+                const g = s.grade_num || s.grade_level;
+                const gn = typeof g === 'number' ? g : parseInt(String(g).replace(/\D/g, '')) || 0;
+                return gn >= 11;
+            });
+        } else if (levelFilter === 'JHS') {
+            filteredDatabase = masterStudentDatabase.filter(s => {
+                const g = s.grade_num || s.grade_level;
+                const gn = typeof g === 'number' ? g : parseInt(String(g).replace(/\D/g, '')) || 0;
+                return gn <= 10;
+            });
+        } else {
+            filteredDatabase = masterStudentDatabase;
+        }
+
+        console.log(`📤 EXPORT ${levelFilter || 'ALL'}: ${filteredDatabase.length} students selected`);
+        console.log(`📤 Filtered Students (Grade/Level):`, filteredDatabase.map(s => ({ 
+            name: s.excelName, 
+            grade_num: s.grade_num, 
+            grade_level: s.grade_level, 
+            level: s.level, 
+            section: s.section 
+        })));
+        
+        // 🔥 PLAIN TEXT LIST OF ALL SELECTED STUDENTS 🔥
+        console.log(`📋 PLAIN TEXT LIST - ${levelFilter || 'ALL'} STUDENTS:`);
+        filteredDatabase.forEach((s, i) => {
+            console.log(`  ${i+1}. ${s.excelName} | Grade: ${s.grade_num} | Section: ${s.section} | Level: ${s.level}`);
+        });
+
+        if (filteredDatabase.length === 0) {
+            alert(`No students found for ${levelFilter || 'any level'}.`);
+            return;
+        }
+
+        statusTitle.textContent = levelFilter ? `Exporting SF2 (${levelFilter})...` : "Fetching Data...";
+        statusIcon.classList.add('animate-spin');
+
         // 1. Fetch Logs & School Info for Targeted Date
         const exportMonth = document.getElementById('export-month');
         const exportYear = document.getElementById('export-year');
@@ -1997,8 +2018,12 @@ async function exportAllSF2(levelFilter = null) {
 
         // 2. Determine Required Templates
         const zip = new JSZip();
-        const sections = [...new Set(filteredDatabase.map(s => s.section))];
-        const levelsRequired = [...new Set(filteredDatabase.map(s => s.level))];
+        const sections = [...new Set(filteredDatabase.map(s => s.section).filter(section => section))];
+        // If we have explicit levelFilter, use that instead of relying on s.level
+        const requiredLevel = levelFilter || null;
+        const levelsRequired = requiredLevel 
+            ? [requiredLevel] 
+            : [...new Set(filteredDatabase.map(s => s.level))];
         
         statusTitle.textContent = "Loading Templates...";
         const templates = {};
@@ -2044,7 +2069,8 @@ async function exportAllSF2(levelFilter = null) {
                 continue;
             }
             
-            const level = studentsInSection[0].level;
+            // Use the requiredLevel (from filter) if available, otherwise fall back to student's level
+            const level = requiredLevel || studentsInSection[0].level;
             const mapping = SF2_MAPPINGS[level] || SF2_MAPPINGS['JHS'];
 
             const workbook = new ExcelJS.Workbook();
@@ -2082,7 +2108,7 @@ async function exportAllSF2(levelFilter = null) {
                 if (h.month) worksheet.getCell(h.month).value = String(monthName);
                 
                 if (h.adviser) {
-                    const assignedAdviser = adviserMap[sectionName.toUpperCase()];
+                    const assignedAdviser = adviserMap[(sectionName || '').toUpperCase()];
                     const adviserToFill = assignedAdviser || sAdv;
                     if (adviserToFill) worksheet.getCell(h.adviser).value = String(adviserToFill).toUpperCase();
                 }
@@ -2097,8 +2123,8 @@ async function exportAllSF2(levelFilter = null) {
             // Sort students: Male first, then Female (alphabetical)
             // Ensure gender is matched exactly as 'male' or 'female'
             const sortedStudents = [
-                ...studentsInSection.filter(s => s.gender === 'male').sort((a, b) => a.parsedName.localeCompare(b.parsedName)),
-                ...studentsInSection.filter(s => s.gender === 'female').sort((a, b) => a.parsedName.localeCompare(b.parsedName))
+                ...studentsInSection.filter(s => s.gender === 'male').sort((a, b) => (a.parsedName || '').localeCompare(b.parsedName || '')),
+                ...studentsInSection.filter(s => s.gender === 'female').sort((a, b) => (a.parsedName || '').localeCompare(b.parsedName || ''))
             ];
 
             if (sortedStudents.length === 0) {
@@ -2165,7 +2191,8 @@ async function exportAllSF2(levelFilter = null) {
             const females = sortedStudents.filter(s => s.gender === 'female');
             console.log(`Section ${sectionName} Grouping: ${males.length} Males, ${females.length} Females`);
 
-            sortedStudents.forEach((student) => {
+            sortedStudents.forEach((student, idx) => {
+                console.log(`Processing student ${idx + 1}/${sortedStudents.length}:`, student);
                 let currentRow;
                 if (student.gender === 'male') {
                     currentRow = (mapping.maleStartRow || mapping.startRow) + maleIdx;
@@ -2333,6 +2360,7 @@ async function exportAllSF2(levelFilter = null) {
         statusIcon.classList.remove('animate-spin');
     } catch (err) {
         console.error("Export Error:", err);
+        alert(`Export failed! Error: ${err.message || err}\nCheck the browser console (F12) for more details.`);
         statusTitle.textContent = "Export Failed";
         statusIcon.classList.remove('animate-spin');
     }
@@ -2432,8 +2460,12 @@ async function exportAllSF4(levelFilter = null) {
 
         // 2. Determine Required Templates
         const zip = new JSZip();
-        const sections = [...new Set(filteredDatabase.map(s => s.section))];
-        const levelsRequired = [...new Set(filteredDatabase.map(s => s.level))];
+        const sections = [...new Set(filteredDatabase.map(s => s.section).filter(section => section))];
+        // If we have explicit levelFilter, use that instead of relying on s.level
+        const requiredLevel = levelFilter || null;
+        const levelsRequired = requiredLevel 
+            ? [requiredLevel] 
+            : [...new Set(filteredDatabase.map(s => s.level))];
         
         statusTitle.textContent = "Loading Templates...";
         const templates = {};
@@ -2447,7 +2479,9 @@ async function exportAllSF4(levelFilter = null) {
         for (const level of levelsRequired) {
             statusTitle.textContent = `Processing ${level} SF4...`;
             
-            let levelStudents = filteredDatabase.filter(s => s.level === level);
+            let levelStudents = requiredLevel 
+                ? filteredDatabase 
+                : filteredDatabase.filter(s => s.level === level);
             
             // DEFENSIVE CHECK: Only include students with correct grade for the level
             if (level === 'SHS') {

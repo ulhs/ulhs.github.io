@@ -3768,6 +3768,8 @@ async function initIDGenerator() {
     const typeStudent = document.getElementById('type-student');
     const typePersonnel = document.getElementById('type-personnel');
     const studentLrnGroup = document.getElementById('student-lrn-group');
+    const studentGradeGroup = document.getElementById('student-grade-group');
+    const studentSectionGroup = document.getElementById('student-section-group');
     const personnelFields = document.getElementById('personnel-fields');
     const personnelExtraFields = document.getElementById('personnel-extra-fields');
     const personnelTypeGroup = document.getElementById('personnel-type-group');
@@ -3782,6 +3784,8 @@ async function initIDGenerator() {
     if (typeStudent && typePersonnel) {
         const toggleFields = (isPersonnel) => {
             studentLrnGroup.style.display = isPersonnel ? 'none' : 'block';
+            studentGradeGroup.style.display = isPersonnel ? 'none' : 'block';
+            studentSectionGroup.style.display = isPersonnel ? 'none' : 'block';
             personnelFields.style.display = isPersonnel ? 'block' : 'none';
             personnelExtraFields.style.display = isPersonnel ? 'block' : 'none';
             personnelTypeGroup.style.display = isPersonnel ? 'block' : 'none';
@@ -3797,6 +3801,8 @@ async function initIDGenerator() {
 
             // Update requirements
             document.getElementById('lrn').required = !isPersonnel;
+            document.getElementById('grade-level').required = !isPersonnel;
+            document.getElementById('student-section').required = !isPersonnel;
             document.getElementById('emp-number').required = isPersonnel;
             document.getElementById('position').required = isPersonnel;
             
