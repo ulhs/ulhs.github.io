@@ -4578,10 +4578,10 @@ async function initIDGenerator() {
             },
             // QR code placement (on BACK)
             qrCode: {
-                centerX: 298,
-                centerY: 444,
-                width: 318,
-                height: 318
+                centerX: 323,
+                centerY: 466,
+                width: 380,
+                height: 380
             }
         };
 
@@ -4732,14 +4732,14 @@ async function initIDGenerator() {
         ctxBack.fillStyle = "#000"; ctxBack.textAlign = "left"; 
         const backFont = 'bold 24px Roboto, "Segoe UI", sans-serif';
         ctxBack.font = backFont;
-        ctxBack.fillText(document.getElementById('guardian').value.toUpperCase(), 118, 702);
+        ctxBack.fillText(document.getElementById('guardian').value.toUpperCase(), 118, 734);
         const address = addressSelect.value === 'others' ? addressManual.value : addressSelect.value;
-        wrapText(ctxBack, address, 118, 741, 350, 28, backFont);
+        wrapText(ctxBack, address, 118, 773, 350, 28, backFont);
         const rawMobile = document.getElementById('parent-mobile').value || "";
         const mobileDigits = rawMobile.replace(/\D/g, ''); // Extract only digits
         const mobile = mobileDigits.length === 11 ? mobileDigits : (mobileDigits || "N/A");
         ctxBack.font = backFont;
-        ctxBack.fillText(mobile, 118, 778);
+        ctxBack.fillText(mobile, 118, 810);
     }
 
     async function renderPersonnelID(firstname, mi, lastname, birthdate) {
