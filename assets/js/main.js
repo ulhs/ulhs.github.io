@@ -4709,7 +4709,7 @@ async function initIDGenerator() {
         };
         photoImg.src = capturedPhoto.src;
 
-        ctxBack.drawImage(templates.studentBack, 0, 0, 600, 960);
+        ctxBack.drawImage(templates.studentBack, 0, 0, 648, 1008);
         
         // Draw QR code on BACK
         const qrW = layoutConfig.qrCode.width;
