@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.supabase.net wss://*.supabase.co wss://*.supabase.net;">
+    <title>Achievements | Parent Portal</title>
+    <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght400;700&family=Open+Sans:wght400;600&family=Acme&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="../../assets/js/secure-session.js"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
+    <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/parent-nav.js"></script>
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <script src="../../assets/lib/tailwind.min.js"></script>
+    <style>
+        .student-card {
+            transition: all 0.2s ease;
+        }
+        .student-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .student-card.active {
+            border-color: #2563eb;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-100">
+        <div class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <h1 class="text-lg font-black text-gray-900 uppercase tracking-tight" style="font-family: 'Acme', sans-serif;">Achievements</h1>
+                <div class="flex items-center gap-4">
+                    <button onclick="window.location.href='dashboard.html'" class="flex items-center gap-2 px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all text-xs font-black uppercase tracking-widest border border-gray-200 shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                        Back
+                    </button>
+                    <button onclick="handleParentLogout(event)" class="flex items-center gap-2 px-5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all text-xs font-black uppercase tracking-widest border border-red-100 shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-6">
+        <!-- Student Selector -->
+        <div class="mb-6">
+            <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Select Student</h2>
+            <div id="student-selector" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Student cards will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Student Info Banner -->
+        <div id="student-banner" class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm mb-6">
+            <div class="flex items-center gap-4">
+                <div id="student-photo-container" class="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                    <svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h2 id="student-name" class="text-sm font-black text-gray-900"></h2>
+                    <p id="student-details" class="text-xs font-bold text-gray-500 uppercase tracking-widest"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl p-5 text-white shadow-md">
+                <div id="total-awards" class="text-3xl font-black mb-1">0</div>
+                <p class="text-[10px] font-bold uppercase tracking-widest opacity-90">Total Awards</p>
+            </div>
+            <div class="bg-gradient-to-br from-amber-300 to-amber-400 rounded-2xl p-5 text-white shadow-md">
+                <div id="academic-awards" class="text-3xl font-black mb-1">0</div>
+                <p class="text-[10px] font-bold uppercase tracking-widest opacity-90">Academic</p>
+            </div>
+            <div class="bg-gradient-to-br from-green-400 to-green-500 rounded-2xl p-5 text-white shadow-md">
+                <div id="sports-awards" class="text-3xl font-black mb-1">0</div>
+                <p class="text-[10px] font-bold uppercase tracking-widest opacity-90">Sports</p>
+            </div>
+            <div class="bg-gradient-to-br from-purple-400 to-purple-500 rounded-2xl p-5 text-white shadow-md">
+                <div id="conduct-awards" class="text-3xl font-black mb-1">0</div>
+                <p class="text-[10px] font-bold uppercase tracking-widest opacity-90">Conduct</p>
+            </div>
+        </div>
+
+        <!-- Achievements Timeline -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div class="p-4 bg-gray-50 border-b border-gray-100">
+                <h3 class="text-sm font-black text-gray-700 uppercase tracking-widest">Recent Achievements</h3>
+            </div>
+            <div id="achievements-container" class="p-6">
+                <!-- Achievements will be rendered here -->
+            </div>
+        </div>
+
+        <!-- Logout Button at Bottom -->
+        <div class="mt-8 flex justify-center">
+            <button onclick="handleParentLogout(event)" class="flex items-center gap-2 px-6 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all text-sm font-black uppercase tracking-widest border border-red-100 shadow-sm">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                Logout
+            </button>
+        </div>
+        
+        <!-- Privacy Policy Link -->
+        <div class="mt-6 text-center">
+            <a href="../privacy-policy.html" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">
+                Privacy Policy
+            </a>
+        </div>
+    </main>
+
+    <script>
+        let students = [];
+        let activeStudent = null;
+
+        async function initPage() {
+            if (!window.supabaseClient) {
+                setTimeout(initPage, 100);
+                return;
+            }
+
+            // Check if parent is logged in
+            students = secureSession.getItem('parentStudents') || [];
+            const activeLrn = secureSession.getItem('activeStudentLrn');
+            
+            if (students.length === 0) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            activeStudent = students.find(s => String(s.lrn) === String(activeLrn)) || students[0];
+            
+            renderStudentSelector();
+            renderStudentInfo();
+            await fetchAchievements();
+        }
+
+        // Render student selector
+        function renderStudentSelector() {
+            const container = document.getElementById('student-selector');
+            
+            container.innerHTML = students.map(student => {
+                const isActive = String(student.lrn) === String(activeStudent.lrn);
+                
+                return `
+                    <div class="student-card bg-white rounded-2xl p-5 border-2 ${isActive ? 'border-blue-500 active' : 'border-gray-100'} cursor-pointer shadow-sm"
+                         data-lrn="${student.lrn}"
+                         data-student-name="${student.full_name}">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                                ${student.photo_url ? 
+                                    `<img src="${student.photo_url}" alt="${student.full_name}" class="w-full h-full object-cover" onerror="this.style.display='none'">` :
+                                    `<svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                                    </svg>`
+                                }
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-sm font-black text-gray-900 truncate">${student.full_name}</h3>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase">${student.section || 'N/A'}</span>
+                                    <span class="text-[10px] font-bold text-gray-400">Grade ${student.grade_level || 'N/A'}</span>
+                                </div>
+                            </div>
+                            ${isActive ? 
+                                `<div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Add click listeners to student cards
+            const cards = container.querySelectorAll('.student-card');
+            cards.forEach(card => {
+                card.addEventListener('click', () => {
+                    const lrn = card.getAttribute('data-lrn');
+                    if (lrn) selectStudent(lrn);
+                });
+            });
+        }
+
+        // Select student
+        function selectStudent(lrn) {
+            activeStudent = students.find(s => String(s.lrn) === String(lrn));
+            secureSession.setItem('activeStudentLrn', lrn);
+            renderStudentSelector();
+            renderStudentInfo();
+            fetchAchievements();
+        }
+
+        function renderStudentInfo() {
+            document.getElementById('student-name').textContent = activeStudent.full_name;
+            document.getElementById('student-details').textContent = `${activeStudent.section || 'N/A'} • Grade ${activeStudent.grade_level || 'N/A'}`;
+            
+            // Load photo if available
+            if (activeStudent.photo_url) {
+                loadStudentPhoto(activeStudent.photo_url);
+            }
+        }
+
+        async function loadStudentPhoto(photoUrl) {
+            const container = document.getElementById('student-photo-container');
+            try {
+                if (window.supabaseClient) {
+                    const { data, error } = await window.supabaseClient.storage.from('student-photos').download(photoUrl);
+                    if (!error) {
+                        const url = URL.createObjectURL(data);
+                        container.innerHTML = `<img src="${url}" alt="${activeStudent.full_name}" class="w-full h-full object-cover">`;
+                    }
+                }
+            } catch (err) {
+                console.error('Error loading photo:', err);
+            }
+        }
+
+        async function fetchAchievements() {
+            const container = document.getElementById('achievements-container');
+            
+            try {
+                // First, try to fetch from an 'achievements' table in Supabase
+                const { data, error } = await window.supabaseClient
+                    .from('achievements')
+                    .select('*')
+                    .eq('student_lrn', activeStudent.lrn)
+                    .order('awarded_at', { ascending: false });
+                
+                if (error || !data || data.length === 0) {
+                    // If no achievements in Supabase, show sample data
+                    renderSampleAchievements();
+                } else {
+                    renderAchievements(data);
+                }
+            } catch (err) {
+                console.error('Error fetching achievements:', err);
+                // Fall back to sample data
+                renderSampleAchievements();
+            }
+        }
+
+        function getAchievementColor(type) {
+            const colors = {
+                'Academic': 'bg-yellow-500 border-yellow-500',
+                'Sports': 'bg-green-500 border-green-500',
+                'Conduct': 'bg-purple-500 border-purple-500',
+                'Arts': 'bg-pink-500 border-pink-500'
+            };
+            return colors[type] || 'bg-blue-500 border-blue-500';
+        }
+
+        function getBadgeColor(type) {
+            const colors = {
+                'Academic': 'bg-yellow-100 text-yellow-800',
+                'Sports': 'bg-green-100 text-green-800',
+                'Conduct': 'bg-purple-100 text-purple-800',
+                'Arts': 'bg-pink-100 text-pink-800'
+            };
+            return colors[type] || 'bg-blue-100 text-blue-800';
+        }
+
+        function getIconColor(type) {
+            const colors = {
+                'Academic': 'text-yellow-600',
+                'Sports': 'text-green-600',
+                'Conduct': 'text-purple-600',
+                'Arts': 'text-pink-600'
+            };
+            return colors[type] || 'text-blue-600';
+        }
+
+        function getIconBgColor(type) {
+            const colors = {
+                'Academic': 'bg-yellow-100',
+                'Sports': 'bg-green-100',
+                'Conduct': 'bg-purple-100',
+                'Arts': 'bg-pink-100'
+            };
+            return colors[type] || 'bg-blue-100';
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function renderAchievements(achievements) {
+            const container = document.getElementById('achievements-container');
+            
+            // Update summary stats
+            updateAchievementStats(achievements);
+            
+            container.innerHTML = achievements.map(achievement => {
+                const colorClasses = getAchievementColor(achievement.type);
+                const badgeColor = getBadgeColor(achievement.type);
+                const iconColor = getIconColor(achievement.type);
+                const iconBgColor = getIconBgColor(achievement.type);
+                
+                return `
+                    <div class="achievement-item border-l-4 ${colorClasses.split(' ')[1]} pl-4 py-4 mb-4">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="px-2 py-1 ${badgeColor} rounded-full text-[10px] font-black uppercase">${achievement.type || 'Academic'}</span>
+                                    <span class="text-[10px] text-gray-400 font-bold uppercase">${formatDate(achievement.awarded_at)}</span>
+                                </div>
+                                <h4 class="text-sm font-black text-gray-900 mb-1">${achievement.title}</h4>
+                                <p class="text-xs text-gray-500 font-semibold">${achievement.description || ''}</p>
+                            </div>
+                            <div class="w-12 h-12 ${iconBgColor} rounded-full flex items-center justify-center ml-4 flex-shrink-0">
+                                <svg class="w-6 h-6 ${iconColor}" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateAchievementStats(achievements) {
+            document.getElementById('total-awards').textContent = achievements.length;
+            document.getElementById('academic-awards').textContent = achievements.filter(a => a.type === 'Academic').length;
+            document.getElementById('sports-awards').textContent = achievements.filter(a => a.type === 'Sports').length;
+            document.getElementById('conduct-awards').textContent = achievements.filter(a => a.type === 'Conduct').length;
+        }
+
+        function renderSampleAchievements() {
+            const container = document.getElementById('achievements-container');
+            
+            // Update summary stats to 0
+            updateAchievementStats([]);
+            
+            container.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                        </svg>
+                    </div>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">No Achievements Yet</p>
+                    <p class="text-[10px] text-gray-500 font-semibold">Achievements will appear here when awarded</p>
+                </div>
+            `;
+        }
+
+        initPage();
+    </script>
+</body>
+</html>

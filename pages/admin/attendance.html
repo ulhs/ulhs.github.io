@@ -76,7 +76,9 @@
                 const resolvedAccess = {
                     attendance: canScan,
                     idGen: profile?.can_manage_ids || userRole === 'admin',
-                    stats: profile?.can_view_dashboard || ['admin', 'school_head'].includes(userRole)
+                    stats: profile?.can_view_dashboard || ['admin', 'school_head'].includes(userRole),
+                    sardo: profile?.can_view_sardo || ['admin', 'school_head', 'guidance_counselor'].includes(userRole),
+                    grades: profile?.can_manage_grades || userRole === 'admin'
                 };
                 sessionStorage.setItem('userAccess', JSON.stringify(resolvedAccess));
                 sessionStorage.setItem('adminLoggedIn', 'true');
@@ -170,12 +172,23 @@
                         }
                         
                         // SARDO Risk Dashboard (Admin, School Head, Guidance, or with Sardo permission)
-                        if (role === 'admin' || role === 'school_head' || role === 'guidance_counselor' || access.sardo) {
+                        if (role === 'admin' || role === 'school_head' || role === 'guidance_counselor' || access.sardo || false) {
                             html += `
                                 <li class="list" data-page="sardo-dashboard.html">
                                     <a href="sardo-dashboard.html">
                                         <span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
                                         <span class="text">SARDO</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        // GRADES Encoding (Admin or with Grades permission)
+                        if (role === 'admin' || access.grades || false) {
+                            html += `
+                                <li class="list" data-page="grade-encoding.html">
+                                    <a href="grade-encoding.html">
+                                        <span class="icon"><i class="fa-solid fa-book-open-reader"></i></span>
+                                        <span class="text">GRADES</span>
                                     </a>
                                 </li>`;
                         }

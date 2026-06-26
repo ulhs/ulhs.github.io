@@ -69,7 +69,7 @@
         </label>
         <nav class="nav-links magic-nav">
             <ul>
-                    <li class="list active" data-page="access.html">
+                    <li class="list" data-page="access.html">
                         <a href="access.html">
                             <span class="icon"><i class="fa-solid fa-users-gear"></i></span>
                             <span class="text">ACCESS</span>
@@ -91,6 +91,12 @@
                         <a href="sardo-dashboard.html">
                             <span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
                             <span class="text">SARDO</span>
+                        </a>
+                    </li>
+                    <li class="list" data-page="grade-encoding.html">
+                        <a href="grade-encoding.html">
+                            <span class="icon"><i class="fa-solid fa-book-open-reader"></i></span>
+                            <span class="text">GRADES</span>
                         </a>
                     </li>
                     <li class="list" data-page="admin-dashboard.html">
@@ -134,6 +140,7 @@
                             <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">🆔 ID Gen</th>
                             <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">📊 Dashboard</th>
                             <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">🔒 SARDO</th>
+                            <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">📚 Grades</th>
                             <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">Actions</th>
                         </tr>
                     </thead>
@@ -283,6 +290,11 @@
                         <div onclick="togglePermission('${item.email}', 'can_view_sardo')" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-red-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
                     </td>
                     <td class="px-4 py-4 text-center">
+                        <input type="checkbox" id="grades-${item.email}" class="perm-toggle sr-only peer" 
+                               data-email="${item.email}" data-col="can_manage_grades" ${item.can_manage_grades ? 'checked' : ''}>
+                        <div onclick="togglePermission('${item.email}', 'can_manage_grades')" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-amber-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                    </td>
+                    <td class="px-4 py-4 text-center">
                         <button onclick="removeFromWhitelist('${item.email}')" class="text-red-400 hover:text-red-600 transition-colors">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
@@ -303,10 +315,10 @@
                 const [addWhitelist, addProfiles] = await Promise.all([
                     window.supabaseClient
                         .from('admin_whitelist')
-                        .insert([{ email, role, can_scan: false, can_manage_ids: false, can_view_dashboard: false, can_view_sardo: false }]),
+                        .insert([{ email, role, can_scan: false, can_manage_ids: false, can_view_dashboard: false, can_view_sardo: false, can_manage_grades: false }]),
                     window.supabaseClient
                         .from('profiles')
-                        .insert([{ email, role, full_name: email, can_scan: false, can_manage_ids: false, can_view_dashboard: false, can_view_sardo: false }])
+                        .insert([{ email, role, full_name: email, can_scan: false, can_manage_ids: false, can_view_dashboard: false, can_view_sardo: false, can_manage_grades: false }])
                 ]);
 
                 if (addWhitelist.error) throw addWhitelist.error;
@@ -382,9 +394,9 @@
         }
 
         function showStatus(msg = "Database Updated!") {
-            statusMsg.textContent = msg;
+            statusMsg.textContent = msg + " - Ask user to re-login for changes to take effect";
             statusMsg.style.opacity = '1';
-            setTimeout(() => statusMsg.style.opacity = '0', 2000);
+            setTimeout(() => statusMsg.style.opacity = '0', 4000);
         }
 
         btnRefresh.addEventListener('click', fetchWhitelist);

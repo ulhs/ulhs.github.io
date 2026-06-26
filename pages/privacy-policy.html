@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy | ULHS Attendance Alert System</title>
+    <title>Privacy Policy | ULHS Student Information System</title>
     <link rel="icon" type="image/webp" href="../assets/images/school-logo.webp">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
     <script src="../assets/lib/tailwind.min.js"></script>
@@ -24,47 +24,94 @@
             <div class="space-y-8 text-gray-700 leading-relaxed">
                 <section>
                     <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-l-4 border-blue-600 pl-3">1. Overview</h2>
-                    <p class="text-sm">In compliance with the <strong>Data Privacy Act of 2012 (RA 10173)</strong>, Upper Labay High School (ULHS) is committed to protecting the personal information of its students and parents. This policy explains how we collect and process data for the <strong>Attendance Alert System</strong> via Facebook Messenger.</p>
-                </section>
-
-                <section>
-                    <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-l-4 border-blue-600 pl-3">2. Data Collection</h2>
-                    <p class="text-sm mb-2">To provide automated attendance alerts, we collect the following:</p>
-                    <ul class="list-disc pl-5 text-sm space-y-1">
-                        <li><strong>Student Information:</strong> Name and Learner Reference Number (LRN).</li>
-                        <li><strong>Parent Information:</strong> Facebook Page Scoped ID (PSID) upon successful linking.</li>
-                        <li><strong>Attendance Logs:</strong> Time of arrival and departure from the school campus.</li>
+                    <p class="text-sm">In compliance with the <strong>Data Privacy Act of 2012 (RA 10173)</strong>, Upper Labay High School (ULHS) is committed to protecting the personal information of its students, parents, and personnel. This policy explains how we collect, process, and protect data for our <strong>Student Information System (SIS)</strong>, which includes:
+                    </p>
+                    <ul class="list-disc pl-5 text-sm space-y-1 mt-2">
+                        <li>Attendance Alert System via Facebook Messenger</li>
+                        <li>Parent Portal for accessing grades, attendance, and achievements</li>
+                        <li>Personnel/Admin Portal for managing student data</li>
                     </ul>
                 </section>
 
                 <section>
+                    <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-l-4 border-blue-600 pl-3">2. Data Collection</h2>
+                    <p class="text-sm mb-2">We collect the following types of data:</p>
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 mb-4">
+                        <h3 class="text-xs font-black text-gray-900 uppercase tracking-widest mb-2">A. Student Information</h3>
+                        <ul class="list-disc pl-5 text-sm space-y-1">
+                            <li>Full name, Learner Reference Number (LRN), student ID number</li>
+                            <li>Section, grade level, and photo (if provided)</li>
+                            <li>Academic grades and term information</li>
+                            <li>Achievements and awards</li>
+                            <li>Attendance logs (time of arrival and departure)</li>
+                        </ul>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 mb-4">
+                        <h3 class="text-xs font-black text-gray-900 uppercase tracking-widest mb-2">B. Parent/Guardian Information</h3>
+                        <ul class="list-disc pl-5 text-sm space-y-1">
+                            <li>Name and Facebook Page Scoped ID (PSID) for attendance alerts</li>
+                            <li>Hashed PIN for Parent Portal login (PIN is never stored in plaintext)</li>
+                        </ul>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <h3 class="text-xs font-black text-gray-900 uppercase tracking-widest mb-2">C. Personnel/Teacher Information</h3>
+                        <ul class="list-disc pl-5 text-sm space-y-1">
+                            <li>Name and role for access to admin portals</li>
+                            <li>Authentication credentials for login</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section>
                     <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-l-4 border-blue-600 pl-3">3. Purpose of Processing</h2>
-                    <p class="text-sm">The data is processed solely for the purpose of notifying parents/guardians about their child's school attendance in real-time. We do not use this data for marketing, profiling, or third-party sharing.</p>
+                    <p class="text-sm mb-2">Data is processed solely for the following legitimate educational purposes:</p>
+                    <ul class="list-disc pl-5 text-sm space-y-1">
+                        <li>Notify parents/guardians about their child's school attendance in real-time</li>
+                        <li>Provide parents/guardians access to their child's academic performance (grades, achievements)</li>
+                        <li>Enable school personnel to manage, encode, and store student information, grades, and attendance</li>
+                    </ul>
+                    <p class="text-sm mt-2"><strong>We do not use this data for marketing, profiling, or third-party sharing without explicit consent.</strong></p>
                 </section>
 
                 <section>
                     <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-l-4 border-blue-600 pl-3">4. Data Storage & Security</h2>
-                    <p class="text-sm">Data is stored securely in Cloud Database with strict Row Level Security (RLS) policies. Access is restricted to authorized school personnel only.</p>
+                    <p class="text-sm mb-2">All data is stored securely in a cloud database with strict Row Level Security (RLS) policies. Our security measures include:</p>
+                    <ul class="list-disc pl-5 text-sm space-y-1">
+                        <li>Access restricted to authorized school personnel only</li>
+                        <li>Password hashing and PIN encryption (no plaintext storage)</li>
+                        <li>Encrypted session storage for all portal sessions</li>
+                        <li>Rate limiting on login attempts to prevent brute-force attacks</li>
+                        <li>Secure connections (HTTPS) for all data transfers</li>
+                        <li>Regular security audits and updates</li>
+                    </ul>
                 </section>
 
                 <section id="deletion">
                     <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-l-4 border-blue-600 pl-3">5. Data Deletion & User Rights</h2>
-                    <p class="text-sm mb-4">In compliance with the DPA, users have the right to have their data deleted from our system. To request data deletion:</p>
+                    <p class="text-sm mb-2">In compliance with the Data Privacy Act of 2012, users have the following rights:</p>
+                    <ul class="list-disc pl-5 text-sm space-y-1 mb-4">
+                        <li>Right to access their personal data</li>
+                        <li>Right to correct inaccurate data</li>
+                        <li>Right to data erasure</li>
+                        <li>Right to restrict processing</li>
+                        <li>Right to data portability</li>
+                    </ul>
+                    <p class="text-sm mb-2">To request data deletion or exercise other rights:</p>
                     <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm space-y-3">
-                        <p><strong>Method 1 (Instant):</strong> Send the message <code>UNLINK [LRN]</code> to our Messenger bot. This immediately removes your Facebook ID from the student record.</p>
-                        <p><strong>Method 2 (Manual):</strong> Contact the ULHS ICT Department or message our official Facebook Page with a formal request to purge your notification data.</p>
+                        <p><strong>Method 1 (Instant PSID Removal):</strong> Send the message <code>UNLINK [LRN]</code> to our Messenger bot to remove your Facebook ID from the student record.</p>
+                        <p><strong>Method 2 (Formal Request):</strong> Contact the ULHS ICT Department or message our official Facebook Page with a formal request for data deletion, correction, or access.</p>
                     </div>
                 </section>
 
                 <section>
                     <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-l-4 border-blue-600 pl-3">6. Contact Us</h2>
-                    <p class="text-sm">For questions regarding your data privacy, please contact our Data Protection Officer at the Upper Labay High School ICT Department or visit our official Facebook Page.</p>
+                    <p class="text-sm">For questions regarding your data privacy, or to exercise your rights under the DPA, please contact our Data Protection Officer at the Upper Labay High School ICT Department or visit our official Facebook Page.</p>
                 </section>
             </div>
 
             <div class="mt-12 pt-8 border-t border-gray-100 flex justify-between items-center">
                 <a href="parent-registration.html" class="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:text-blue-800 transition-colors">&larr; Back to Registration</a>
-                <p class="text-[9px] text-gray-400 font-bold uppercase italic">Effective Date: May 8, 2026</p>
+                <p class="text-[9px] text-gray-400 font-bold uppercase italic">Effective Date: June 26, 2026</p>
             </div>
         </div>
     </div>

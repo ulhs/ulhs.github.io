@@ -4711,7 +4711,7 @@ async function initIDGenerator() {
 
         ctxBack.drawImage(templates.studentBack, 0, 0, 648, 1008);
         
-        // Draw QR code on BACK
+        // Draw QR code on BACK with school logo overlay
         const qrW = layoutConfig.qrCode.width;
         const qrH = layoutConfig.qrCode.height;
         const qrX = layoutConfig.qrCode.centerX - qrW / 2;
@@ -4721,9 +4721,41 @@ async function initIDGenerator() {
         try {
             const qrUrl = await QRCode.toDataURL(qrData, { margin: 1, width: 400, errorCorrectionLevel: 'H' });
             const qrImg = new Image();
-            qrImg.onload = () => {
+            qrImg.onload = async () => {
+                // Draw QR code first
                 ctxBack.drawImage(qrImg, qrX, qrY, qrW, qrH);
-                document.getElementById('btn-download-back').disabled = false;
+                
+                // Load school logo and overlay it
+                const logoImg = new Image();
+                logoImg.onload = () => {
+                    // Logo size: 30% of QR code size
+                    const logoSize = qrW * 0.30;
+                    const logoX = qrX + (qrW - logoSize) / 2;
+                    const logoY = qrY + (qrH - logoSize) / 2;
+                    
+                    // Draw white background behind logo for contrast
+                    const bgPadding = logoSize * 0.15;
+                    ctxBack.fillStyle = "#FFFFFF";
+                    ctxBack.beginPath();
+                    ctxBack.arc(
+                        qrX + qrW / 2, 
+                        qrY + qrH / 2, 
+                        (logoSize + bgPadding) / 2, 
+                        0, 
+                        2 * Math.PI
+                    );
+                    ctxBack.fill();
+                    
+                    // Draw logo centered
+                    ctxBack.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+                    
+                    document.getElementById('btn-download-back').disabled = false;
+                };
+                logoImg.onerror = () => {
+                    // If logo fails to load, just use plain QR
+                    document.getElementById('btn-download-back').disabled = false;
+                };
+                logoImg.src = '../../assets/images/school-logo.webp';
             };
             qrImg.src = qrUrl;
         } catch (err) { console.error("QR Error:", err); }
@@ -4837,7 +4869,7 @@ async function initIDGenerator() {
             
             // Nickname - 90px 'Bookman Old Style' Bold White (X: 5, Y: 423)
             ctxFront.font = "bold 90px 'Bookman Old Style'";
-            ctxFront.fillText(`"${nickname}"`, 5, 423);
+            ctxFront.fillText(`'${nickname}'`, 33, 418);
             
             // Surname - 59px Arial Bold White (X: 33, Y: 483)
             ctxFront.font = "bold 59px Arial";
@@ -4885,7 +4917,7 @@ async function initIDGenerator() {
         ctxBack.font = "bold 28px Arial";
         ctxBack.fillText(emergencyName, 318, 420);
         ctxBack.font = "28px Arial";
-        ctxBack.fillText(emergencyMobile, 318, 444);
+        ctxBack.fillText(emergencyMobile, 318, 453);
         
         // Reset alignment for other fields
         ctxBack.textAlign = "left";

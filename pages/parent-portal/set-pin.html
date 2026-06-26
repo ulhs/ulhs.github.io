@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.supabase.net wss://*.supabase.co wss://*.supabase.net;">
+    <title>Set PIN | Parent Portal</title>
+    <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
+    <script src="../../assets/js/main.js"></script>
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <script src="../../assets/lib/tailwind.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+    <div class="max-w-md mx-auto px-6 py-12">
+        <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+            <div class="p-1 bg-blue-600"></div>
+            <div class="p-8">
+                <div class="flex justify-center mb-6">
+                    <img src="../../assets/images/school-logo.webp" alt="ULHS" class="w-20 h-20">
+                </div>
+                
+                <h2 class="text-2xl font-black text-center text-gray-900 uppercase tracking-tight mb-2" style="font-family: 'Acme', sans-serif;">Set PIN</h2>
+                <p class="text-center text-gray-500 text-sm mb-4 font-semibold">Enter your child's LRN and set your PIN</p>
+                <div class="bg-green-50 rounded-2xl p-4 border border-green-100 mb-6">
+                    <h4 class="text-[10px] font-black text-green-800 uppercase mb-2 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        Data Privacy Reminder
+                    </h4>
+                    <p class="text-[10px] text-green-700 font-semibold">Your PIN is encrypted and never stored in plaintext. By setting a PIN, you agree to our <a href="../privacy-policy.html" class="text-green-800 font-bold underline">Privacy Policy</a>.</p>
+                </div>
+
+                <div id="form-container" class="space-y-6">
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Student LRN</label>
+                        <input type="text" id="lrn-input" maxlength="12" placeholder="Enter 12-digit LRN" 
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-blue-500 focus:outline-none font-bold text-gray-900 transition-all font-mono text-center">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">New 4-Digit PIN</label>
+                        <input type="password" id="pin-input" maxlength="4" placeholder="Enter 4-digit PIN" 
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-blue-500 focus:outline-none font-bold text-gray-900 transition-all font-mono text-center">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Confirm PIN</label>
+                        <input type="password" id="confirm-pin-input" maxlength="4" placeholder="Confirm 4-digit PIN" 
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-blue-500 focus:outline-none font-bold text-gray-900 transition-all font-mono text-center">
+                        <p id="pin-error" class="text-[10px] text-red-500 font-bold mt-2 hidden">PINs do not match or are not 4 digits.</p>
+                    </div>
+
+                    <button id="set-pin-btn" disabled class="w-full py-4 bg-gray-200 text-gray-400 rounded-xl font-black uppercase tracking-widest cursor-not-allowed transition-all shadow-lg">
+                        Set PIN
+                    </button>
+
+                    <div class="pt-2">
+                        <p class="text-center text-[10px] text-gray-400 font-semibold">
+                            Remember your PIN? <a href="login.html" class="text-blue-600 font-bold underline">Sign In Now</a>
+                        </p>
+                    </div>
+                </div>
+
+                <div id="success-container" class="hidden space-y-4 text-center">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900">PIN Set Successfully!</h3>
+                    <p class="text-sm text-gray-600">You can now sign in with your PIN.</p>
+                    <a href="login.html" class="inline-block w-full py-3 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg active:scale-95">
+                        Sign In
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 text-center">
+            <a href="../../index.html" class="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">
+                &larr; Back to Homepage
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const lrnInput = document.getElementById('lrn-input');
+        const pinInput = document.getElementById('pin-input');
+        const confirmPinInput = document.getElementById('confirm-pin-input');
+        const setPinBtn = document.getElementById('set-pin-btn');
+        const formContainer = document.getElementById('form-container');
+        const successContainer = document.getElementById('success-container');
+        const pinError = document.getElementById('pin-error');
+
+        // Rate limiting
+        let attempts = 0;
+        const MAX_ATTEMPTS = 5;
+        const COOLDOWN_TIME = 30000; // 30 seconds
+        let cooldownTimer = null;
+
+        function validateInputs() {
+            const lrn = lrnInput.value.trim();
+            const pin = pinInput.value.trim();
+            const confirmPin = confirmPinInput.value.trim();
+            const lrnRegex = /^\d{12}$/;
+            const pinRegex = /^\d{4}$/;
+            return lrnRegex.test(lrn) && pinRegex.test(pin) && pin === confirmPin;
+        }
+
+        function updateButtonState() {
+            if (cooldownTimer) {
+                return; // Button is disabled during cooldown
+            }
+            if (validateInputs()) {
+                setPinBtn.disabled = false;
+                setPinBtn.className = "w-full py-4 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg active:scale-95 cursor-pointer";
+            } else {
+                setPinBtn.disabled = true;
+                setPinBtn.className = "w-full py-4 bg-gray-200 text-gray-400 rounded-xl font-black uppercase tracking-widest cursor-not-allowed transition-all shadow-lg";
+            }
+        }
+
+        lrnInput.addEventListener('input', updateButtonState);
+        pinInput.addEventListener('input', updateButtonState);
+        confirmPinInput.addEventListener('input', updateButtonState);
+
+        function startCooldown() {
+            let remaining = COOLDOWN_TIME / 1000;
+            setPinBtn.disabled = true;
+            setPinBtn.className = "w-full py-4 bg-gray-400 text-white rounded-xl font-black uppercase tracking-widest cursor-not-allowed transition-all shadow-lg";
+            setPinBtn.textContent = `Try again in ${remaining}s`;
+
+            cooldownTimer = setInterval(() => {
+                remaining--;
+                if (remaining > 0) {
+                    setPinBtn.textContent = `Try again in ${remaining}s`;
+                } else {
+                    clearInterval(cooldownTimer);
+                    cooldownTimer = null;
+                    attempts = 0;
+                    setPinBtn.textContent = "Set PIN";
+                    updateButtonState();
+                }
+            }, 1000);
+        }
+
+        setPinBtn.addEventListener('click', async () => {
+            attempts++;
+            if (attempts >= MAX_ATTEMPTS) {
+                startCooldown();
+                return;
+            }
+
+            const lrn = lrnInput.value.trim();
+            const pin = pinInput.value.trim();
+
+            setPinBtn.disabled = true;
+            setPinBtn.textContent = 'Setting PIN...';
+
+            try {
+                console.log('Starting PIN set process for LRN:', lrn);
+                
+                // Check if student exists and has parent_messenger_id
+                const { data: student, error } = await window.supabaseClient
+                    .from('students')
+                    .select('lrn, parent_messenger_id')
+                    .eq('lrn', lrn)
+                    .single();
+
+                console.log('Student fetch result:', { data: student, error });
+
+                if (error || !student || !student.parent_messenger_id) {
+                    throw new Error('Invalid LRN or student not linked to parent');
+                }
+
+                // Hash PIN
+                const salt = CryptoJS.lib.WordArray.random(128/8).toString();
+                const hashedPin = CryptoJS.SHA256(pin + salt).toString();
+                const parentPin = salt + ':' + hashedPin;
+
+                console.log('Hashed PIN:', parentPin);
+
+                // Update ALL students linked to this parent with the new PIN
+                const { error: updateError, data: updateData, count } = await window.supabaseClient
+                    .from('students')
+                    .update({ parent_pin: parentPin })
+                    .eq('parent_messenger_id', student.parent_messenger_id)
+                    .select()
+                    .then(response => {
+                        console.log('Full response:', response);
+                        return response;
+                    });
+
+                console.log('Update result:', { error: updateError, data: updateData, count });
+                console.log('Number of students updated:', updateData?.length);
+
+                if (updateError) {
+                    throw updateError;
+                }
+
+                // Success!
+                formContainer.classList.add('hidden');
+                successContainer.classList.remove('hidden');
+
+            } catch (err) {
+                console.error('Error setting PIN:', err);
+                pinError.textContent = 'Error setting PIN: ' + (err.message || 'Unknown error');
+                pinError.classList.remove('hidden');
+                setTimeout(() => {
+                    pinError.classList.add('hidden');
+                }, 5000);
+            } finally {
+                if (!successContainer.classList.contains('hidden')) {
+                    // Don't reset button state if successful
+                } else {
+                    setPinBtn.textContent = 'Set PIN';
+                    updateButtonState();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

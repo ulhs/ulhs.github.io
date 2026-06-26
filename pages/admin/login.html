@@ -59,7 +59,12 @@
                 </p>
             </div>
 
-            <div class="login-links" style="margin-top: 24px;">
+            <div style="margin-top: 24px;">
+                <p style="font-size: 0.65rem; color: #9ca3af; font-weight: 600; text-align: center;">
+                    By logging in, you agree to our <a href="../privacy-policy.html" style="color: #1e40af; font-weight: 700; text-decoration: underline;">Privacy Policy</a>
+                </p>
+            </div>
+            <div class="login-links" style="margin-top: 16px;">
                 <a href="../../index.html" class="back-link" style="font-size: 0.8rem; color: #6b7280; text-decoration: none; font-weight: 600;">&larr; Back to Homepage</a>
             </div>
             
@@ -98,23 +103,21 @@
 
                 let finalProfile = profile;
 
-                if (profileError || !profile) {
-                    statusText.textContent = "Authorizing Account...";
-                    
-                    // Check Whitelist using a robust query
-                    console.log("🔍 Verifying whitelist for:", session.user.email);
-                    const { data: whitelist, error: whitelistError } = await window.supabaseClient
-                        .from('admin_whitelist')
-                        .select('*')
-                        .ilike('email', session.user.email.trim())
-                        .single();
-                    
-                    if (whitelistError || !whitelist) {
-                        console.error("❌ Whitelist lookup failed:", whitelistError);
-                        await window.supabaseClient.auth.signOut();
-                        throw new Error("Access Denied: Your email is not whitelisted.");
-                    }
+                // Always fetch the whitelist to get the latest permissions
+                console.log("🔍 Verifying whitelist for:", session.user.email);
+                const { data: whitelist, error: whitelistError } = await window.supabaseClient
+                    .from('admin_whitelist')
+                    .select('*')
+                    .ilike('email', session.user.email.trim())
+                    .single();
+                
+                if (whitelistError || !whitelist) {
+                    console.error("❌ Whitelist lookup failed:", whitelistError);
+                    await window.supabaseClient.auth.signOut();
+                    throw new Error("Access Denied: Your email is not whitelisted.");
+                }
 
+                if (profileError || !profile) {
                     statusText.textContent = "Setting up Profile...";
                     const profileData = {
                         id: session.user.id,
@@ -124,7 +127,9 @@
                         role: whitelist.role || 'staff',
                         can_scan: whitelist.can_scan || false,
                         can_manage_ids: whitelist.can_manage_ids || false,
-                        can_view_dashboard: whitelist.can_view_dashboard || false
+                        can_view_dashboard: whitelist.can_view_dashboard || false,
+                        can_view_sardo: whitelist.can_view_sardo || false,
+                        can_manage_grades: whitelist.can_manage_grades || false
                     };
 
                     const { data: newProfile, error: insertError } = await window.supabaseClient
@@ -135,6 +140,30 @@
                     
                     if (insertError) throw new Error("Profile setup failed: " + insertError.message);
                     finalProfile = newProfile;
+                } else {
+                    // Profile exists - update it with the latest whitelist permissions
+                    statusText.textContent = "Syncing permissions...";
+                    const profileUpdate = {
+                        role: whitelist.role || profile.role,
+                        can_scan: whitelist.can_scan ?? profile.can_scan,
+                        can_manage_ids: whitelist.can_manage_ids ?? profile.can_manage_ids,
+                        can_view_dashboard: whitelist.can_view_dashboard ?? profile.can_view_dashboard,
+                        can_view_sardo: whitelist.can_view_sardo ?? profile.can_view_sardo ?? false,
+                        can_manage_grades: whitelist.can_manage_grades ?? profile.can_manage_grades ?? false
+                    };
+
+                    const { data: updatedProfile, error: updateError } = await window.supabaseClient
+                        .from('profiles')
+                        .update(profileUpdate)
+                        .eq('id', session.user.id)
+                        .select()
+                        .single();
+                    
+                    if (updateError) {
+                        console.warn("Profile update failed, using existing profile:", updateError);
+                    } else {
+                        finalProfile = updatedProfile;
+                    }
                 }
 
                 statusText.textContent = "Welcome, " + (finalProfile.full_name || "Admin");
@@ -147,7 +176,9 @@
                 sessionStorage.setItem('userAccess', JSON.stringify({
                     attendance: finalProfile.can_scan,
                     idGen: finalProfile.can_manage_ids,
-                    stats: finalProfile.can_view_dashboard
+                    stats: finalProfile.can_view_dashboard,
+                    sardo: finalProfile.can_view_sardo,
+                    grades: finalProfile.can_manage_grades
                 }));
 
                 // Audit: Login Action

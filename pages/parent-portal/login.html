@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://connect.facebook.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.gstatic.com https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.supabase.net wss://*.supabase.co wss://*.supabase.net;">
+    <title>Parent Portal Login | Upper Labay High School</title>
+    <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="../../assets/js/secure-session.js"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
+    <script src="../../assets/js/main.js"></script>
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <script src="../../assets/lib/tailwind.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+    <div class="max-w-md mx-auto px-6 py-12">
+        <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+            <div class="p-1 bg-blue-600"></div>
+            <div class="p-8">
+                <div class="flex justify-center mb-6">
+                    <img src="../../assets/images/school-logo.webp" alt="ULHS" class="w-20 h-20">
+                </div>
+                
+                <h2 class="text-2xl font-black text-center text-gray-900 uppercase tracking-tight mb-2" style="font-family: 'Acme', sans-serif;">Parent Portal</h2>
+                <p class="text-center text-gray-500 text-sm mb-4 font-semibold">Sign in to view your child's school information</p>
+                
+                <div class="bg-green-50 rounded-2xl p-4 border border-green-100 mb-6">
+                    <h4 class="text-xs font-black text-green-800 uppercase mb-2 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        Data Privacy Reminder
+                    </h4>
+                    <p class="text-[10px] text-green-700 font-semibold">By signing in, you acknowledge that your personal and child's school data will be processed in accordance with the <a href="../privacy-policy.html" class="text-green-800 font-bold underline">Data Privacy Act of 2012 and our Privacy Policy</a>.</p>
+                </div>
+
+                <div id="login-container" class="space-y-6">
+                    <div class="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                        <h4 class="text-xs font-black text-blue-800 uppercase mb-3 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"></path></svg>
+                            How to Sign In
+                        </h4>
+                        <ol class="text-[10px] text-blue-700 space-y-2 font-semibold">
+                            <li>1. Make sure you have linked your child via the <a href="../parent-registration.html" class="text-blue-600 underline font-bold">Parent Registration</a> page</li>
+                            <li>2. Enter your child's 12-digit LRN below</li>
+                            <li>3. Click "Verify & Sign In" to access the portal</li>
+                        </ol>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Student LRN</label>
+                        <input type="text" id="verify-lrn" maxlength="12" placeholder="Enter 12-digit LRN" 
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-blue-500 focus:outline-none font-bold text-gray-900 transition-all font-mono text-center">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">PIN</label>
+                        <input type="password" id="verify-pin" maxlength="4" placeholder="Enter 4-digit PIN" 
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-blue-500 focus:outline-none font-bold text-gray-900 transition-all font-mono text-center">
+                    </div>
+
+                    <button id="verify-lrn-btn" disabled class="w-full py-4 bg-gray-200 text-gray-400 rounded-xl font-black uppercase tracking-widest cursor-not-allowed transition-all shadow-lg">
+                        Verify & Sign In
+                    </button>
+
+                    <div class="pt-2">
+                        <p class="text-center text-[10px] text-gray-400 font-semibold">
+                            Haven't linked your child yet? 
+                            <a href="../parent-registration.html" class="text-blue-600 font-bold underline">Register Now</a>
+                        </p>
+                    </div>
+                    
+                    <div class="pt-2">
+                        <p class="text-center text-[10px] text-gray-400 font-semibold">
+                            Need to set or reset your PIN? 
+                            <a href="set-pin.html" class="text-blue-600 font-bold underline">Set PIN</a>
+                        </p>
+                    </div>
+                </div>
+
+                <div id="loading-container" class="hidden space-y-6 text-center py-8">
+                    <div class="flex flex-col items-center justify-center gap-3">
+                        <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+                        <p class="text-sm font-black text-blue-600 uppercase tracking-widest">Verifying...</p>
+                    </div>
+                </div>
+
+                <div id="error-container" class="hidden space-y-4">
+                    <div class="bg-red-50 rounded-2xl p-4 border border-red-200">
+                        <p id="error-message" class="text-xs font-bold text-red-700"></p>
+                    </div>
+                    <button onclick="location.reload()" class="w-full py-3 bg-gray-200 text-gray-700 rounded-xl font-bold uppercase tracking-wide hover:bg-gray-300 transition-all">
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 text-center">
+            <a href="../../index.html" class="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">
+                &larr; Back to Homepage
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const verifyLrnInput = document.getElementById('verify-lrn');
+        const verifyPinInput = document.getElementById('verify-pin');
+        const verifyLrnBtn = document.getElementById('verify-lrn-btn');
+        const loginContainer = document.getElementById('login-container');
+        const loadingContainer = document.getElementById('loading-container');
+        const errorContainer = document.getElementById('error-container');
+        const errorMessage = document.getElementById('error-message');
+        
+        // Rate limiting state
+        let loginAttempts = 0;
+        const MAX_ATTEMPTS = 5;
+        const COOLDOWN_TIME = 30000; // 30 seconds
+        let cooldownTimer = null;
+
+        function updateButtonState() {
+            const lrn = verifyLrnInput.value.trim();
+            const pin = verifyPinInput.value.trim();
+            // Validate LRN format (12-digit number) and PIN (4-digit number)
+            const lrnRegex = /^\d{12}$/;
+            const pinRegex = /^\d{4}$/;
+            if (lrnRegex.test(lrn) && pinRegex.test(pin)) {
+                verifyLrnBtn.disabled = false;
+                verifyLrnBtn.className = "w-full py-4 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg active:scale-95 cursor-pointer";
+            } else {
+                verifyLrnBtn.disabled = true;
+                verifyLrnBtn.className = "w-full py-4 bg-gray-200 text-gray-400 rounded-xl font-black uppercase tracking-widest cursor-not-allowed transition-all shadow-lg";
+            }
+        }
+        
+        // Update button state based on input
+        verifyLrnInput.addEventListener('input', updateButtonState);
+        verifyPinInput.addEventListener('input', updateButtonState);
+
+        // Verify LRN and sign in
+        verifyLrnBtn.addEventListener('click', verifyWithLrn);
+        
+        function startCooldown() {
+            let remainingTime = COOLDOWN_TIME / 1000;
+            verifyLrnBtn.disabled = true;
+            verifyLrnBtn.className = "w-full py-4 bg-gray-400 text-white rounded-xl font-black uppercase tracking-widest cursor-not-allowed transition-all shadow-lg";
+            verifyLrnBtn.textContent = `Try again in ${remainingTime}s`;
+            
+            cooldownTimer = setInterval(() => {
+                remainingTime--;
+                if (remainingTime > 0) {
+                    verifyLrnBtn.textContent = `Try again in ${remainingTime}s`;
+                } else {
+                    clearInterval(cooldownTimer);
+                    cooldownTimer = null;
+                    loginAttempts = 0;
+                    // Re-enable button if input is valid
+                    const lrn = verifyLrnInput.value.trim();
+                    const lrnRegex = /^\d{12}$/;
+                    if (lrnRegex.test(lrn)) {
+                        verifyLrnBtn.disabled = false;
+                        verifyLrnBtn.className = "w-full py-4 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg active:scale-95 cursor-pointer";
+                        verifyLrnBtn.textContent = "Verify & Sign In";
+                    } else {
+                        verifyLrnBtn.textContent = "Verify & Sign In";
+                    }
+                }
+            }, 1000);
+        }
+
+        async function verifyWithLrn() {
+            // Check rate limit
+            loginAttempts++;
+            if (loginAttempts >= MAX_ATTEMPTS) {
+                startCooldown();
+                return;
+            }
+            
+            const lrn = document.getElementById('verify-lrn').value.trim();
+            const pin = document.getElementById('verify-pin').value.trim();
+            
+            console.log('Login attempt for LRN:', lrn);
+            
+            loginContainer.classList.add('hidden');
+            loadingContainer.classList.remove('hidden');
+
+            try {
+                const { data: student, error } = await window.supabaseClient
+                    .from('students')
+                    .select('lrn, full_name, parent_messenger_id, parent_guardian_name, section, grade_level, photo_url, student_id_number, parent_pin')
+                    .eq('lrn', lrn)
+                    .single();
+
+                console.log('Student data:', student);
+                console.log('Student error:', error);
+                console.log('Parent PIN value:', student?.parent_pin);
+
+                // Generic error message to avoid information leakage
+                if (error || !student || !student.parent_messenger_id) {
+                    throw new Error('Invalid login attempt. Please check your information and try again.');
+                }
+                
+                // Verify PIN
+                console.log('Verifying PIN...');
+                if (student.parent_pin) {
+                    const [salt, storedHash] = student.parent_pin.split(':');
+                    console.log('Salt:', salt);
+                    console.log('Stored Hash:', storedHash);
+                    const inputHash = CryptoJS.SHA256(pin + salt).toString();
+                    console.log('Input Hash:', inputHash);
+                    console.log('PIN match:', inputHash === storedHash);
+                    if (inputHash !== storedHash) {
+                        throw new Error('Invalid login attempt. Please check your information and try again.');
+                    }
+                } else {
+                    console.log('No parent PIN found!');
+                    // Show error and ask to set PIN
+                    showError('No PIN set for this account. Please set a PIN first.');
+                    // Add a link to set PIN page
+                    setTimeout(() => {
+                        if (errorContainer) {
+                            const linkHtml = '<p class="text-center mt-4"><a href="set-pin.html" class="text-blue-600 font-bold underline">Set PIN Now</a></p>';
+                            errorContainer.insertAdjacentHTML('beforeend', linkHtml);
+                        }
+                    }, 100);
+                    return;
+                }
+
+                // Success! Reset attempts and set up parent session
+                loginAttempts = 0;
+                secureSession.setItem('parentPsid', student.parent_messenger_id);
+                if (student.parent_guardian_name) {
+                    secureSession.setItem('parentName', student.parent_guardian_name);
+                }
+
+                // Fetch all students linked to this parent
+                const { data: allStudents, error: studentsError } = await window.supabaseClient
+                    .from('students')
+                    .select('lrn, full_name, section, grade_level, photo_url, student_id_number')
+                    .eq('parent_messenger_id', student.parent_messenger_id);
+
+                if (!studentsError && allStudents) {
+                    secureSession.setItem('parentStudents', allStudents);
+                    secureSession.setItem('activeStudentLrn', lrn);
+                }
+
+                loadingContainer.innerHTML = `
+                    <div class="flex flex-col items-center justify-center gap-4 py-4">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                        <p class="text-sm font-black text-green-600 uppercase tracking-widest">Welcome!</p>
+                        <p class="text-xs text-gray-600 font-semibold">Redirecting to dashboard...</p>
+                    </div>
+                `;
+
+                setTimeout(() => {
+                    window.location.replace('./dashboard.html');
+                }, 1200);
+
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        function showError(message) {
+            loadingContainer.classList.add('hidden');
+            loginContainer.classList.add('hidden');
+            errorMessage.textContent = message;
+            errorContainer.classList.remove('hidden');
+        }
+
+        // Check if already logged in
+        async function checkExistingSession() {
+            if (!window.supabaseClient) {
+                setTimeout(checkExistingSession, 100);
+                return;
+            }
+
+            const parentPsid = secureSession.getItem('parentPsid');
+            if (parentPsid) {
+                window.location.replace('./dashboard.html');
+            }
+        }
+
+        // Initialize button state
+        updateButtonState();
+        checkExistingSession();
+    </script>
+</body>
+</html>

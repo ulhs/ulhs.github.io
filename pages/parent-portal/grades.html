@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.supabase.net wss://*.supabase.co wss://*.supabase.net;">
+    <title>Grades | Parent Portal</title>
+    <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="../../assets/js/secure-session.js"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
+    <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/parent-nav.js"></script>
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <script src="../../assets/lib/tailwind.min.js"></script>
+    <style>
+        .student-card {
+            transition: all 0.2s ease;
+        }
+        .student-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .student-card.active {
+            border-color: #2563eb;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-100">
+        <div class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <h1 class="text-lg font-black text-gray-900 uppercase tracking-tight" style="font-family: 'Acme', sans-serif;">Grades</h1>
+                <div class="flex items-center gap-4">
+                    <button onclick="window.location.href='dashboard.html'" class="flex items-center gap-2 px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all text-xs font-black uppercase tracking-widest border border-gray-200 shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                        Back
+                    </button>
+                    <button onclick="handleParentLogout(event)" class="flex items-center gap-2 px-5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all text-xs font-black uppercase tracking-widest border border-red-100 shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-6">
+        <!-- Student Selector -->
+        <div class="mb-6">
+            <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Select Student</h2>
+            <div id="student-selector" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Student cards will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Student Info Banner -->
+        <div id="student-banner" class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm mb-6">
+            <div class="flex items-center gap-4">
+                <div id="student-photo-container" class="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                    <svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h2 id="student-name" class="text-sm font-black text-gray-900"></h2>
+                    <p id="student-details" class="text-xs font-bold text-gray-500 uppercase tracking-widest"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Term Selector -->
+        <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm mb-6">
+            <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Select Term</h3>
+            <div class="flex flex-wrap gap-2">
+                <button data-term="1" class="term-btn px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase shadow-sm">Term 1</button>
+                <button data-term="2" class="term-btn px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-xs font-black uppercase hover:bg-gray-50 shadow-sm">Term 2</button>
+                <button data-term="3" class="term-btn px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-xs font-black uppercase hover:bg-gray-50 shadow-sm">Term 3</button>
+            </div>
+        </div>
+
+        <!-- Grades Container -->
+        <div id="grades-container" class="space-y-4">
+            <!-- Grades will be rendered here -->
+        </div>
+
+        <!-- Logout Button at Bottom -->
+        <div class="mt-8 flex justify-center">
+            <button onclick="handleParentLogout(event)" class="flex items-center gap-2 px-6 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all text-sm font-black uppercase tracking-widest border border-red-100 shadow-sm">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                Logout
+            </button>
+        </div>
+        
+        <!-- Privacy Policy Link -->
+        <div class="mt-6 text-center">
+            <a href="../privacy-policy.html" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">
+                Privacy Policy
+            </a>
+        </div>
+    </main>
+
+    <script>
+        let students = [];
+        let activeStudent = null;
+        let currentTerm = 1;
+
+        async function initPage() {
+            if (!window.supabaseClient) {
+                setTimeout(initPage, 100);
+                return;
+            }
+
+            // Check if parent is logged in
+            students = secureSession.getItem('parentStudents') || [];
+            const activeLrn = secureSession.getItem('activeStudentLrn');
+            
+            if (students.length === 0) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            activeStudent = students.find(s => String(s.lrn) === String(activeLrn)) || students[0];
+            
+            renderStudentSelector();
+            renderStudentInfo();
+            await fetchGrades();
+
+            // Add event listeners for term buttons
+            document.querySelectorAll('.term-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    currentTerm = parseInt(e.target.dataset.term);
+                    updateTermButtons();
+                    fetchGrades();
+                });
+            });
+        }
+
+        // Render student selector
+        function renderStudentSelector() {
+            const container = document.getElementById('student-selector');
+            
+            container.innerHTML = students.map(student => {
+                const isActive = String(student.lrn) === String(activeStudent.lrn);
+                
+                return `
+                    <div class="student-card bg-white rounded-2xl p-5 border-2 ${isActive ? 'border-blue-500 active' : 'border-gray-100'} cursor-pointer shadow-sm"
+                         data-lrn="${student.lrn}"
+                         data-student-name="${student.full_name}">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                                ${student.photo_url ? 
+                                    `<img src="${student.photo_url}" alt="${student.full_name}" class="w-full h-full object-cover" onerror="this.style.display='none'">` :
+                                    `<svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                                    </svg>`
+                                }
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-sm font-black text-gray-900 truncate">${student.full_name}</h3>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase">${student.section || 'N/A'}</span>
+                                    <span class="text-[10px] font-bold text-gray-400">Grade ${student.grade_level || 'N/A'}</span>
+                                </div>
+                            </div>
+                            ${isActive ? 
+                                `<div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Add click listeners to student cards
+            const cards = container.querySelectorAll('.student-card');
+            cards.forEach(card => {
+                card.addEventListener('click', () => {
+                    const lrn = card.getAttribute('data-lrn');
+                    if (lrn) selectStudent(lrn);
+                });
+            });
+        }
+
+        // Select student
+        function selectStudent(lrn) {
+            activeStudent = students.find(s => String(s.lrn) === String(lrn));
+            secureSession.setItem('activeStudentLrn', lrn);
+            renderStudentSelector();
+            renderStudentInfo();
+            fetchGrades();
+        }
+
+        function updateTermButtons() {
+            document.querySelectorAll('.term-btn').forEach(btn => {
+                const term = parseInt(btn.dataset.term);
+                if (term === currentTerm) {
+                    btn.classList.remove('bg-white', 'text-gray-700', 'border', 'border-gray-200');
+                    btn.classList.add('bg-blue-600', 'text-white');
+                } else {
+                    btn.classList.remove('bg-blue-600', 'text-white');
+                    btn.classList.add('bg-white', 'text-gray-700', 'border', 'border-gray-200');
+                }
+            });
+        }
+
+        function renderStudentInfo() {
+            document.getElementById('student-name').textContent = activeStudent.full_name;
+            document.getElementById('student-details').textContent = `${activeStudent.section || 'N/A'} • Grade ${activeStudent.grade_level || 'N/A'}`;
+            
+            // Load photo if available
+            if (activeStudent.photo_url) {
+                loadStudentPhoto(activeStudent.photo_url);
+            }
+        }
+
+        async function loadStudentPhoto(photoUrl) {
+            const container = document.getElementById('student-photo-container');
+            try {
+                if (window.supabaseClient) {
+                    const { data, error } = await window.supabaseClient.storage.from('student-photos').download(photoUrl);
+                    if (!error) {
+                        const url = URL.createObjectURL(data);
+                        container.innerHTML = `<img src="${url}" alt="${activeStudent.full_name}" class="w-full h-full object-cover">`;
+                    }
+                }
+            } catch (err) {
+                console.error('Error loading photo:', err);
+            }
+        }
+
+        async function fetchGrades() {
+            const container = document.getElementById('grades-container');
+            
+            try {
+                // First, try to fetch from a 'grades' table in Supabase
+                const { data, error } = await window.supabaseClient
+                    .from('grades')
+                    .select('*')
+                    .eq('student_lrn', activeStudent.lrn)
+                    .eq('term', currentTerm);
+                
+                if (error || !data || data.length === 0) {
+                    // If no grades in Supabase, show sample data
+                    renderSampleGrades();
+                } else {
+                    renderGrades(data);
+                }
+            } catch (err) {
+                console.error('Error fetching grades:', err);
+                // Fall back to sample data
+                renderSampleGrades();
+            }
+        }
+
+        function getGradeColor(grade) {
+            if (grade >= 90) return 'bg-green-100 text-green-800';
+            if (grade >= 85) return 'bg-blue-100 text-blue-800';
+            if (grade >= 80) return 'bg-yellow-100 text-yellow-800';
+            if (grade >= 75) return 'bg-orange-100 text-orange-800';
+            return 'bg-red-100 text-red-800';
+        }
+
+        function renderGrades(grades) {
+            const container = document.getElementById('grades-container');
+            
+            container.innerHTML = `
+                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                    <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Term ${currentTerm} Grades</h3>
+                    <div class="grid grid-cols-1 gap-3">
+                        ${grades.map(grade => `
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                                <div>
+                                    <h4 class="text-sm font-black text-gray-900">${grade.subject}</h4>
+                                    <p class="text-[10px] text-gray-500 font-semibold">${grade.teacher || 'Teacher'}</p>
+                                </div>
+                                <span class="px-3 py-1 rounded-full text-sm font-black ${getGradeColor(grade.grade)}">${grade.grade}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSampleGrades() {
+            const container = document.getElementById('grades-container');
+            
+            container.innerHTML = `
+                <div class="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M12 10a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">No Grades Yet</h3>
+                        <p class="text-[10px] text-gray-500 font-semibold">Grades for Term ${currentTerm} will appear here when available</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        initPage();
+    </script>
+</body>
+</html>

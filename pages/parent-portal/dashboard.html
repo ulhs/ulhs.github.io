@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.supabase.net wss://*.supabase.co wss://*.supabase.net;">
+    <title>Parent Portal | Upper Labay High School</title>
+    <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="../../assets/js/secure-session.js"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
+    <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/parent-nav.js"></script>
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <script src="../../assets/lib/tailwind.min.js"></script>
+    <style>
+        .student-card {
+            transition: all 0.2s ease;
+        }
+        .student-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .student-card.active {
+            border-color: #2563eb;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        }
+        .nav-item {
+            transition: all 0.2s ease;
+        }
+        .nav-item:hover {
+            background: #f3f4f6;
+            transform: translateX(4px);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-100">
+        <div class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <img src="../../assets/images/school-logo.webp" alt="ULHS" class="w-10 h-10">
+                    <div>
+                        <h1 class="text-lg font-black text-gray-900 uppercase tracking-tight" style="font-family: 'Acme', sans-serif;">Parent Portal</h1>
+                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Upper Labay High School</p>
+                    </div>
+                </div>
+                <button onclick="handleParentLogout(event)" class="flex items-center gap-2 px-5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all text-xs font-black uppercase tracking-widest border border-red-100 shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                    </svg>
+                    Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <!-- Student Selector -->
+        <div class="mb-8">
+            <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Select Student</h2>
+            <div id="student-selector" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Student cards will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Welcome & Quick Stats -->
+        <div id="dashboard-content" class="space-y-6">
+            <!-- Content will be dynamically loaded based on selected student -->
+        </div>
+    </main>
+
+
+
+    <script>
+        let students = [];
+        let activeStudent = null;
+
+        // Initialize dashboard
+        async function initDashboard() {
+            if (!window.supabaseClient) {
+                setTimeout(initDashboard, 100);
+                return;
+            }
+
+            students = secureSession.getItem('parentStudents') || [];
+            const activeLrn = secureSession.getItem('activeStudentLrn');
+            
+            console.log('=== INIT DASHBOARD ===');
+            console.log('All students:', students);
+            console.log('Active LRN from storage:', activeLrn);
+            
+            if (students.length === 0) {
+                window.location.replace('./login.html');
+                return;
+            }
+
+            activeStudent = students.find(s => String(s.lrn) === String(activeLrn)) || students[0];
+            console.log('Active student set to:', activeStudent);
+            
+            renderStudentSelector();
+            renderDashboardContent();
+        }
+
+        // Render student selector
+        function renderStudentSelector() {
+            console.log('=== RENDERING STUDENT SELECTOR ===');
+            console.log('Active student LRN:', activeStudent.lrn);
+            
+            const container = document.getElementById('student-selector');
+            
+            container.innerHTML = students.map(student => {
+                const isActive = String(student.lrn) === String(activeStudent.lrn);
+                console.log(`Student: ${student.full_name}, LRN: ${student.lrn}, IsActive: ${isActive}`);
+                
+                return `
+                    <div class="student-card bg-white rounded-2xl p-5 border-2 ${isActive ? 'border-blue-500 active' : 'border-gray-100'} cursor-pointer shadow-sm"
+                         data-lrn="${student.lrn}"
+                         data-student-name="${student.full_name}">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                                ${student.photo_url ? 
+                                    `<img src="${student.photo_url}" alt="${student.full_name}" class="w-full h-full object-cover" onerror="this.style.display='none'">` :
+                                    `<svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                                    </svg>`
+                                }
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-sm font-black text-gray-900 truncate">${student.full_name}</h3>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase">${student.section || 'N/A'}</span>
+                                    <span class="text-[10px] font-bold text-gray-400">Grade ${student.grade_level || 'N/A'}</span>
+                                </div>
+                            </div>
+                            ${isActive ? 
+                                `<div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Add click listeners to student cards
+            const cards = container.querySelectorAll('.student-card');
+            console.log(`Found ${cards.length} student cards`);
+            
+            cards.forEach(card => {
+                const studentName = card.getAttribute('data-student-name');
+                console.log(`Adding listener for: ${studentName}`);
+                
+                card.addEventListener('click', (e) => {
+                    console.log('Card clicked!', e.target);
+                    const lrn = card.getAttribute('data-lrn');
+                    console.log('LRN from card:', lrn);
+                    if (lrn) selectStudent(lrn);
+                });
+            });
+        }
+
+        // Select student
+        function selectStudent(lrn) {
+            console.log('Selecting student with LRN:', lrn);
+            activeStudent = students.find(s => String(s.lrn) === String(lrn));
+            console.log('Active student set to:', activeStudent);
+            secureSession.setItem('activeStudentLrn', lrn);
+            renderStudentSelector();
+            renderDashboardContent();
+        }
+
+        // Render dashboard content
+        function renderDashboardContent() {
+            const container = document.getElementById('dashboard-content');
+            
+            container.innerHTML = `
+                <!-- Welcome -->
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-3xl p-6 text-white shadow-lg">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-xs font-bold text-blue-100 uppercase tracking-widest mb-1">Welcome to Parent Portal</p>
+                            <h2 class="text-xl font-black">Viewing: ${activeStudent.full_name}</h2>
+                        </div>
+                        <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Attendance -->
+                    <div class="nav-item bg-white rounded-2xl p-5 border border-gray-100 shadow-sm cursor-pointer" onclick="window.location.href='attendance-history.html'">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-black text-gray-900">Attendance</h3>
+                                <p class="text-xs text-gray-500 font-semibold">View attendance history</p>
+                            </div>
+                            <svg class="w-5 h-5 text-gray-300 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Grades -->
+                    <div class="nav-item bg-white rounded-2xl p-5 border border-gray-100 shadow-sm cursor-pointer" onclick="window.location.href='grades.html'">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-black text-gray-900">Grades</h3>
+                                <p class="text-xs text-gray-500 font-semibold">View term grades</p>
+                            </div>
+                            <svg class="w-5 h-5 text-gray-300 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Achievements -->
+                    <div class="nav-item bg-white rounded-2xl p-5 border border-gray-100 shadow-sm cursor-pointer" onclick="window.location.href='achievements.html'">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-yellow-100 rounded-2xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-black text-gray-900">Achievements</h3>
+                                <p class="text-xs text-gray-500 font-semibold">Awards & recognitions</p>
+                            </div>
+                            <svg class="w-5 h-5 text-gray-300 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Info -->
+                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                    <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Student Information</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">LRN</p>
+                            <p class="text-sm font-black text-gray-900 font-mono">${activeStudent.lrn}</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Student ID</p>
+                            <p class="text-sm font-black text-gray-900 font-mono">${activeStudent.student_id_number || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Section</p>
+                            <p class="text-sm font-black text-gray-900">${activeStudent.section || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Grade Level</p>
+                            <p class="text-sm font-black text-gray-900">Grade ${activeStudent.grade_level || 'N/A'}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logout Button at Bottom -->
+                <div class="mt-8 flex justify-center">
+                    <button onclick="handleParentLogout(event)" class="flex items-center gap-2 px-6 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all text-sm font-black uppercase tracking-widest border border-red-100 shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        Logout
+                    </button>
+                </div>
+                
+                <!-- Privacy Policy Link -->
+                <div class="mt-6 text-center">
+                    <a href="../privacy-policy.html" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">
+                        Privacy Policy
+                    </a>
+                </div>
+            `;
+        }
+
+        // Initialize on load
+        initDashboard();
+    </script>
+</body>
+</html>

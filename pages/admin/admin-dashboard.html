@@ -108,12 +108,23 @@
                         }
                         
                         // SARDO Risk Dashboard (Admin, School Head, Guidance, or with Sardo permission)
-                        if (role === 'admin' || role === 'school_head' || role === 'guidance_counselor' || access.sardo) {
+                        if (role === 'admin' || role === 'school_head' || role === 'guidance_counselor' || access.sardo || false) {
                             html += `
                                 <li class="list" data-page="sardo-dashboard.html">
                                     <a href="sardo-dashboard.html">
                                         <span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
                                         <span class="text">SARDO</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        // GRADES Encoding (Admin or with Grades permission)
+                        if (role === 'admin' || access.grades || false) {
+                            html += `
+                                <li class="list" data-page="grade-encoding.html">
+                                    <a href="grade-encoding.html">
+                                        <span class="icon"><i class="fa-solid fa-book-open-reader"></i></span>
+                                        <span class="text">GRADES</span>
                                     </a>
                                 </li>`;
                         }
@@ -268,7 +279,7 @@
                         Data Privacy Notice
                     </h4>
                     <p class="text-sm leading-relaxed text-gray-800 font-bold mb-6">
-                        In compliance with the <b>Philippines Data Privacy Act of 2012 (RA 10173)</b>, Upper Labay High School ensures that all student data processed by this Attendance System is handled with the highest level of security. This system operates on a <b>"Cloud-Native & Hybrid-Offline"</b> architecture, and the sensitive Learner Reference Number (LRN) is never exposed on student ID cards, QR codes, or in public-facing interfaces—only public student ID numbers and secure tokens are used.
+                        In compliance with the <b>Philippines Data Privacy Act of 2012 (RA 10173)</b>, Upper Labay High School ensures that all student data processed by this Attendance System is handled with the highest level of security. This system operates on a <b>"Cloud-Native & Hybrid-Offline"</b> architecture, and the sensitive Learner Reference Number (LRN) is never exposed on student ID cards, QR codes, or in public-facing interfaces—only public student ID numbers and secure tokens are used. For more details, see our <a href="../privacy-policy.html" class="text-blue-700 underline font-bold">Privacy Policy</a>.
                     </p>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div class="bg-white/40 p-4 rounded-2xl border border-white/60">
