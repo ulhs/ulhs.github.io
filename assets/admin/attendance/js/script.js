@@ -1519,13 +1519,24 @@ async function triggerParentNotification(student, timeData, scanTime, forceType 
 
 // --- SCANNER LOGIC ---
 async function onScanSuccess(decodedText, decodedResult) {
-    // Critical: Only process scans if scanner is actively running and NOT switching cameras
-    if (!isScannerActive || isSwitchingCamera || !html5QrCode || !html5QrCode.isScanning) {
-        return;
+    // Critical: For camera scans, only process if scanner is actively running and NOT switching cameras
+    // For physical (HID) scanner scans (no decodedResult), always process
+    if (decodedResult) {
+        if (!isScannerActive || isSwitchingCamera || !html5QrCode || !html5QrCode.isScanning) {
+            return;
+        }
     }
 
     const nowTimestamp = Date.now();
     const scannedInput = decodedText.trim();
+
+    // Update debug UI
+    const lastScannedRawEl = document.getElementById('last-scanned-raw');
+    const extractedTokenEl = document.getElementById('extracted-token');
+    const extractedLrnEl = document.getElementById('extracted-lrn');
+    const scanStatusEl = document.getElementById('scan-status-message');
+    
+    if (lastScannedRawEl) lastScannedRawEl.textContent = scannedInput;
 
     // Parse the QR code data to extract token or LRN (for backward compatibility)
     let publicToken = null;
@@ -1545,11 +1556,21 @@ async function onScanSuccess(decodedText, decodedResult) {
     if (!publicToken && !cleanLRN) {
         cleanLRN = scannedInput.replace(/[^0-9]/g, '');
     }
+    
+    // Update debug UI with parsed info
+    if (extractedTokenEl) extractedTokenEl.textContent = publicToken || '—';
+    if (extractedLrnEl) extractedLrnEl.textContent = cleanLRN || '—';
+    if (scanStatusEl) scanStatusEl.textContent = 'Processing scan...';
+    if (scanStatusEl) scanStatusEl.className = 'bg-white rounded-lg p-2 text-xs font-bold border border-blue-200 min-h-[32px] text-blue-700';
 
     // 1. SCAN COOLDOWN: Prevent double-scanning same token/LRN within 5 seconds
     const cooldownKey = publicToken || cleanLRN;
     if (cooldownKey === lastScannedLrn && (nowTimestamp - lastScanTimestamp) < 5000) {
         console.log(`Scan ignored: Cooldown active for ${cooldownKey}`);
+        if (scanStatusEl) {
+            scanStatusEl.textContent = `Ignored: Cooldown active for ${cooldownKey}`;
+            scanStatusEl.className = 'bg-white rounded-lg p-2 text-xs font-bold border border-yellow-200 min-h-[32px] text-yellow-700';
+        }
         return;
     }
     
@@ -1579,27 +1600,29 @@ async function onScanSuccess(decodedText, decodedResult) {
     }
 
     if (student) {
+        if (scanStatusEl) {
+            scanStatusEl.textContent = `Found student: ${student.parsedName} (${student.section})`;
+            scanStatusEl.className = 'bg-white rounded-lg p-2 text-xs font-bold border border-green-200 min-h-[32px] text-green-700';
+        }
+        
         const timeData = getAttendanceStatus(student.lrn);
         const existing = attendanceSession.get(student.lrn);
 
         // 1. Check for Duplicate Session Scans
         if (existing) {
-            if (timeData.session === 'AM' && existing.am) {
-                showScanFeedback(student, "AM Session Already Scanned", "yellow");
+            let duplicateMsg = null;
+            if (timeData.session === 'AM' && existing.am) duplicateMsg = "AM Session Already Scanned";
+            if (timeData.session === 'PM' && existing.pm) duplicateMsg = "PM Session Already Scanned";
+            if (timeData.session === 'DEPARTURE' && existing.departure) duplicateMsg = "Departure Already Scanned";
+            
+            if (duplicateMsg) {
+                showScanFeedback(student, duplicateMsg, "yellow");
                 showScanOverlay(student.parsedName, student, 'warning', student.section, timeData);
                 lastScannedLrn = student.lrn; lastScanTimestamp = nowTimestamp;
-                return;
-            }
-            if (timeData.session === 'PM' && existing.pm) {
-                showScanFeedback(student, "PM Session Already Scanned", "yellow");
-                showScanOverlay(student.parsedName, student, 'warning', student.section, timeData);
-                lastScannedLrn = student.lrn; lastScanTimestamp = nowTimestamp;
-                return;
-            }
-            if (timeData.session === 'DEPARTURE' && existing.departure) {
-                showScanFeedback(student, "Departure Already Scanned", "yellow");
-                showScanOverlay(student.parsedName, student, 'warning', student.section, timeData);
-                lastScannedLrn = student.lrn; lastScanTimestamp = nowTimestamp;
+                if (scanStatusEl) {
+                    scanStatusEl.textContent = `Duplicate: ${duplicateMsg}`;
+                    scanStatusEl.className = 'bg-white rounded-lg p-2 text-xs font-bold border border-yellow-200 min-h-[32px] text-yellow-700';
+                }
                 return;
             }
         }
@@ -1638,7 +1661,17 @@ async function onScanSuccess(decodedText, decodedResult) {
         addLog(student, scanTime, timeData.session);
         showScanOverlay(student.parsedName, student, 'success', student.section, timeData);
         playBeep('success');
+        
+        if (scanStatusEl) {
+            scanStatusEl.textContent = `Success! Recorded ${timeData.session} attendance for ${student.parsedName}`;
+            scanStatusEl.className = 'bg-white rounded-lg p-2 text-xs font-bold border border-green-200 min-h-[32px] text-green-700';
+        }
     } else {
+        if (scanStatusEl) {
+            scanStatusEl.textContent = `Error: No student found for this scan`;
+            scanStatusEl.className = 'bg-white rounded-lg p-2 text-xs font-bold border border-red-200 min-h-[32px] text-red-700';
+        }
+        
         // Cooldown for unknown scans too
         if (scannedInput === lastScannedLrn && (nowTimestamp - lastScanTimestamp) < 5000) return;
         lastScannedLrn = scannedInput;
@@ -3229,6 +3262,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Zero-interference listener for dedicated USB/Bluetooth QR scanners
     let scanBuffer = "";
     let lastKeyTime = Date.now();
+    const scannerBufferEl = document.getElementById('scanner-buffer');
 
     window.addEventListener('keydown', (e) => {
         // Guard 1: Ignore if user is currently typing in an input, textarea, or select field
@@ -3238,32 +3272,61 @@ document.addEventListener('DOMContentLoaded', () => {
             activeEl.tagName === 'TEXTAREA' || 
             activeEl.isContentEditable ||
             activeEl.tagName === 'SELECT'
-        );
+        ) && activeEl.id !== 'manual-scan-input'; // Allow manual input field
         if (isTyping) return;
 
         const currentTime = Date.now();
+        const keyDelay = currentTime - lastKeyTime;
         
-        // HID Scanners type extremely fast. If delay between keys > 50ms, it's likely a human typing.
+        // HID Scanners type extremely fast. If delay between keys > 150ms, it's likely a human typing.
         // We reset the buffer if the pause is too long.
-        if (currentTime - lastKeyTime > 50) {
+        if (keyDelay > 150) {
             scanBuffer = "";
         }
         lastKeyTime = currentTime;
 
+        // Update buffer display
+        if (scannerBufferEl) {
+            scannerBufferEl.textContent = scanBuffer || '—';
+        }
+
         // Logic for handling the scan
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' || e.key === 'Tab') { // Support both Enter and Tab as terminators
             if (scanBuffer.length >= 3) { // Most LRNs/IDs are at least 3+ chars
                 console.log(`[HID Scanner] Detected Scan: ${scanBuffer}`);
                 onScanSuccess(scanBuffer);
             }
             scanBuffer = "";
+            if (scannerBufferEl) scannerBufferEl.textContent = '—';
+            e.preventDefault();
         } else {
-            // Only collect alphanumeric characters to keep the buffer clean
+            // Collect all characters except special keys
             if (e.key.length === 1) {
                 scanBuffer += e.key;
             }
         }
     });
+
+    // --- Manual Input Handling ---
+    const manualScanInput = document.getElementById('manual-scan-input');
+    const processManualScanBtn = document.getElementById('process-manual-scan-btn');
+    
+    if (processManualScanBtn) {
+        processManualScanBtn.addEventListener('click', () => {
+            if (manualScanInput && manualScanInput.value.trim()) {
+                onScanSuccess(manualScanInput.value.trim());
+            }
+        });
+    }
+    
+    if (manualScanInput) {
+        manualScanInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && manualScanInput.value.trim()) {
+                e.preventDefault();
+                onScanSuccess(manualScanInput.value.trim());
+            }
+        });
+    }
 
     // Start offline-first attendance data flow
     initializeAttendanceApp();
