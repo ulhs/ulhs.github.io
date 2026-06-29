@@ -224,25 +224,25 @@
 
     <main class="container mx-auto px-4 pb-12 max-w-6xl mt-8">
         <!-- Scan Result Overlay -->
-        <div id="scan-overlay" class="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md hidden transition-opacity duration-300">
-            <div class="text-center text-white transform scale-110 transition-transform duration-300">
+        <div id="scan-overlay" class="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md hidden transition-opacity duration-300 overflow-hidden p-4">
+            <div class="text-center text-white transition-transform duration-300 max-w-full w-full">
                 <!-- Security: Student Photo Container -->
-                <div class="relative inline-block mb-6">
-                    <div id="overlay-photo-container" class="w-48 h-48 md:w-64 md:h-64 rounded-2xl border-4 border-white shadow-2xl overflow-hidden bg-gray-200">
-                        <img id="overlay-student-photo" src="" alt="Student" class="w-full h-full student-photo-display" style="display:none">
+                <div class="relative inline-block mb-4 md:mb-6">
+                    <div id="overlay-photo-container" class="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 lg:w-56 lg:h-56 rounded-2xl border-4 border-white shadow-2xl overflow-hidden bg-gray-200 mx-auto">
+                        <img id="overlay-student-photo" src="" alt="Student" class="w-full h-full student-photo-display object-cover" style="display:none">
                         <div id="overlay-photo-placeholder" class="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
-                            <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                            <svg class="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
                         </div>
                     </div>
-                    <div id="overlay-icon-container" class="absolute -bottom-4 -right-4 bg-white rounded-full w-12 h-12 flex items-center justify-center shadow-xl">
+                    <div id="overlay-icon-container" class="absolute -bottom-3 -right-3 sm:-bottom-4 sm:-right-4 bg-white rounded-full w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center shadow-xl">
                         <!-- Icon will be inserted via JS -->
                     </div>
                 </div>
                 
-                <h2 id="overlay-status" class="text-2xl font-black uppercase tracking-widest opacity-80 mb-2">STATUS</h2>
-                <h1 id="overlay-student-name" class="text-5xl md:text-7xl font-black tracking-tighter drop-shadow-lg">STUDENT NAME</h1>
-                <p id="overlay-student-lrn" class="text-xl font-bold mt-4 opacity-90 font-mono">LRN: 123456789012</p>
-                <div id="overlay-time-status" class="mt-4 inline-block px-6 py-2 rounded-full font-black text-xl uppercase tracking-widest shadow-lg">
+                <h2 id="overlay-status" class="text-lg sm:text-xl md:text-2xl font-black uppercase tracking-widest opacity-80 mb-2">STATUS</h2>
+                <h1 id="overlay-student-name" class="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-black tracking-tighter drop-shadow-lg break-words px-2">STUDENT NAME</h1>
+                <p id="overlay-student-lrn" class="text-base sm:text-lg md:text-xl font-bold mt-2 md:mt-4 opacity-90 font-mono break-all px-2">LRN: 123456789012</p>
+                <div id="overlay-time-status" class="mt-2 md:mt-4 inline-block px-4 py-1.5 sm:px-6 sm:py-2 rounded-full font-black text-base sm:text-xl uppercase tracking-widest shadow-lg">
                     <!-- Time Status (LATE/ON TIME) -->
                 </div>
             </div>
@@ -343,6 +343,19 @@
                             </label>
                             <span id="scan-status" class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-[10px] font-bold uppercase">System Initializing...</span>
                         </div>
+                        
+                        <!-- Scanner Controls -->
+                        <div class="mb-4 flex flex-col sm:flex-row gap-3 justify-center">
+                            <button id="start-btn" class="w-full sm:w-auto group relative px-8 py-3 bg-deped-blue text-white rounded-xl font-black uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed overflow-hidden" disabled>
+                                <span class="relative z-10 flex items-center justify-center gap-2">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                                    Launch Scanner
+                                </span>
+                                <div id="btn-pulse" class="absolute inset-0 bg-white/20 scale-0 rounded-xl transition-transform duration-1000"></div>
+                            </button>
+                            <button id="stop-btn" class="w-full sm:w-auto px-8 py-3 bg-red-600 text-white rounded-xl font-black uppercase tracking-widest shadow-xl hover:bg-red-700 transition-all hidden">Stop</button>
+                        </div>
+                        
                         <div id="reader-container" class="relative">
                             <div id="reader" class="rounded-xl overflow-hidden bg-gray-900 aspect-video border-2 border-gray-800 shadow-2xl"></div>
                             
@@ -361,12 +374,12 @@
                             </div>
                         </div>
 
-                        <!-- Scanning Tips (High-Visibility for Gate Staff) -->
+                        <!-- Scanning Tips (High-Visibility for Gate Staff) 
                         <div class="mt-4 text-center">
                             <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest bg-gray-50 inline-block px-4 py-1.5 rounded-full border border-gray-200 shadow-sm">
                                 <span class="text-blue-600">Pro Tip:</span> Hold phone <span class="text-gray-900">12 inches away</span> & <span class="text-gray-900">reduce brightness</span> if scanning fails.
                             </p>
-                        </div>
+                        </div> -->
 
                         <!-- QR Scan Info & Debug Panel -->
                         <div class="mt-6 bg-blue-50 rounded-xl p-4 border border-blue-200">
@@ -406,6 +419,14 @@
                                 <label class="text-xs font-bold text-blue-700 block mb-1">Scan Status:</label>
                                 <div id="scan-status-message" class="bg-white rounded-lg p-2 text-xs font-bold border border-blue-200 min-h-[32px]">
                                     <span class="text-gray-400 italic">Waiting for scan...</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Parent Notification Status -->
+                            <div class="mb-4">
+                                <label class="text-xs font-bold text-blue-700 block mb-1">Parent Notification Status:</label>
+                                <div id="notification-status-message" class="bg-white rounded-lg p-2 text-xs font-bold border border-blue-200 min-h-[32px]">
+                                    <span class="text-gray-400 italic">No notification sent yet</span>
                                 </div>
                             </div>
 
@@ -451,14 +472,6 @@
                                 </div>
                             </div>
 
-                            <button id="start-btn" class="w-full sm:w-auto group relative px-8 py-3 bg-deped-blue text-white rounded-xl font-black uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed overflow-hidden" disabled>
-                                <span class="relative z-10 flex items-center justify-center gap-2">
-                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
-                                    Launch Scanner
-                                </span>
-                                <div id="btn-pulse" class="absolute inset-0 bg-white/20 scale-0 rounded-xl transition-transform duration-1000"></div>
-                            </button>
-                            <button id="stop-btn" class="w-full sm:w-auto px-8 py-3 bg-red-600 text-white rounded-xl font-black uppercase tracking-widest shadow-xl hover:bg-red-700 transition-all hidden">Stop</button>
                             <button id="export-btn" class="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition-all hidden flex items-center justify-center gap-2">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                                 Save Session

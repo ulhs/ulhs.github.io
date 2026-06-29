@@ -1483,12 +1483,51 @@ async function logAttendanceToSupabase(student, timeData, scanTime = new Date())
  * This is currently optimized for Facebook Messenger integration.
  */
 async function triggerParentNotification(student, timeData, scanTime, forceType = null) {
-    if (!window.supabaseClient || !navigator.onLine) return;
+    const notificationStatusEl = document.getElementById('notification-status-message');
+    let statusText = "";
+    let statusClass = "";
+    
+    if (!window.supabaseClient) {
+        statusText = "Error: Supabase client not available";
+        statusClass = "bg-white rounded-lg p-2 text-xs font-bold border border-red-200 min-h-[32px] text-red-700";
+        if (notificationStatusEl) {
+            notificationStatusEl.textContent = statusText;
+            notificationStatusEl.className = statusClass;
+        }
+        console.warn("⚠️ Notification trigger failed: Supabase client not available");
+        return;
+    }
+    
+    if (!navigator.onLine) {
+        statusText = "Skipped: Offline (will sync later)";
+        statusClass = "bg-white rounded-lg p-2 text-xs font-bold border border-yellow-200 min-h-[32px] text-yellow-700";
+        if (notificationStatusEl) {
+            notificationStatusEl.textContent = statusText;
+            notificationStatusEl.className = statusClass;
+        }
+        console.log("[Notification] Skipped: Offline");
+        return;
+    }
 
     try {
         const psidList = String(student.parent_messenger_id || '').split(',').map(id => id.trim()).filter(id => id);
-        if (psidList.length === 0) return;
+        if (psidList.length === 0) {
+            statusText = "Skipped: No parent messenger ID configured";
+            statusClass = "bg-white rounded-lg p-2 text-xs font-bold border border-yellow-200 min-h-[32px] text-yellow-700";
+            if (notificationStatusEl) {
+                notificationStatusEl.textContent = statusText;
+                notificationStatusEl.className = statusClass;
+            }
+            console.log("[Notification] Skipped: No parent messenger ID");
+            return;
+        }
 
+        statusText = `Sending to ${psidList.length} parent(s)...`;
+        statusClass = "bg-white rounded-lg p-2 text-xs font-bold border border-blue-200 min-h-[32px] text-blue-700";
+        if (notificationStatusEl) {
+            notificationStatusEl.textContent = statusText;
+            notificationStatusEl.className = statusClass;
+        }
         console.log(`[Notification] Triggering alerts for ${student.parsedName} to ${psidList.length} recipients`);
         
         // Use forced type if provided, otherwise default to arrival
@@ -1511,8 +1550,25 @@ async function triggerParentNotification(student, timeData, scanTime, forceType 
         const results = await Promise.allSettled(notificationPromises);
         const successCount = results.filter(r => r.status === 'fulfilled' && !r.value.error).length;
         
+        statusText = `✅ ${successCount}/${psidList.length} notification(s) sent successfully`;
+        statusClass = "bg-white rounded-lg p-2 text-xs font-bold border border-green-200 min-h-[32px] text-green-700";
+        if (successCount < psidList.length) {
+            statusText = `⚠️ ${successCount}/${psidList.length} notification(s) sent successfully (some failed)`;
+            statusClass = "bg-white rounded-lg p-2 text-xs font-bold border border-yellow-200 min-h-[32px] text-yellow-700";
+        }
+        
+        if (notificationStatusEl) {
+            notificationStatusEl.textContent = statusText;
+            notificationStatusEl.className = statusClass;
+        }
         console.log(`✅ Parent notification results: ${successCount}/${psidList.length} successful.`);
     } catch (err) {
+        statusText = `❌ Error: ${err.message}`;
+        statusClass = "bg-white rounded-lg p-2 text-xs font-bold border border-red-200 min-h-[32px] text-red-700";
+        if (notificationStatusEl) {
+            notificationStatusEl.textContent = statusText;
+            notificationStatusEl.className = statusClass;
+        }
         console.warn("⚠️ Notification trigger failed:", err.message);
     }
 }
