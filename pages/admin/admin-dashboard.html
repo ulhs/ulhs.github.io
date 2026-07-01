@@ -168,7 +168,44 @@
                             Attendance Dashboard
                         </h2>
 
-                        <div class="space-y-4">
+                        <div class="space-y-6">
+                            <!-- Last Scanned Learner - Enlarged, Top Section with Clock -->
+                            <div id="last-scanned-card" class="bg-white rounded-3xl shadow-xl p-8 border border-gray-100 transition-all duration-300">
+                                <div class="flex flex-col lg:flex-row items-center gap-8">
+                                    <!-- Student Photo -->
+                                    <div class="rounded-3xl bg-white/10 backdrop-blur-md border-2 border-white/20 overflow-hidden flex-shrink-0 relative shadow-2xl w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 lg:w-64 lg:h-64">
+                                        <img id="last-student-photo" src="" alt="" class="w-full h-full student-photo-display object-cover" style="display:none">
+                                        <div id="last-photo-placeholder" class="w-full h-full flex items-center justify-center text-gray-300 bg-gray-100">
+                                            <svg class="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Student Info -->
+                                    <div class="flex-1 min-w-0 text-center lg:text-left">
+                                        <p class="text-xs font-black text-blue-600 uppercase tracking-widest mb-3">Last Scanned Learner</p>
+                                        <h3 id="last-student-name" class="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 leading-tight tracking-tighter">Waiting for scan...</h3>
+                                        <div class="flex items-center justify-center lg:justify-start gap-3 mt-4">
+                                            <span id="section-name" class="text-sm font-bold text-blue-600 uppercase tracking-wider">No activity</span>
+                                            <span class="text-gray-400">•</span>
+                                            <span id="last-scan-time" class="text-sm font-bold text-gray-500 tabular-nums">--:--:--</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Real-time Clock -->
+                                    <div class="flex-shrink-0 text-center border-l border-gray-100 pl-8 lg:pl-8">
+                                        <div class="bg-blue-100 rounded-2xl p-6 border border-blue-200 shadow-inner">
+                                            <p class="text-4xl font-black text-green-600 tracking-widest mb-2">Today is:</p>
+                                            <h2 id="live-clock" class="text-4xl sm:text-5xl md:text-6xl font-black text-blue-900 tracking-tight leading-none mb-2 flex items-baseline gap-2 tabular-nums">
+                                                <span id="clock-time">00:00</span>
+                                                <span id="clock-ampm" class="text-lg sm:text-xl md:text-2xl font-black text-blue-700 uppercase tracking-widest">AM</span>
+                                            </h2>
+                                            <p id="live-date" class="text-sm font-black text-blue-800 uppercase tracking-widest">Loading Date...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section Filter -->
                             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                 <div>
                                     <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">View Section</p>
@@ -181,6 +218,7 @@
                                 </div>
                             </div>
 
+                            <!-- Statistics Cards -->
                             <div class="grid grid-cols-2 xl:grid-cols-6 gap-4">
                                 <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
                                     <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Population</p>
@@ -205,26 +243,6 @@
                                 <div class="bg-red-50 p-4 rounded-xl border border-red-100">
                                     <p class="text-[10px] font-bold text-red-600 uppercase tracking-widest">Departures</p>
                                     <p id="departure-count" class="text-xl sm:text-2xl font-black text-red-800">0</p>
-                                </div>
-                            </div>
-
-                            <div id="last-scanned-card" class="bg-white rounded-3xl shadow-xl p-6 border border-gray-100 transition-all duration-300 mt-8">
-                                <div class="flex flex-col sm:flex-row items-center gap-6">
-                                    <div class="rounded-2xl bg-white/10 backdrop-blur-md border-2 border-white/20 overflow-hidden flex-shrink-0 relative shadow-lg w-32 h-32 sm:w-36 sm:h-36">
-                                        <img id="last-student-photo" src="" alt="" class="w-full h-full student-photo-display" style="display:none">
-                                        <div id="last-photo-placeholder" class="w-full h-full flex items-center justify-center text-gray-300 bg-gray-100">
-                                            <svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
-                                        </div>
-                                    </div>
-                                    <div class="flex-1 min-w-0 text-center sm:text-left">
-                                        <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">Last Scanned Learner</p>
-                                        <h3 id="last-student-name" class="text-2xl sm:text-3xl font-black text-gray-900 truncate leading-tight tracking-tighter">Waiting for scan...</h3>
-                                        <div class="flex items-center justify-center sm:justify-start gap-2 mt-2">
-                                            <span id="section-name" class="text-xs font-bold text-blue-600 truncate uppercase tracking-wider">No activity</span>
-                                            <span class="text-gray-300">•</span>
-                                            <span id="last-scan-time" class="text-xs font-bold text-gray-500 tabular-nums">--:--:--</span>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -711,6 +729,40 @@
                 });
             }
         });
+
+        // Update Real-time Clock
+        function updateClock() {
+            const now = new Date();
+            
+            // Time (12-hour format: h:mm AM/PM)
+            const timeOptions = { 
+                hour: 'numeric', 
+                minute: '2-digit', 
+                hour12: true 
+            };
+            const timeStr = now.toLocaleTimeString('en-PH', timeOptions).toUpperCase();
+            
+            // Split time and AM/PM for separate styling
+            const parts = timeStr.split(' ');
+            const clockTime = document.getElementById('clock-time');
+            const clockAmPm = document.getElementById('clock-ampm');
+            const liveClock = document.getElementById('live-clock');
+            const liveDate = document.getElementById('live-date');
+            
+            if (parts.length === 2) {
+                if (clockTime) clockTime.textContent = parts[0];
+                if (clockAmPm) clockAmPm.textContent = parts[1];
+            } else {
+                if (liveClock) liveClock.textContent = timeStr;
+            }
+            
+            // Date
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dateStr = now.toLocaleDateString('en-PH', dateOptions);
+            if (liveDate) liveDate.textContent = dateStr;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
     </script>
 </body>
 </html>

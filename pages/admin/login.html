@@ -129,7 +129,8 @@
                         can_manage_ids: whitelist.can_manage_ids || false,
                         can_view_dashboard: whitelist.can_view_dashboard || false,
                         can_view_sardo: whitelist.can_view_sardo || false,
-                        can_manage_grades: whitelist.can_manage_grades || false
+                        can_manage_grades: whitelist.can_manage_grades || false,
+                        section_assigned: whitelist.section_assigned || null
                     };
 
                     const { data: newProfile, error: insertError } = await window.supabaseClient
@@ -149,7 +150,8 @@
                         can_manage_ids: whitelist.can_manage_ids ?? profile.can_manage_ids,
                         can_view_dashboard: whitelist.can_view_dashboard ?? profile.can_view_dashboard,
                         can_view_sardo: whitelist.can_view_sardo ?? profile.can_view_sardo ?? false,
-                        can_manage_grades: whitelist.can_manage_grades ?? profile.can_manage_grades ?? false
+                        can_manage_grades: whitelist.can_manage_grades ?? profile.can_manage_grades ?? false,
+                        section_assigned: whitelist.section_assigned ?? profile.section_assigned
                     };
 
                     const { data: updatedProfile, error: updateError } = await window.supabaseClient

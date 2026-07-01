@@ -712,18 +712,18 @@ const SF4_MAPPINGS = {
             schoolHead: 'AC26'
         },
         sections: {
-            startRow: 12, // B12
-            sectionCol: 2,  // B
-            adviserCol: 3,  // C
-            maleCountCol: 5,  // E
-            femaleCountCol: 6,  // F
-            maleDailyAvgCol: 8,  // H
-            femaleDailyAvgCol: 9,  // I
-            malePercentCol: 11,  // K
-            femalePercentCol: 12,  // L
-            gradeRanges: ['7', '8', '9', '10'],
-            maxRows: 6 // B12 to B17
-        }
+                startRow: 12, // B12
+                sectionCol: 2,  // B
+                adviserCol: 3,  // C
+                maleCountCol: 5,  // E
+                femaleCountCol: 6,  // F
+                maleDailyAvgCol: 8,  // H
+                femaleDailyAvgCol: 9,  // I
+                malePercentCol: 11,  // K
+                femalePercentCol: 12,  // L
+                gradeRanges: ['7', '8', '9', '10'],
+                maxRows: 7 // B12 to B18
+            }
     },
     'SHS': {
         template: 'SF4_Blank_SHS.xlsx',
@@ -2077,7 +2077,7 @@ async function exportAllSF2(levelFilter = null) {
             window.supabaseClient.from('attendance_logs').select('*').gte('scanned_at', startOfMonth).lte('scanned_at', endOfMonth),
             window.supabaseClient.from('school_info').select('*'), // Fetch all to be safe
             window.supabaseClient.from('profiles').select('full_name').eq('role', 'school_head').maybeSingle(),
-            window.supabaseClient.from('profiles').select('full_name, section_assigned').not('section_assigned', 'is', null)
+            window.supabaseClient.from('profiles').select('full_name, section_assigned')
         ]);
 
         // Check for critical errors
@@ -2519,7 +2519,7 @@ async function exportAllSF4(levelFilter = null) {
             window.supabaseClient.from('attendance_logs').select('*').gte('scanned_at', startOfMonth).lte('scanned_at', endOfMonth),
             window.supabaseClient.from('school_info').select('*'), // Fetch all to be safe
             window.supabaseClient.from('profiles').select('full_name').eq('role', 'school_head').maybeSingle(),
-            window.supabaseClient.from('profiles').select('full_name, section_assigned').not('section_assigned', 'is', null)
+            window.supabaseClient.from('profiles').select('full_name, section_assigned')
         ]);
 
         // Check for critical errors
@@ -2539,13 +2539,19 @@ async function exportAllSF4(levelFilter = null) {
         
         // Map section names to adviser names from profiles
         const adviserMap = {};
+        console.log("=== SF4 Profiles loaded ===", profilesRes.data);
         if (profilesRes.data) {
             profilesRes.data.forEach(p => {
-                if (p.section_assigned) adviserMap[p.section_assigned.toUpperCase()] = p.full_name;
+                if (p.section_assigned) {
+                    const key = p.section_assigned.toUpperCase();
+                    adviserMap[key] = p.full_name;
+                    console.log(`  Added to SF4 adviserMap: ${key} → ${p.full_name}`);
+                }
             });
         } else if (profilesRes.error) {
             console.warn("⚠️ Could not fetch Adviser mappings. Ensure 'section_assigned' column exists in 'profiles' table.", profilesRes.error);
         }
+        console.log("=== Final SF4 adviserMap ===", adviserMap);
 
         // 2. Determine Required Templates
         const zip = new JSZip();
@@ -2655,7 +2661,31 @@ async function exportAllSF4(levelFilter = null) {
             // Process section data for this level
             if (level === 'JHS') {
                 let currentRow = mapping.sections.startRow;
-                for (const sectionName of levelSections) {
+                
+                // Define the desired JHS section order
+                const desiredJHSSectionOrder = [
+                    "7-HBalunto",
+                    "7-Salazar",
+                    "8-JBalunto",
+                    "8-Cuachon",
+                    "9-Aguas",
+                    "9-Laogan",
+                    "10-Capili"
+                ];
+                
+                // Sort levelSections according to the desired order (create a copy to avoid mutating original)
+                const sortedLevelSections = [...levelSections].sort((a, b) => {
+                    const indexA = desiredJHSSectionOrder.indexOf(a);
+                    const indexB = desiredJHSSectionOrder.indexOf(b);
+                    
+                    // If sections not in desired list go to the end
+                    if (indexA === -1) return 1;
+                    if (indexB === -1) return -1;
+                    
+                    return indexA - indexB;
+                });
+                
+                for (const sectionName of sortedLevelSections) {
                     if (currentRow > mapping.sections.startRow + mapping.sections.maxRows - 1) break;
                     
                     const sectionStudents = levelStudents.filter(s => s.section === sectionName);
@@ -2684,7 +2714,13 @@ async function exportAllSF4(levelFilter = null) {
                     
                     // Fill the row
                     worksheet.getCell(currentRow, mapping.sections.sectionCol).value = sectionName;
-                    worksheet.getCell(currentRow, mapping.sections.adviserCol).value = adviserMap[sectionName.toUpperCase()] || '';
+                    const lookupKey = sectionName.toUpperCase();
+                    const adviserName = adviserMap[lookupKey] || '';
+                    console.log(`Filling row ${currentRow} for section: ${sectionName}`);
+                    console.log(`  Lookup key: ${lookupKey}`);
+                    console.log(`  Available keys in adviserMap: ${Object.keys(adviserMap).join(', ')}`);
+                    console.log(`  Found adviser: ${adviserName || 'NONE'}`);
+                    worksheet.getCell(currentRow, mapping.sections.adviserCol).value = adviserName;
                     worksheet.getCell(currentRow, mapping.sections.maleCountCol).value = males.length;
                     worksheet.getCell(currentRow, mapping.sections.femaleCountCol).value = females.length;
                     worksheet.getCell(currentRow, mapping.sections.maleDailyAvgCol).value = parseFloat(maleDailyAvg.toFixed(2));
