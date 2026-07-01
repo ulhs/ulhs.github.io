@@ -3777,6 +3777,7 @@ async function initIDGenerator() {
     const guardianLabel = document.getElementById('guardian-label');
     const mobileGroup = document.getElementById('mobile-group');
     const personnelMobileGroup = document.getElementById('personnel-mobile-group');
+    const birthdateGroup = document.getElementById('birthdate-group');
     const genTitle = document.getElementById('gen-title');
     const genSubtitle = document.getElementById('gen-subtitle');
     const photoLabel = document.getElementById('photo-label');
@@ -3791,6 +3792,7 @@ async function initIDGenerator() {
             personnelTypeGroup.style.display = isPersonnel ? 'block' : 'none';
             personnelNicknameGroup.style.display = isPersonnel ? 'block' : 'none';
             personnelMobileGroup.style.display = isPersonnel ? 'block' : 'none';
+            birthdateGroup.style.display = isPersonnel ? 'block' : 'none';
             mobileGroup.style.display = isPersonnel ? 'none' : 'block';
             
             // Update labels
@@ -3805,6 +3807,7 @@ async function initIDGenerator() {
             document.getElementById('student-section').required = !isPersonnel;
             document.getElementById('emp-number').required = isPersonnel;
             document.getElementById('position').required = isPersonnel;
+            document.getElementById('birthdate').required = isPersonnel;
             
             // Reset preview
             ctxFront.clearRect(0, 0, canvasFront.width, canvasFront.height);
@@ -4480,14 +4483,17 @@ async function initIDGenerator() {
             const miVal = document.getElementById('mi').value.trim();
             const mi = miVal ? (miVal.endsWith('.') ? miVal.toUpperCase() : miVal.toUpperCase() + '.') : "";
             const lastname = document.getElementById('lastname').value.toUpperCase();
-            const birthdate = birthdateInput.value;
+            let birthdate = "";
 
-            if (!isValidDate(birthdate)) {
-                if (birthdateError) birthdateError.style.display = 'block';
-                birthdateInput.style.borderColor = 'var(--madder-red)';
-                alert("Invalid birthdate. Please use mm-dd-yyyy format and ensure the date exists.");
-                birthdateInput.focus();
-                return;
+            if (isPersonnel) {
+                birthdate = birthdateInput.value;
+                if (!isValidDate(birthdate)) {
+                    if (birthdateError) birthdateError.style.display = 'block';
+                    birthdateInput.style.borderColor = 'var(--madder-red)';
+                    alert("Invalid birthdate. Please use mm-dd-yyyy format and ensure the date exists.");
+                    birthdateInput.focus();
+                    return;
+                }
             }
 
             if (isPersonnel) {
@@ -4560,10 +4566,10 @@ async function initIDGenerator() {
             canvasHeight: 1008,
             // Photo placement
             photo: {
-                x: 174,
-                y: 241,
-                width: 472 - 174,
-                height: 592 - 241,
+                x: 140,
+                y: 215,
+                width: 508 - 140,
+                height: 635 - 215,
                 borderRadius: 15,
                 borderWidth: 6,
                 borderColor: getGradeBorderColor(gradeLevel)
@@ -4571,8 +4577,8 @@ async function initIDGenerator() {
             // Text placement
             text: {
                 maxWidth: 588,
-                fullName: { x: 323, y: 690 },
-                gradeSection: { x: 323, y: 810 },
+                fullName: { x: 323, y: 740 },
+                gradeSection: { x: 323, y: 840 },
                 studentId: { x: 29, y: 981 },
                 syText: { x: 616, y: 981 }
             },
@@ -4670,7 +4676,7 @@ async function initIDGenerator() {
                     layoutConfig.text.gradeSection.x, 
                     layoutConfig.text.gradeSection.y, 
                     layoutConfig.text.maxWidth, 
-                    baseFontSize - 20, 
+                    baseFontSize - 14, 
                     fontIdDetails, 
                     "bold", 
                     false
