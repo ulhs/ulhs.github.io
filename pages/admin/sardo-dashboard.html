@@ -179,23 +179,39 @@
                         <div class="space-y-4">
                             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                 <div>
-                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">View Filter</p>
-                                    <p class="text-xs font-bold text-gray-500 mt-1">Filter students by risk level for targeted intervention.</p>
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">View Filters</p>
+                                    <p class="text-xs font-bold text-gray-500 mt-1">Filter students by risk level, grade, or section for targeted intervention.</p>
                                 </div>
-                                <div class="flex gap-3">
-                                    <div class="w-full md:w-72">
-                                        <select id="risk-filter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
-                                            <option value="all">All Risk Levels</option>
-                                            <option value="critical">Critical Only</option>
-                                            <option value="high">High Only</option>
-                                            <option value="medium">Medium Only</option>
-                                        </select>
-                                    </div>
-                                    <button id="refresh-btn" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-200">
-                                        <i class="fa-solid fa-sync-alt mr-2"></i>
-                                        Refresh
-                                    </button>
+                            </div>
+                            <div class="flex flex-col md:flex-row gap-3 flex-wrap">
+                                <div class="w-full md:w-64">
+                                    <select id="risk-filter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                                        <option value="all">All Risk Levels</option>
+                                        <option value="critical">Critical Only</option>
+                                        <option value="high">High Only</option>
+                                        <option value="medium">Medium Only</option>
+                                    </select>
                                 </div>
+                                <div class="w-full md:w-48">
+                                    <select id="grade-filter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                                        <option value="all">All Grades</option>
+                                        <option value="7">Grade 7</option>
+                                        <option value="8">Grade 8</option>
+                                        <option value="9">Grade 9</option>
+                                        <option value="10">Grade 10</option>
+                                        <option value="11">Grade 11</option>
+                                        <option value="12">Grade 12</option>
+                                    </select>
+                                </div>
+                                <div class="w-full md:w-64">
+                                    <select id="section-filter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                                        <option value="all">All Sections</option>
+                                    </select>
+                                </div>
+                                <button id="refresh-btn" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-200">
+                                    <i class="fa-solid fa-sync-alt mr-2"></i>
+                                    Refresh
+                                </button>
                             </div>
 
                             <div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
@@ -277,6 +293,16 @@
 
     <script>
         let allStudents = [];
+        let allRiskAssessments = [];
+
+        const sectionsByGrade = {
+            '7': ['Salazar', 'HBalunto'],
+            '8': ['Cuachon', 'JBalunto'],
+            '9': ['Aguas', 'Laogan'],
+            '10': ['Capili'],
+            '11': ['Academics', 'TechPro'],
+            '12': ['FCS', 'HUMSS']
+        };
 
         function getRiskLevelClass(riskLevel) {
             switch (riskLevel.toLowerCase()) {
@@ -426,6 +452,7 @@
                 document.getElementById('medium-count').textContent = counts.medium;
                 document.getElementById('low-count').textContent = counts.low;
 
+                allRiskAssessments = riskAssessments;
                 updateStudentsList(riskAssessments);
             } catch (err) {
                 console.error('Dashboard load error:', err);
@@ -440,12 +467,21 @@
         }
 
         function updateStudentsList(riskAssessments) {
-            const filter = document.getElementById('risk-filter').value;
+            const riskFilter = document.getElementById('risk-filter').value;
+            const gradeFilter = document.getElementById('grade-filter').value;
+            const sectionFilter = document.getElementById('section-filter').value;
             const studentsList = document.getElementById('students-list');
 
             let filtered = riskAssessments;
-            if (filter !== 'all') {
-                filtered = riskAssessments.filter(a => a.riskData.risk_level.toLowerCase() === filter);
+            
+            if (riskFilter !== 'all') {
+                filtered = filtered.filter(a => a.riskData.risk_level.toLowerCase() === riskFilter);
+            }
+            if (gradeFilter !== 'all') {
+                filtered = filtered.filter(a => String(a.student.grade_level) === gradeFilter);
+            }
+            if (sectionFilter !== 'all') {
+                filtered = filtered.filter(a => a.student.section === sectionFilter);
             }
 
             const sorted = filtered.sort((a, b) => b.riskData.risk_score - a.riskData.risk_score);
@@ -456,7 +492,7 @@
                 studentsList.innerHTML = `
                     <div class="text-center py-12 text-gray-500">
                         <i class="fa-solid fa-check-circle text-4xl mb-4 text-green-500"></i>
-                        <p>No students matching the selected filter.</p>
+                        <p>No students matching the selected filters.</p>
                     </div>
                 `;
             } else {
@@ -464,10 +500,39 @@
             }
         }
 
-        document.getElementById('refresh-btn').addEventListener('click', loadRiskDashboard);
-        document.getElementById('risk-filter').addEventListener('change', loadRiskDashboard);
+        function updateSectionFilter() {
+            const gradeFilter = document.getElementById('grade-filter');
+            const sectionFilter = document.getElementById('section-filter');
+            const selectedGrade = gradeFilter.value;
+            
+            sectionFilter.innerHTML = '';
+            const allOption = document.createElement('option');
+            allOption.value = 'all';
+            allOption.textContent = 'All Sections';
+            sectionFilter.appendChild(allOption);
 
-        document.addEventListener('DOMContentLoaded', loadRiskDashboard);
+            if (selectedGrade !== 'all' && sectionsByGrade[selectedGrade]) {
+                sectionsByGrade[selectedGrade].forEach(section => {
+                    const option = document.createElement('option');
+                    option.value = section;
+                    option.textContent = section;
+                    sectionFilter.appendChild(option);
+                });
+            }
+        }
+
+        document.getElementById('refresh-btn').addEventListener('click', loadRiskDashboard);
+        document.getElementById('risk-filter').addEventListener('change', () => updateStudentsList(allRiskAssessments));
+        document.getElementById('grade-filter').addEventListener('change', () => {
+            updateSectionFilter();
+            updateStudentsList(allRiskAssessments);
+        });
+        document.getElementById('section-filter').addEventListener('change', () => updateStudentsList(allRiskAssessments));
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadRiskDashboard();
+            updateSectionFilter();
+        });
     </script>
 </body>
 </html>
