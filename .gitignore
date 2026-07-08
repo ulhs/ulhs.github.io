@@ -70,3 +70,6 @@ dist/
 
 # Ignore QR Batch Generator page
 pages/admin/qr-batch-generator.html
+
+# Ignore Windows thumbnail cache files
+*.db
