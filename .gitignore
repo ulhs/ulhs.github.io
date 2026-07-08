@@ -67,3 +67,6 @@ tmp/
 dist/
 
 *.sql
+
+# Ignore QR Batch Generator page
+pages/admin/qr-batch-generator.html
