@@ -1,5 +1,24 @@
 console.log('🔹 Parent Nav JS loaded!');
 document.addEventListener('DOMContentLoaded', async () => {
+    // --- Idle Auto-Logout (15 Minutes) ---
+    let idleLogoutTimeout;
+    const IDLE_TIMEOUT = 15 * 60 * 1000; // 15 minutes
+
+    function resetIdleTimer() {
+        clearTimeout(idleLogoutTimeout);
+        idleLogoutTimeout = setTimeout(() => {
+            console.log('⏰ Idle timeout triggered - logging out parent');
+            alert('Session expired due to inactivity. Please login again.');
+            handleParentLogout();
+        }, IDLE_TIMEOUT);
+    }
+
+    // Track all user interactions
+    const idleEvents = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart', 'touchmove'];
+    idleEvents.forEach(event => {
+        document.addEventListener(event, resetIdleTimer, true);
+    });
+
     // --- Parent Session Guard ---
     async function syncParentSession() {
         if (!window.supabaseClient) {
@@ -11,8 +30,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (window.location.pathname.includes('/parent-portal/')) {
             
             // Check for parent session
-            const parentPsid = sessionStorage.getItem('parentPsid');
-            const parentStudents = sessionStorage.getItem('parentStudents');
+            const parentPsid = secureSession.getItem('parentPsid');
+            const parentStudents = secureSession.getItem('parentStudents');
             
             if (!parentPsid && !window.location.pathname.includes('login.html')) {
                 // No session and not on login page -> redirect
@@ -23,6 +42,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             // If we have a PSID but no students, fetch them
             if (parentPsid && !parentStudents) {
                 await fetchParentStudents(parentPsid);
+            }
+
+            // Start idle timer only on valid session
+            if (parentPsid && !window.location.pathname.includes('login.html')) {
+                resetIdleTimer();
             }
         }
     }
@@ -38,10 +62,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (error) throw error;
 
             if (students && students.length > 0) {
-                sessionStorage.setItem('parentStudents', JSON.stringify(students));
+                secureSession.setItem('parentStudents', students);
                 // Set first student as active by default
-                if (!sessionStorage.getItem('activeStudentLrn')) {
-                    sessionStorage.setItem('activeStudentLrn', students[0].lrn);
+                if (!secureSession.getItem('activeStudentLrn')) {
+                    secureSession.setItem('activeStudentLrn', students[0].lrn);
                 }
                 return students;
             }
@@ -58,25 +82,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         console.log("🔐 Parent Logout...");
         
+        // Clear idle timer
+        clearTimeout(idleLogoutTimeout);
+        
         // Clear parent session data
-        sessionStorage.removeItem('parentPsid');
-        sessionStorage.removeItem('parentStudents');
-        sessionStorage.removeItem('activeStudentLrn');
-        sessionStorage.removeItem('parentName');
+        secureSession.removeItem('parentPsid');
+        secureSession.removeItem('parentStudents');
+        secureSession.removeItem('activeStudentLrn');
+        secureSession.removeItem('parentName');
         
         window.location.href = './login.html';
     };
 
     // --- Get Active Student ---
     window.getActiveStudent = function() {
-        const students = JSON.parse(sessionStorage.getItem('parentStudents') || '[]');
-        const activeLrn = sessionStorage.getItem('activeStudentLrn');
+        const students = secureSession.getItem('parentStudents') || [];
+        const activeLrn = secureSession.getItem('activeStudentLrn');
         return students.find(s => s.lrn === activeLrn) || students[0] || null;
     };
 
     // --- Switch Active Student ---
     window.switchStudent = function(lrn) {
-        sessionStorage.setItem('activeStudentLrn', lrn);
+        secureSession.setItem('activeStudentLrn', lrn);
         window.dispatchEvent(new CustomEvent('studentSwitched', { detail: { lrn } }));
         // Refresh the page to update content
         window.location.reload();
