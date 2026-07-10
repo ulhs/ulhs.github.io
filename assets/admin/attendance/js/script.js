@@ -805,7 +805,7 @@ const totalStudentsCount = document.getElementById('total-students-count');
 const totalPhotosCount = document.getElementById('total-photos-count');
 
 // Time Windows Configuration (Updated for 3-scan logic)
-const TIME_CONFIG = {
+let TIME_CONFIG = {
     AM: {
         late: "07:45",     // Marked LATE after 7:45 (7:30 start + 15m grace)
         absent: "11:45"    // End of AM window
@@ -819,6 +819,88 @@ const TIME_CONFIG = {
         start: "15:00"     // Departure window starts at 3:00 PM
     }
 };
+let customDepartureTime = null; // Holds today's custom departure time string (HH:MM)
+
+// Helper to get meta key for today's custom departure time
+function getTodayDepartureMetaKey() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = (today.getMonth() + 1).toString().padStart(2, '0');
+    const day = today.getDate().toString().padStart(2, '0');
+    return `custom_departure_${year}-${month}-${day}`;
+}
+
+// Load custom departure time on init
+async function loadCustomDepartureTime() {
+    if (!window.attendanceOfflineStore) return;
+    const metaKey = getTodayDepartureMetaKey();
+    const savedTime = await window.attendanceOfflineStore.getMeta(metaKey);
+    if (savedTime) {
+        customDepartureTime = savedTime;
+        TIME_CONFIG.DEPARTURE.start = savedTime;
+        TIME_CONFIG.PM.threshold = savedTime;
+        updateCustomDepartureUI(savedTime);
+    }
+}
+
+// Update UI for custom departure time
+function updateCustomDepartureUI(timeStr) {
+    const timeInput = document.getElementById('custom-departure-time');
+    const statusDiv = document.getElementById('custom-departure-status');
+    const resetBtn = document.getElementById('reset-custom-departure-btn');
+    if (timeInput) timeInput.value = timeStr;
+    if (statusDiv) {
+        statusDiv.classList.remove('hidden');
+        statusDiv.innerHTML = `<span class="text-green-600"><i class="fa-solid fa-check-circle"></i> Custom departure time set for today: ${formatTime12Hour(timeStr)}</span>`;
+    }
+    if (resetBtn) resetBtn.classList.remove('hidden');
+}
+
+// Reset custom departure time
+async function resetCustomDepartureTime() {
+    if (!window.attendanceOfflineStore) return;
+    const metaKey = getTodayDepartureMetaKey();
+    await window.attendanceOfflineStore.saveMeta(metaKey, null);
+    customDepartureTime = null;
+    TIME_CONFIG.DEPARTURE.start = "15:00";
+    TIME_CONFIG.PM.threshold = "15:00";
+    const timeInput = document.getElementById('custom-departure-time');
+    const statusDiv = document.getElementById('custom-departure-status');
+    const resetBtn = document.getElementById('reset-custom-departure-btn');
+    if (timeInput) timeInput.value = "";
+    if (statusDiv) statusDiv.classList.add('hidden');
+    if (resetBtn) resetBtn.classList.add('hidden');
+}
+
+// Helper to format time to 12-hour format
+function formatTime12Hour(timeStr) {
+    if (!timeStr) return "";
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+}
+
+// Set custom departure time
+async function setCustomDepartureTime() {
+    const timeInput = document.getElementById('custom-departure-time');
+    if (!timeInput || !timeInput.value || !window.attendanceOfflineStore) return;
+    const timeStr = timeInput.value;
+    const metaKey = getTodayDepartureMetaKey();
+    await window.attendanceOfflineStore.saveMeta(metaKey, timeStr);
+    customDepartureTime = timeStr;
+    TIME_CONFIG.DEPARTURE.start = timeStr;
+    TIME_CONFIG.PM.threshold = timeStr;
+    updateCustomDepartureUI(timeStr);
+}
+
+// Init custom departure time UI event listeners
+function initCustomDepartureUI() {
+    const setBtn = document.getElementById('set-custom-departure-btn');
+    const resetBtn = document.getElementById('reset-custom-departure-btn');
+    if (setBtn) setBtn.addEventListener('click', setCustomDepartureTime);
+    if (resetBtn) resetBtn.addEventListener('click', resetCustomDepartureTime);
+}
 
 // Update Real-time Clock and Session Badge
 function updateClock() {
@@ -3349,6 +3431,10 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '../admin.html';
         return;
     }
+    
+    // Custom Departure Time Init
+    initCustomDepartureUI();
+    loadCustomDepartureTime();
     
     // --- HID SCANNER (HARDWARE) READY LAYER ---
     // Zero-interference listener for dedicated USB/Bluetooth QR scanners

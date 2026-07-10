@@ -330,6 +330,27 @@
                             </div>
                             <span id="test-mode-indicator" class="text-[9px] font-black text-blue-600 uppercase tracking-tighter hidden">Bypassing Weekends</span>
                         </div>
+
+                        <!-- Custom Departure Time Section -->
+                        <div class="border-t border-gray-100 mt-6 pt-6">
+                            <div class="space-y-3">
+                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Custom Departure Time (Early Dismissal)</label>
+                                <div class="flex flex-col sm:flex-row gap-3">
+                                    <div class="flex-1">
+                                        <input type="time" id="custom-departure-time" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <button id="set-custom-departure-btn" class="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                                        <i class="fa-solid fa-clock"></i> Set Time
+                                    </button>
+                                    <button id="reset-custom-departure-btn" class="w-full sm:w-auto px-6 py-2 bg-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-300 transition-colors flex items-center justify-center gap-2 hidden">
+                                        <i class="fa-solid fa-rotate-left"></i> Reset
+                                    </button>
+                                </div>
+                                <div id="custom-departure-status" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2 hidden">
+                                    <span class="text-green-600"><i class="fa-solid fa-check-circle"></i> Custom departure time set for today</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -606,7 +627,7 @@
                             </div>
                             <div>
                                 <p class="font-bold text-sm">Three-Scan Routine</p>
-                                <p class="text-xs text-blue-100/70 mt-1">Scan 1 (AM Arrival), Scan 2 (PM Afternoon), and Scan 3 (Departure 3:00 PM onwards) for full attendance and parent alerts.</p>
+                                <p class="text-xs text-blue-100/70 mt-1">Scan 1 (AM Arrival), Scan 2 (PM Afternoon), and Scan 3 (Departure Anytime depending on the situation) for full attendance and parent alerts.</p>
                             </div>
                         </li>
                         <li class="flex items-start gap-4">
@@ -634,6 +655,15 @@
                             <div>
                                 <p class="font-bold text-sm">Parent Notifications</p>
                                 <p class="text-xs text-blue-100/70 mt-1">Arrival scans (AM/PM) and Departure scans trigger real-time Facebook Messenger alerts to all registered parent/guardian accounts.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-4">
+                            <div class="bg-blue-500/20 p-2 rounded-lg text-blue-300">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                            </div>
+                            <div>
+                                <p class="font-bold text-sm">Data Privacy</p>
+                                <p class="text-xs text-blue-100/70 mt-1">All student data processing follows the Data Privacy Act of 2012. Read our <a href="../privacy-policy.html" class="text-blue-300 underline font-bold">Privacy Policy</a> for details.</p>
                             </div>
                         </li>
                     </ul>
