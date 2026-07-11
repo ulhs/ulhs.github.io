@@ -1010,6 +1010,8 @@ async function triggerEarlyDismissal() {
             }
         }
 
+        let notificationCount = 0;
+
         for (const student of targetStudents) {
             // Skip if already has PM log
             if (existingPMLrns.has(String(student.lrn))) {
@@ -1070,6 +1072,12 @@ async function triggerEarlyDismissal() {
             // Add to currentSessionLogs for UI
             currentSessionLogs.unshift(logData);
             markedCount++;
+
+            // Trigger Parent Notification (Facebook Messenger)
+            if (student.notify_parent && student.parent_messenger_id) {
+                await triggerParentNotification(student, { session: 'PM', status: 'PRESENT' }, scanTime, 'departure', 'early-dismissal');
+                notificationCount++;
+            }
         }
 
         // Update UI
@@ -1081,7 +1089,7 @@ async function triggerEarlyDismissal() {
 
         // Show success status
         statusDiv.classList.remove('hidden');
-        statusDiv.innerHTML = `<span class="text-green-600"><i class="fa-solid fa-check-circle"></i> PM attendance marked for ${markedCount} students</span>`;
+        statusDiv.innerHTML = `<span class="text-green-600"><i class="fa-solid fa-check-circle"></i> PM attendance marked for ${markedCount} students, ${notificationCount} notification(s) sent</span>`;
 
         console.log(`✅ Early dismissal: marked ${markedCount} students as PRESENT for PM session`);
 
@@ -1760,7 +1768,7 @@ async function logAttendanceToSupabase(student, timeData, scanTime = new Date())
  * Triggers a parent notification via Supabase Edge Function
  * This is currently optimized for Facebook Messenger integration.
  */
-async function triggerParentNotification(student, timeData, scanTime, forceType = null) {
+async function triggerParentNotification(student, timeData, scanTime, forceType = null, context = 'regular-scan') {
     const notificationStatusEl = document.getElementById('notification-status-message');
     let statusText = "";
     let statusClass = "";
@@ -1812,18 +1820,19 @@ async function triggerParentNotification(student, timeData, scanTime, forceType 
         const type = forceType || (timeData.session === 'DEPARTURE' ? 'departure' : 'arrival');
 
         // Send to each PSID
-        const notificationPromises = psidList.map(psid => {
-            return window.supabaseClient.functions.invoke('send-messenger-alert', {
-                body: {
-                    psid: psid,
-                    studentName: student.parsedName,
-                    session: timeData.session,
-                    status: timeData.status,
-                    time: scanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    type: type
-                }
-            });
-        });
+                const notificationPromises = psidList.map(psid => {
+                    return window.supabaseClient.functions.invoke('send-messenger-alert', {
+                        body: {
+                            psid: psid,
+                            studentName: student.parsedName,
+                            session: timeData.session,
+                            status: timeData.status,
+                            time: scanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                            type: type,
+                            context: context
+                        }
+                    });
+                });
 
         const results = await Promise.allSettled(notificationPromises);
         const successCount = results.filter(r => r.status === 'fulfilled' && !r.value.error).length;
@@ -1986,7 +1995,7 @@ async function onScanSuccess(decodedText, decodedResult) {
                 // AM and PM scans are "arrivals" at their respective sessions
                 // DEPARTURE scan is "departure"
                 const notificationType = timeData.session === 'DEPARTURE' ? 'departure' : 'arrival';
-                triggerParentNotification(student, timeData, scanTime, notificationType);
+                triggerParentNotification(student, timeData, scanTime, notificationType, 'regular-scan');
             }
         }
 

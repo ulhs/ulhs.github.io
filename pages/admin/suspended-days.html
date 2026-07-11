@@ -254,6 +254,7 @@
         // Initialize app
         let masterStudentDatabase = [];
         let sections = [];
+        let suspendedDaysCache = [];
 
         async function initApp() {
             await fetchStudents();
@@ -271,7 +272,7 @@
             try {
                 const { data: students, error } = await window.supabaseClient
                     .from('students')
-                    .select('lrn, full_name, section, grade_level');
+                    .select('lrn, full_name, section, grade_level, notify_parent, parent_messenger_id');
 
                 if (error) throw error;
 
@@ -307,9 +308,61 @@
 
                 if (error) throw error;
 
+                suspendedDaysCache = suspendedDays;
                 renderSuspendedDays(suspendedDays);
             } catch (e) {
                 console.error("Error fetching suspended days:", e);
+            }
+        }
+
+        // Fetch notification logs for a specific suspended day
+        async function fetchNotificationLogsForDay(day) {
+            if (!window.supabaseClient) {
+                console.warn("Supabase client not available");
+                return [];
+            }
+
+            try {
+                console.log("DEBUG: fetchNotificationLogsForDay called with day:", day);
+                
+                // Fetch logs where suspended_day_date matches the day's date
+                const { data: logs, error: logsError } = await window.supabaseClient
+                    .from('notification_logs')
+                    .select('*')
+                    .eq('context', 'suspended-day')
+                    .eq('suspended_day_date', day.date)
+                    .order('sent_at', { ascending: true });
+
+                if (logsError) throw logsError;
+                console.log("DEBUG: Logs for suspended_day_date:", day.date, logs);
+                
+                // Fetch all students to get grade and section
+                const { data: allStudents, error: studentsError } = await window.supabaseClient
+                    .from('students')
+                    .select('lrn, full_name, grade_level, section');
+
+                if (studentsError) throw studentsError;
+                
+                // Create a map of students by LRN for quick lookup
+                const studentsByLrn = {};
+                allStudents.forEach(student => {
+                    studentsByLrn[student.lrn] = student;
+                });
+                
+                // Combine logs with student data
+                const logsWithStudents = logs.map(log => {
+                    const student = studentsByLrn[log.student_lrn];
+                    return {
+                        ...log,
+                        student: student
+                    };
+                });
+                
+                console.log("DEBUG: Final logs with student data:", logsWithStudents);
+                return logsWithStudents;
+            } catch (e) {
+                console.error("Error fetching notification logs:", e);
+                return [];
             }
         }
 
@@ -326,10 +379,11 @@
 
             noDaysDiv.classList.add('hidden');
             listDiv.innerHTML = days.map(day => `
-                <div class="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                <div class="p-4 bg-white rounded-xl border border-gray-100 shadow-sm" data-day-id="${day.id}">
                     <div class="flex items-center justify-between">
-                        <div>
+                        <div class="cursor-pointer flex-1" onclick="toggleDayDetails(${day.id})">
                             <div class="flex items-center gap-3 mb-1">
+                                <i class="fa-solid fa-chevron-down text-gray-400 transition-transform" id="chevron-${day.id}"></i>
                                 <span class="text-lg font-bold text-gray-900">
                                     <i class="fa-solid fa-calendar-day mr-2 text-blue-600"></i>
                                     ${new Date(day.date + 'T00:00:00').toLocaleDateString('en-PH', {
@@ -357,17 +411,205 @@
                             <i class="fa-solid fa-trash text-xl"></i>
                         </button>
                     </div>
+                    <div id="details-${day.id}" class="hidden mt-4 pt-4 border-t border-gray-100">
+                        <div id="logs-${day.id}" class="space-y-2">
+                            <p class="text-gray-500 text-sm">Loading notification logs...</p>
+                        </div>
+                    </div>
                 </div>
             `).join('');
 
             // Add delete listeners
             document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', async () => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
                     if (confirm('Are you sure you want to delete this suspended day? This will not delete existing attendance logs.')) {
                         await deleteSuspendedDay(btn.dataset.id);
                     }
                 });
             });
+        }
+
+        // Toggle day details (expand/collapse)
+        async function toggleDayDetails(dayId) {
+            console.log("toggleDayDetails called with dayId:", dayId);
+            const detailsDiv = document.getElementById(`details-${dayId}`);
+            const chevron = document.getElementById(`chevron-${dayId}`);
+            const logsDiv = document.getElementById(`logs-${dayId}`);
+
+            if (detailsDiv.classList.contains('hidden')) {
+                detailsDiv.classList.remove('hidden');
+                chevron.style.transform = 'rotate(180deg)';
+                
+                // Find the day object (we need to get the date)
+                const dayElement = document.querySelector(`[data-day-id="${dayId}"]`);
+                console.log("suspendedDaysCache:", suspendedDaysCache);
+                const day = suspendedDaysCache.find(d => d.id == dayId); // Use == to match number/string
+                console.log("Found day:", day);
+                if (day) {
+                    const logs = await fetchNotificationLogsForDay(day);
+                    renderNotificationLogs(logsDiv, logs, dayId);
+                }
+            } else {
+                detailsDiv.classList.add('hidden');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // Render notification logs
+        function renderNotificationLogs(container, logs, containerId) {
+            if (!logs || logs.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-sm">No notification logs found for this day.</p>';
+                return;
+            }
+
+            // Group by student to avoid duplicates (since we send AM and PM)
+            const groupedByStudent = {};
+            const gradeLevels = new Set();
+            const sections = new Set();
+
+            logs.forEach(log => {
+                const student = log.student || {};
+                const gradeLevel = student.grade_level;
+                const section = student.section;
+
+                if (gradeLevel) gradeLevels.add(gradeLevel);
+                if (section) sections.add(section);
+
+                if (!groupedByStudent[log.student_lrn]) {
+                    groupedByStudent[log.student_lrn] = {
+                        studentName: log.student_name,
+                        gradeLevel: gradeLevel,
+                        section: section,
+                        sessions: []
+                    };
+                }
+                groupedByStudent[log.student_lrn].sessions.push({
+                    session: log.session,
+                    success: log.success,
+                    sentAt: log.sent_at
+                });
+            });
+
+            // Sort grade levels and sections
+            const sortedGrades = Array.from(gradeLevels).sort((a, b) => a - b);
+            const sortedSections = Array.from(sections).sort();
+
+            // Initial render without filters
+            renderFilteredLogs(container, Object.values(groupedByStudent), containerId, sortedGrades, sortedSections);
+
+            // Store filter state in container's dataset for later use
+            container.dataset.logs = JSON.stringify(Object.values(groupedByStudent));
+        }
+
+        // Helper function to render filtered logs
+        function renderFilteredLogs(container, allStudents, containerId, sortedGrades, sortedSections) {
+            // Get current filter values from localStorage or default to "all"
+            const filterGradeKey = `logs-${containerId}-grade`;
+            const filterSectionKey = `logs-${containerId}-section`;
+            let selectedGrade = localStorage.getItem(filterGradeKey) || 'all';
+            let selectedSection = localStorage.getItem(filterSectionKey) || 'all';
+
+            // Filter students
+            let filteredStudents = allStudents;
+            if (selectedGrade !== 'all') {
+                filteredStudents = filteredStudents.filter(s => s.gradeLevel == selectedGrade);
+            }
+            if (selectedSection !== 'all') {
+                filteredStudents = filteredStudents.filter(s => s.section === selectedSection);
+            }
+
+            container.innerHTML = `
+                <!-- Filter UI -->
+                <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                    <div class="flex flex-wrap gap-3 items-center">
+                        <span class="text-sm font-semibold text-blue-900">Filters:</span>
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-blue-700">Grade Level:</label>
+                            <select id="grade-filter-${containerId}" class="border border-blue-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="all">All Grades</option>
+                                ${sortedGrades.map(grade => `
+                                    <option value="${grade}" ${selectedGrade == grade ? 'selected' : ''}>Grade ${grade}</option>
+                                `).join('')}
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-blue-700">Section:</label>
+                            <select id="section-filter-${containerId}" class="border border-blue-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="all">All Sections</option>
+                                ${sortedSections.map(section => `
+                                    <option value="${section}" ${selectedSection === section ? 'selected' : ''}>${section}</option>
+                                `).join('')}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logs List -->
+                <div class="space-y-3">
+                    ${filteredStudents.length === 0 ? `
+                        <p class="text-gray-500 text-sm">No students match the selected filters.</p>
+                    ` : filteredStudents.map(student => `
+                        <div class="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+                            <div class="flex items-center justify-between flex-wrap gap-2">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">
+                                        ${student.studentName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-900">${student.studentName}</h4>
+                                        <div class="text-sm text-gray-600">
+                                            <span class="mr-3">
+                                                <i class="fa-solid fa-graduation-cap mr-1"></i> 
+                                                Grade ${student.gradeLevel || 'N/A'}
+                                            </span>
+                                            <span>
+                                                <i class="fa-solid fa-door-open mr-1"></i> 
+                                                Section ${student.section || 'N/A'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs text-green-700 font-semibold bg-green-50 px-2 py-1 rounded-full">
+                                        <i class="fa-solid fa-bell mr-1"></i> 
+                                        ${student.sessions.length} Alert${student.sessions.length > 1 ? 's' : ''} Sent
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-3 pt-3 border-t border-gray-100">
+                                <div class="flex flex-wrap gap-2 text-xs text-gray-600">
+                                    ${student.sessions.map(s => `
+                                        <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded-full ${s.success ? '' : 'bg-red-50 text-red-700'}">
+                                            <i class="fa-solid fa-circle-${s.success ? 'check text-green-500' : 'xmark text-red-500'} mr-1"></i>
+                                            ${s.session} Session
+                                        </span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            // Add event listeners to filters
+            const gradeFilter = document.getElementById(`grade-filter-${containerId}`);
+            const sectionFilter = document.getElementById(`section-filter-${containerId}`);
+
+            if (gradeFilter) {
+                gradeFilter.addEventListener('change', (e) => {
+                    localStorage.setItem(filterGradeKey, e.target.value);
+                    const storedLogs = JSON.parse(container.dataset.logs || '[]');
+                    renderFilteredLogs(container, storedLogs, containerId, sortedGrades, sortedSections);
+                });
+            }
+            if (sectionFilter) {
+                sectionFilter.addEventListener('change', (e) => {
+                    localStorage.setItem(filterSectionKey, e.target.value);
+                    const storedLogs = JSON.parse(container.dataset.logs || '[]');
+                    renderFilteredLogs(container, storedLogs, containerId, sortedGrades, sortedSections);
+                });
+            }
         }
 
         // Setup event listeners
@@ -445,7 +687,10 @@
                 const existingLogKey = new Set(existingLogs.map(l => `${l.student_lrn}-${l.session}`));
 
                 const attendanceLogs = [];
-                eligibleStudents.forEach(student => {
+                const notificationPromises = [];
+
+                for (const student of eligibleStudents) {
+                    const scanTime = new Date();
                     // AM session
                     if (!existingLogKey.has(`${student.lrn}-AM`)) {
                         attendanceLogs.push({
@@ -457,6 +702,20 @@
                             modality: modality,
                             scanned_by: userId
                         });
+
+                        // Trigger AM notification
+                        if (student.notify_parent && student.parent_messenger_id) {
+                            notificationPromises.push(
+                                triggerParentNotification(
+                                    student, 
+                                    { session: 'AM', status: 'PRESENT' }, 
+                                    scanTime, 
+                                    'arrival',
+                                    'suspended-day',
+                                    date
+                                )
+                            );
+                        }
                     }
 
                     // PM session
@@ -470,8 +729,22 @@
                             modality: modality,
                             scanned_by: userId
                         });
+
+                        // Trigger PM notification
+                        if (student.notify_parent && student.parent_messenger_id) {
+                            notificationPromises.push(
+                                triggerParentNotification(
+                                    student, 
+                                    { session: 'PM', status: 'PRESENT' }, 
+                                    scanTime, 
+                                    'arrival',
+                                    'suspended-day',
+                                    date
+                                )
+                            );
+                        }
                     }
-                });
+                }
 
                 // Insert attendance logs
                 if (attendanceLogs.length > 0) {
@@ -480,6 +753,11 @@
                         .insert(attendanceLogs);
 
                     if (logError) throw logError;
+                }
+
+                // Wait for notifications to send
+                if (notificationPromises.length > 0) {
+                    await Promise.allSettled(notificationPromises);
                 }
 
                 alert(`Successfully recorded suspended day and logged ${attendanceLogs.length} attendance entries!`);
@@ -514,6 +792,67 @@
             } catch (e) {
                 console.error("Error deleting suspended day:", e);
                 alert('Error: ' + e.message);
+            }
+        }
+
+        /**
+         * Triggers a parent notification via Supabase Edge Function
+         * This is currently optimized for Facebook Messenger integration.
+         */
+        async function triggerParentNotification(student, timeData, scanTime, forceType = null, context = 'regular-scan', suspendedDayDate = null) {
+            console.log("[Notification] triggerParentNotification called with student:", student);
+            if (!window.supabaseClient) {
+                console.warn("⚠️ Notification trigger failed: Supabase client not available");
+                return;
+            }
+            
+            if (!navigator.onLine) {
+                console.log("[Notification] Skipped: Offline");
+                return;
+            }
+
+            try {
+                const psidList = String(student.parent_messenger_id || '').split(',').map(id => id.trim()).filter(id => id);
+                if (psidList.length === 0) {
+                    console.log("[Notification] Skipped: No parent messenger ID");
+                    return;
+                }
+
+                console.log(`[Notification] Triggering alerts for ${student.full_name} to ${psidList.length} recipients`);
+                console.log("[Notification] student.lrn:", student.lrn);
+                
+                // Use forced type if provided, otherwise default to arrival
+                const type = forceType || (timeData.session === 'DEPARTURE' ? 'departure' : 'arrival');
+
+                // Send to each PSID
+                const notificationPromises = psidList.map(async (psid) => {
+                    console.log(`[Notification] Calling edge function for psid: ${psid}`);
+                    try {
+                        const result = await window.supabaseClient.functions.invoke('send-messenger-alert', {
+                            body: {
+                                psid: psid,
+                                studentName: student.full_name,
+                                studentLrn: student.lrn,
+                                session: timeData.session,
+                                status: timeData.status,
+                                time: scanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                type: type,
+                                context: context,
+                                suspendedDayDate: suspendedDayDate
+                            }
+                        });
+                        console.log(`[Notification] Edge function result for ${psid}:`, result);
+                        return result;
+                    } catch (err) {
+                        console.error(`[Notification] Edge function error for ${psid}:`, err);
+                        throw err;
+                    }
+                });
+
+                const results = await Promise.allSettled(notificationPromises);
+                console.log(`✅ Parent notifications sent: ${psidList.length} recipients. Results:`, results);
+            } catch (err) {
+                console.warn("⚠️ Notification trigger failed:", err.message);
             }
         }
 

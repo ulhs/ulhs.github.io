@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
                 } else if (data && data.length > 0) {
                   console.log(`✅ PSID ${psid} successfully linked to ${data[0].full_name} (LRN: ${lrn})`)
                   const nameMsg = defaultName ? ` (Using your name: ${defaultName})` : '';
-                  await sendResponse(psid, `✅ Registration Successful! Makadawat na ka og attendance alerts ni ${data[0].full_name}.${nameMsg}\n\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]\nPara makita ang tanan nimo nga linked students, i-send: LIST`);
+                  await sendResponse(psid, `✅ Registration Successful! Makadawat na ka og attendance alerts ni ${data[0].full_name}.${nameMsg}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]\nPara makita ang tanan nimo nga linked students, i-send: LIST`);
                 } else {
                   console.warn(`⚠️ Registration failed: LRN ${lrn} not found in database.`)
                   await sendResponse(psid, `❌ Registration Failed: Dili makit-an ang LRN ${lrn} sa among listahan.`)
@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
                   } else if (data && data.length > 0) {
                     console.log(`✅ Manual link success: ${data[0].full_name} (LRN: ${targetLrn})`);
                     const nameMsg = defaultName ? ` (Using your name: ${defaultName})` : '';
-                    await sendResponse(psid, `✅ Successfully linked to ${data[0].full_name}!${nameMsg}\n\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]`);
+                    await sendResponse(psid, `✅ Successfully linked to ${data[0].full_name}!${nameMsg}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]`);
                   } else {
                     console.warn(`⚠️ Manual REG LRN not found: ${targetLrn}`);
                     await sendResponse(psid, `❌ Registration Failed: Dili makit-an ang LRN ${targetLrn} sa among listahan.`);
@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
                   } else if (data && data.length > 0) {
                     console.log(`✅ LINK success for ${data[0].full_name} (LRN: ${targetLrn})`);
                     const nameMsg = defaultName ? ` (Using your name: ${defaultName})` : '';
-                    await sendResponse(psid, `✅ Successfully linked to ${data[0].full_name}!${nameMsg}\n\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]`);
+                    await sendResponse(psid, `✅ Successfully linked to ${data[0].full_name}!${nameMsg}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]`);
                   } else {
                     console.warn(`⚠️ LINK LRN not found: ${targetLrn}`);
                     await sendResponse(psid, `❌ Link failed. Ang 12-digit LRN ${targetLrn} wala sa among system.`);
@@ -255,14 +255,14 @@ Deno.serve(async (req) => {
                     const nameInfo = s.parent_guardian_name ? ` (Guardian: ${s.parent_guardian_name})` : '';
                     return `• ${s.full_name} (${s.lrn})${nameInfo}`;
                   }).join('\n');
-                  await sendResponse(psid, `📋 Nagadawat ka ug alerts ni:\n\n${studentList}\n\nCommands:\n• LIST - See linked students\n• NAME [Your Name] - Para i-set o i-update ang imong name\n• LINK [LRN] - Link another student\n• UNLINK [LRN] - Stop receiving alerts`);
+                  await sendResponse(psid, `📋 Nagadawat ka ug alerts ni:\n\n${studentList}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nCommands:\n• LIST - See linked students\n• NAME [Your Name] - Para i-set o i-update ang imong name\n• LINK [LRN] - Link another student\n• UNLINK [LRN] - Stop receiving alerts`);
                 } else {
                   console.warn(`⚠️ No students found for PSID ${psid}`);
                   await sendResponse(psid, `👋 Flehew! Wala pa kay estudyante nga naka-link sa imong account.\n\nPara ma-link ang estudyante, i-send ang: LINK [12-digit LRN]`);
                 }
               } else if (text === 'PING') {
                 console.log(`🏓 PING received from PSID ${psid}`)
-                await sendResponse(psid, `🏓 Pong! Ang ULHS bot kay online na ug andam na sa imong commands. Your PSID is: ${psid}`);
+                await sendResponse(psid, `🏓 Pong! Ang ULHS bot kay online na ug andam na sa imong commands. Your PSID is: ${psid}\n\n✅ Salamat sa pag-PING! Kini magpabilin sa imong 24-hour window active aron makadawat ka gihapon ug attendance alerts!`);
               } else if (/^\d{12}$/.test(text)) {
                 // If user sends JUST the 12-digit LRN
                 const lrn = text;
@@ -286,7 +286,7 @@ Deno.serve(async (req) => {
                 } else if (data && data.length > 0) {
                   console.log(`✅ LRN link success: ${data[0].full_name} (LRN: ${lrn})`);
                   const nameMsg = defaultName ? ` (Using your name: ${defaultName})` : '';
-                  await sendResponse(psid, `✅ Successfully linked to ${data[0].full_name}!${nameMsg}\n\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]`);
+                  await sendResponse(psid, `✅ Successfully linked to ${data[0].full_name}!${nameMsg}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]`);
                 } else {
                   console.warn(`⚠️ LRN not found (LRN Only): ${lrn}`);
                   await sendResponse(psid, `❌ Registration Failed: Ang LRN ${lrn} wala sa among listahan.`);
