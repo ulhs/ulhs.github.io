@@ -132,12 +132,13 @@
                             <th class="px-4 py-3 text-center">Date</th>
                             <th class="px-4 py-3 text-center">Time</th>
                             <th class="px-4 py-3 text-center">Session</th>
+                            <th class="px-4 py-3 text-center">Modality</th>
                             <th class="px-4 py-3 text-center">Status</th>
                         </tr>
                     </thead>
                     <tbody id="logs-tbody" class="divide-y divide-gray-100">
                         <tr>
-                            <td colspan="4" class="px-4 py-8 text-center text-gray-400 text-xs font-bold uppercase tracking-widest">
+                            <td colspan="5" class="px-4 py-8 text-center text-gray-400 text-xs font-bold uppercase tracking-widest">
                                 Loading attendance records...
                             </td>
                         </tr>
@@ -290,7 +291,7 @@
             try {
                 let query = window.supabaseClient
                     .from('attendance_logs')
-                    .select('*')
+                    .select('*, modality')
                     .eq('student_lrn', activeStudent.lrn)
                     .order('scanned_at', { ascending: false });
 
@@ -318,7 +319,7 @@
                 console.error('Error fetching attendance:', err);
                 document.getElementById('logs-tbody').innerHTML = `
                     <tr>
-                        <td colspan="4" class="px-4 py-8 text-center text-red-500 text-xs font-bold uppercase tracking-widest">
+                        <td colspan="5" class="px-4 py-8 text-center text-red-500 text-xs font-bold uppercase tracking-widest">
                             Error loading attendance records
                         </td>
                     </tr>
@@ -351,13 +352,20 @@
             if (attendanceLogs.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="4" class="px-4 py-8 text-center text-gray-400 text-xs font-bold uppercase tracking-widest">
+                        <td colspan="5" class="px-4 py-8 text-center text-gray-400 text-xs font-bold uppercase tracking-widest">
                             No attendance records found for this period
                         </td>
                     </tr>
                 `;
                 return;
             }
+
+            // Modality colors and icons
+            const modalityConfig = {
+                'face_to_face': { color: 'bg-gray-100 text-gray-800', label: 'Face-to-Face' },
+                'online': { color: 'bg-purple-100 text-purple-800', label: 'Online' },
+                'modular': { color: 'bg-yellow-100 text-yellow-800', label: 'Modular' }
+            };
 
             tbody.innerHTML = attendanceLogs.map(log => {
                 const date = new Date(log.scanned_at);
@@ -378,6 +386,9 @@
                     'DEPARTURE': 'bg-orange-100 text-orange-800'
                 };
 
+                const modality = log.modality || 'face_to_face';
+                const modalityInfo = modalityConfig[modality] || modalityConfig['face_to_face'];
+
                 return `
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-4 py-3 text-center">
@@ -389,6 +400,11 @@
                         <td class="px-4 py-3 text-center">
                             <span class="px-2 py-1 rounded-full text-[10px] font-black uppercase ${sessionColors[log.session] || 'bg-gray-100 text-gray-800'}">
                                 ${log.session || 'N/A'}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="px-2 py-1 rounded-full text-[10px] font-black uppercase ${modalityInfo.color}">
+                                ${modalityInfo.label}
                             </span>
                         </td>
                         <td class="px-4 py-3 text-center">

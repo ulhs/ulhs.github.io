@@ -898,8 +898,204 @@ async function setCustomDepartureTime() {
 function initCustomDepartureUI() {
     const setBtn = document.getElementById('set-custom-departure-btn');
     const resetBtn = document.getElementById('reset-custom-departure-btn');
+    const earlyDismissalBtn = document.getElementById('trigger-early-dismissal-btn');
     if (setBtn) setBtn.addEventListener('click', setCustomDepartureTime);
     if (resetBtn) resetBtn.addEventListener('click', resetCustomDepartureTime);
+    if (earlyDismissalBtn) earlyDismissalBtn.addEventListener('click', triggerEarlyDismissal);
+}
+
+// Check if student already has a PM log for today
+async function studentHasPMLog(studentLrn, todayKey) {
+    // Check session state first
+    const sessionState = attendanceSession.get(studentLrn);
+    if (sessionState && sessionState.pm) {
+        return true;
+    }
+
+    // Check offline store if available
+    if (offlineStore) {
+        const logs = await offlineStore.getLogsByDate(todayKey);
+        return logs.some(log => log.student_lrn === String(studentLrn) && log.session === 'PM');
+    }
+
+    // Check Supabase if online
+    if (window.supabaseClient && navigator.onLine) {
+        const { startIso } = getDayRangeForLocalDate(todayKey);
+        const { data, error } = await window.supabaseClient
+            .from('attendance_logs')
+            .select('*')
+            .eq('student_lrn', studentLrn)
+            .eq('session', 'PM')
+            .gte('scanned_at', startIso)
+            .limit(1);
+        if (error) {
+            console.error("Error checking PM log:", error);
+        }
+        return Array.isArray(data) && data.length > 0;
+    }
+
+    return false;
+}
+
+// Trigger early dismissal - auto-mark PM attendance
+async function triggerEarlyDismissal() {
+    const btn = document.getElementById('trigger-early-dismissal-btn');
+    const statusDiv = document.getElementById('early-dismissal-status');
+    const scopeSelect = document.getElementById('early-dismissal-scope');
+    
+    if (!btn || !statusDiv || !scopeSelect) return;
+
+    const scope = scopeSelect.value;
+    const todayKey = getLocalDateKey();
+    let markedCount = 0;
+
+    // Disable button during processing
+    btn.disabled = true;
+    btn.classList.remove('bg-orange-600', 'hover:bg-orange-700');
+    btn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing...`;
+
+    try {
+        // Get current user session once, not in loop
+        const session = await getCurrentSupabaseSession();
+        
+        // Determine which students to process
+        let targetStudents = [];
+        
+        if (scope === 'all') {
+            targetStudents = masterStudentDatabase;
+        } else { // am-scanned
+            // Get students who have AM scan in attendanceSession
+            targetStudents = masterStudentDatabase.filter(student => {
+                const state = attendanceSession.get(String(student.lrn));
+                return state && state.am;
+            });
+        }
+
+        console.log(`Early dismissal: processing ${targetStudents.length} students`);
+
+        // Pre-fetch all PM logs for today to avoid multiple calls
+        let existingPMLrns = new Set();
+
+        // First, check attendanceSession
+        for (const [lrn, state] of attendanceSession) {
+            if (state.pm) {
+                existingPMLrns.add(String(lrn));
+            }
+        }
+
+        // Then check offline store
+        if (offlineStore) {
+            const offlineLogs = await offlineStore.getLogsByDate(todayKey);
+            offlineLogs.forEach(log => {
+                if (log.session === 'PM') {
+                    existingPMLrns.add(String(log.student_lrn));
+                }
+            });
+        }
+
+        // Then check Supabase
+        if (window.supabaseClient && navigator.onLine) {
+            const { startIso } = getDayRangeForLocalDate(todayKey);
+            const { data: pmLogs, error } = await window.supabaseClient
+                .from('attendance_logs')
+                .select('student_lrn')
+                .eq('session', 'PM')
+                .gte('scanned_at', startIso);
+
+            if (!error && pmLogs) {
+                pmLogs.forEach(log => {
+                    existingPMLrns.add(String(log.student_lrn));
+                });
+            }
+        }
+
+        for (const student of targetStudents) {
+            // Skip if already has PM log
+            if (existingPMLrns.has(String(student.lrn))) {
+                continue;
+            }
+
+            // Create PM log with PRESENT status
+            const scanTime = new Date();
+            const logData = {
+                scan_id: `early-dismissal:${student.lrn}:PM:${scanTime.getTime()}`,
+                student_lrn: String(student.lrn),
+                session: 'PM',
+                status: 'PRESENT',
+                scanned_at: scanTime.toISOString(),
+                created_at: scanTime.toISOString(),
+                local_date: todayKey,
+                section: student.section,
+                sync_status: 'pending',
+                student_name: student.parsedName
+            };
+
+            // Set scanned_by
+            if (session) {
+                logData.scanned_by = session.user.id;
+            }
+
+            // Save to offline store if available
+            if (offlineStore) {
+                await offlineStore.queuePendingScan(logData);
+            }
+
+            // Save directly to Supabase if online and no offline store
+            else if (navigator.onLine && window.supabaseClient) {
+                const { error } = await window.supabaseClient
+                    .from('attendance_logs')
+                    .insert([{
+                        student_lrn: logData.student_lrn,
+                        session: logData.session,
+                        status: logData.status,
+                        scanned_at: logData.scanned_at,
+                        section: logData.section,
+                        scanned_by: logData.scanned_by
+                    }]);
+                if (error) {
+                    console.error(`Error inserting PM log for ${student.lrn}:`, error);
+                } else {
+                    logData.sync_status = 'synced';
+                }
+            }
+
+            // Update attendanceSession
+            const currentState = attendanceSession.get(String(student.lrn)) || { am: null, pm: null, departure: null };
+            attendanceSession.set(String(student.lrn), {
+                ...currentState,
+                pm: 'P'
+            });
+            
+            // Add to currentSessionLogs for UI
+            currentSessionLogs.unshift(logData);
+            markedCount++;
+        }
+
+        // Update UI
+        await refreshPendingSyncCount();
+        updateSessionLogCounters(currentSessionLogs);
+        renderLogTableFromSession(currentSessionLogs);
+
+        if (presentCountDisplay) presentCountDisplay.textContent = attendanceSession.size;
+
+        // Show success status
+        statusDiv.classList.remove('hidden');
+        statusDiv.innerHTML = `<span class="text-green-600"><i class="fa-solid fa-check-circle"></i> PM attendance marked for ${markedCount} students</span>`;
+
+        console.log(`✅ Early dismissal: marked ${markedCount} students as PRESENT for PM session`);
+
+    } catch (err) {
+        console.error("Early dismissal error:", err);
+        statusDiv.classList.remove('hidden');
+        statusDiv.innerHTML = `<span class="text-red-600"><i class="fa-solid fa-exclamation-circle"></i> Error: ${err.message}</span>`;
+    } finally {
+        // Re-enable button
+        btn.disabled = false;
+        btn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        btn.classList.add('bg-orange-600', 'hover:bg-orange-700');
+        btn.innerHTML = `<i class="fa-solid fa-sign-out-alt"></i> Mark PM Attendance`;
+    }
 }
 
 // Update Real-time Clock and Session Badge

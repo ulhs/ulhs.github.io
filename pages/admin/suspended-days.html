@@ -1,0 +1,524 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.gstatic.com https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.supabase.net wss://*.supabase.co wss://*.supabase.net https://cdn.jsdelivr.net;">
+    <title>Suspended Days | Upper Labay High School</title>
+    <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Magic Nav Icons -->
+    <link rel="stylesheet" href="../../assets/vendor/font-awesome/css/all.min.css">
+    <script src="../../assets/lib/tailwind.min.js"></script>
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <link rel="stylesheet" href="../../assets/admin/attendance/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
+    <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/theme-manager.js"></script>
+    <script src="../../assets/js/admin-nav.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+    <script>
+        // Security check: Only Admins, School Heads, or authorized personnel can access this
+        async function verifyAccess() {
+            if (!window.supabaseClient) {
+                setTimeout(verifyAccess, 100);
+                return;
+            }
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (!session) return; // handled by admin-nav.js
+
+            const { data: profile } = await window.supabaseClient
+                .from('profiles')
+                .select('role, can_manage_suspended_days')
+                .eq('id', session.user.id)
+                .single();
+
+            if (!profile || (profile.role !== 'admin' && profile.role !== 'school_head' && !profile.can_manage_suspended_days)) {
+                alert("ACCESS DENIED: You do not have permission to manage suspended days.");
+                window.location.href = './admin-dashboard.html';
+            }
+        }
+        verifyAccess();
+    </script>
+
+    <header>
+        <div class="branding">
+            <a href="../../index.html" class="logo-link">
+                <img src="../../assets/images/school-logo.webp" alt="Logo" id="main-logo">
+                <div class="name-container">
+                    <span class="school-name">UPPER LABAY</span>
+                    <span class="school-sub">HIGH SCHOOL</span>
+                </div>
+            </a>
+        </div>
+
+        <div class="user-greeting">
+            <script>
+                const userName = sessionStorage.getItem('userName');
+                if (userName) {
+                    document.write('<span class="user-name">' + userName + '</span>');
+                }
+            </script>
+        </div>
+        <input type="checkbox" id="nav-toggle" class="nav-toggle">
+        <label for="nav-toggle" class="nav-toggle-label" aria-label="Toggle Navigation">
+            <span></span>
+        </label>
+        <nav class="nav-links magic-nav">
+            <ul id="dynamic-nav-list">
+                    <script>
+                        const role = sessionStorage.getItem('userRole');
+                        const access = JSON.parse(sessionStorage.getItem('userAccess') || '{}');
+                        
+                        let html = '';
+                        
+                        if (role === 'admin') {
+                            html += `
+                                <li class="list" data-page="access.html">
+                                    <a href="access.html">
+                                        <span class="icon"><i class="fa-solid fa-users-gear"></i></span>
+                                        <span class="text">ACCESS</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        if (role === 'admin' || access.idGen) {
+                            html += `
+                                <li class="list" data-page="id-gen.html">
+                                    <a href="id-gen.html">
+                                        <span class="icon"><i class="fa-solid fa-id-card"></i></span>
+                                        <span class="text">ID GENERATOR</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        // Attendance (Admin or Faculty with access)
+                        if (role === 'admin' || access.attendance) {
+                            html += `
+                                <li class="list" data-page="attendance.html">
+                                    <a href="attendance.html">
+                                        <span class="icon"><i class="fa-solid fa-clipboard-user"></i></span>
+                                        <span class="text">ATTENDANCE</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        // SARDO Risk Dashboard (Admin, School Head, Guidance, or with Sardo permission)
+                        if (role === 'admin' || role === 'school_head' || role === 'guidance_counselor' || access.sardo || false) {
+                            html += `
+                                <li class="list" data-page="sardo-dashboard.html">
+                                    <a href="sardo-dashboard.html">
+                                        <span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                                        <span class="text">SARDO</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        // GRADES Encoding (Admin or with Grades permission)
+                        if (role === 'admin' || access.grades || false) {
+                            html += `
+                                <li class="list" data-page="grade-encoding.html">
+                                    <a href="grade-encoding.html">
+                                        <span class="icon"><i class="fa-solid fa-book-open-reader"></i></span>
+                                        <span class="text">GRADES</span>
+                                    </a>
+                                </li>`;
+                        }
+
+                        // SUSPENDED DAYS (Admin, School Head, or authorized personnel)
+                        if (role === 'admin' || role === 'school_head' || access.suspended) {
+                            html += `
+                                <li class="list" data-page="suspended-days.html">
+                                    <a href="suspended-days.html">
+                                        <span class="icon"><i class="fa-solid fa-calendar-times"></i></span>
+                                        <span class="text">SUSPENDED</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        if (role === 'admin' || role === 'school_head' || access.stats) {
+                            html += `
+                                <li class="list" data-page="admin-dashboard.html">
+                                    <a href="admin-dashboard.html">
+                                        <span class="icon"><i class="fa-solid fa-chart-line"></i></span>
+                                        <span class="text">DASHBOARD</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        // Logout
+                        html += `
+                            <li class="list">
+                                <a href="./login.html" onclick="handleLogout(event)">
+                                    <span class="icon"><i class="fa-solid fa-right-from-bracket"></i></span>
+                                    <span class="text">LOGOUT</span>
+                                </a>
+                            </li>`;
+                        
+                        html += '<div class="indicator"></div>';
+                        html += '<div id="theme-toggle" class="theme-toggle" data-tooltip="Switch to Dark">🌙</div>';
+                        document.write(html);
+                    </script>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 pb-12 max-w-4xl mt-8">
+        <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+            <h2 class="text-2xl font-black text-gray-900 mb-6 flex items-center gap-2">
+                <i class="fa-solid fa-calendar-times text-blue-600"></i>
+                Manage Suspended Days
+            </h2>
+
+            <!-- Add New Suspended Day Form -->
+            <div class="mb-8 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                <h3 class="text-lg font-bold text-blue-900 mb-4">Record New Suspended Day</h3>
+                <form id="suspendedDayForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Date</label>
+                        <input type="date" id="suspendedDate" required
+                               class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Modality</label>
+                        <select id="suspendedModality" required
+                                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500">
+                            <option value="online">Online Classes</option>
+                            <option value="modular">Printed Modular Classes</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Section (Optional)</label>
+                        <select id="suspendedSection"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Sections</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Reason</label>
+                        <input type="text" id="suspendedReason" placeholder="e.g. Weather, Holiday"
+                               class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <button type="submit"
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg">
+                            <i class="fa-solid fa-save mr-2"></i>
+                            Record and Log Attendance
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- List of Suspended Days -->
+            <div>
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Recorded Suspended Days</h3>
+                <div id="suspendedDaysList" class="space-y-3"></div>
+                <div id="noSuspendedDays" class="hidden text-center py-8 text-gray-500">
+                    <i class="fa-solid fa-calendar-check text-4xl text-gray-300 mb-2"></i>
+                    <p class="text-lg">No suspended days recorded yet.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="container mx-auto px-4 pb-12 max-w-6xl">
+        <div class="bg-blue-50/50 rounded-3xl p-8 border-2 border-blue-100/50 shadow-sm">
+            <div class="flex flex-col md:flex-row gap-8 items-start">
+                <div class="flex-shrink-0 bg-white p-4 rounded-2xl shadow-md border border-blue-100">
+                    <img src="../../assets/images/school-logo.webp" alt="ULHS" class="w-16 h-16">
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-lg font-black text-blue-900 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-shield-halved text-blue-600"></i>
+                        Data Privacy Notice
+                    </h4>
+                    <p class="text-sm leading-relaxed text-gray-800 font-bold">
+                        In compliance with the <strong>Philippines Data Privacy Act of 2012 (RA 10173)</strong>, Upper Labay High School ensures that all student data processed by this system is handled with the highest level of security. Read our <a href="../privacy-policy.html" class="text-blue-700 underline font-black">Privacy Policy</a> for details.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize app
+        let masterStudentDatabase = [];
+        let sections = [];
+
+        async function initApp() {
+            await fetchStudents();
+            await fetchSuspendedDays();
+            setupEventListeners();
+        }
+
+        // Fetch all students to populate sections
+        async function fetchStudents() {
+            if (!window.supabaseClient) {
+                setTimeout(fetchStudents, 100);
+                return;
+            }
+
+            try {
+                const { data: students, error } = await window.supabaseClient
+                    .from('students')
+                    .select('lrn, full_name, section, grade_level');
+
+                if (error) throw error;
+
+                masterStudentDatabase = students;
+                // Get unique sections
+                sections = [...new Set(students.map(s => s.section).filter(s => s))];
+
+                // Populate section dropdown
+                const sectionSelect = document.getElementById('suspendedSection');
+                sections.forEach(section => {
+                    const option = document.createElement('option');
+                    option.value = section;
+                    option.textContent = section;
+                    sectionSelect.appendChild(option);
+                });
+            } catch (e) {
+                console.error("Error fetching students:", e);
+            }
+        }
+
+        // Fetch all suspended days
+        async function fetchSuspendedDays() {
+            if (!window.supabaseClient) {
+                setTimeout(fetchSuspendedDays, 100);
+                return;
+            }
+
+            try {
+                const { data: suspendedDays, error } = await window.supabaseClient
+                    .from('suspended_days')
+                    .select('*')
+                    .order('date', { ascending: false });
+
+                if (error) throw error;
+
+                renderSuspendedDays(suspendedDays);
+            } catch (e) {
+                console.error("Error fetching suspended days:", e);
+            }
+        }
+
+        // Render suspended days list
+        function renderSuspendedDays(days) {
+            const listDiv = document.getElementById('suspendedDaysList');
+            const noDaysDiv = document.getElementById('noSuspendedDays');
+
+            if (!days || days.length === 0) {
+                listDiv.innerHTML = '';
+                noDaysDiv.classList.remove('hidden');
+                return;
+            }
+
+            noDaysDiv.classList.add('hidden');
+            listDiv.innerHTML = days.map(day => `
+                <div class="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="flex items-center gap-3 mb-1">
+                                <span class="text-lg font-bold text-gray-900">
+                                    <i class="fa-solid fa-calendar-day mr-2 text-blue-600"></i>
+                                    ${new Date(day.date + 'T00:00:00').toLocaleDateString('en-PH', {
+                                        weekday: 'long',
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                    })}
+                                </span>
+                                <span class="px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                                    day.modality === 'online' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                }">
+                                    ${day.modality}
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-600">
+                                ${day.section ? 'Section: ' + day.section : 'All Sections'}
+                                ${day.reason ? ' • ' + day.reason : ''}
+                            </p>
+                            <p class="text-xs text-gray-400 mt-1">
+                                Created: ${new Date(day.created_at).toLocaleString('en-PH')}
+                            </p>
+                        </div>
+                        <button class="delete-btn text-red-500 hover:text-red-700" data-id="${day.id}">
+                            <i class="fa-solid fa-trash text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add delete listeners
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    if (confirm('Are you sure you want to delete this suspended day? This will not delete existing attendance logs.')) {
+                        await deleteSuspendedDay(btn.dataset.id);
+                    }
+                });
+            });
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            const form = document.getElementById('suspendedDayForm');
+            form.addEventListener('submit', handleSuspendedDaySubmit);
+        }
+
+        // Handle form submit to record new suspended day and log attendance
+        async function handleSuspendedDaySubmit(e) {
+            e.preventDefault();
+
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Processing...';
+
+            try {
+                // Get form data
+                const date = document.getElementById('suspendedDate').value;
+                const modality = document.getElementById('suspendedModality').value;
+                const section = document.getElementById('suspendedSection').value;
+                const reason = document.getElementById('suspendedReason').value;
+
+                // Get current user
+                const { data: { session } } = await window.supabaseClient.auth.getSession();
+                const userId = session?.user.id;
+
+                // First, check if this day already exists
+                const { data: existingDay, error: checkError } = await window.supabaseClient
+                    .from('suspended_days')
+                    .select('*')
+                    .eq('date', date)
+                    .eq('section', section || null);
+
+                if (checkError) throw checkError;
+
+                if (existingDay && existingDay.length > 0) {
+                    alert('This day is already recorded as a suspended day for this section!');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                    return;
+                }
+
+                // Insert suspended day
+                const { data: insertedDay, error: insertError } = await window.supabaseClient
+                    .from('suspended_days')
+                    .insert([{
+                        date: date,
+                        modality: modality,
+                        section: section || null,
+                        reason: reason,
+                        created_by: userId
+                    }])
+                    .select('*');
+
+                if (insertError) throw insertError;
+
+                console.log('Inserted suspended day:', insertedDay);
+
+                // Now, log attendance for all eligible students
+                const eligibleStudents = section
+                    ? masterStudentDatabase.filter(s => s.section === section)
+                    : masterStudentDatabase;
+
+                const { data: existingLogs, error: logsError } = await window.supabaseClient
+                    .from('attendance_logs')
+                    .select('student_lrn, session')
+                    .gte('scanned_at', new Date(date + 'T00:00:00').toISOString())
+                    .lte('scanned_at', new Date(date + 'T23:59:59').toISOString());
+
+                if (logsError) throw logsError;
+
+                // Create a map of existing logs to avoid duplicates
+                const existingLogKey = new Set(existingLogs.map(l => `${l.student_lrn}-${l.session}`));
+
+                const attendanceLogs = [];
+                eligibleStudents.forEach(student => {
+                    // AM session
+                    if (!existingLogKey.has(`${student.lrn}-AM`)) {
+                        attendanceLogs.push({
+                            student_lrn: student.lrn,
+                            session: 'AM',
+                            status: 'PRESENT',
+                            scanned_at: new Date(date + 'T07:30:00').toISOString(),
+                            section: student.section,
+                            modality: modality,
+                            scanned_by: userId
+                        });
+                    }
+
+                    // PM session
+                    if (!existingLogKey.has(`${student.lrn}-PM`)) {
+                        attendanceLogs.push({
+                            student_lrn: student.lrn,
+                            session: 'PM',
+                            status: 'PRESENT',
+                            scanned_at: new Date(date + 'T13:00:00').toISOString(),
+                            section: student.section,
+                            modality: modality,
+                            scanned_by: userId
+                        });
+                    }
+                });
+
+                // Insert attendance logs
+                if (attendanceLogs.length > 0) {
+                    const { error: logError } = await window.supabaseClient
+                        .from('attendance_logs')
+                        .insert(attendanceLogs);
+
+                    if (logError) throw logError;
+                }
+
+                alert(`Successfully recorded suspended day and logged ${attendanceLogs.length} attendance entries!`);
+
+                // Reset form
+                document.getElementById('suspendedDayForm').reset();
+
+                // Refresh list
+                await fetchSuspendedDays();
+
+            } catch (e) {
+                console.error("Error recording suspended day:", e);
+                alert('Error: ' + e.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        }
+
+        // Delete suspended day
+        async function deleteSuspendedDay(id) {
+            try {
+                const { error } = await window.supabaseClient
+                    .from('suspended_days')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                await fetchSuspendedDays();
+                alert('Suspended day deleted successfully!');
+            } catch (e) {
+                console.error("Error deleting suspended day:", e);
+                alert('Error: ' + e.message);
+            }
+        }
+
+        // Initialize app when page loads
+        window.addEventListener('load', initApp);
+    </script>
+</body>
+</html>
