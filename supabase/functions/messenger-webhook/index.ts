@@ -278,6 +278,24 @@ serve(async (req) => {
               } else if (text === 'PING') {
                 console.log(`🏓 PING received from PSID ${psid}`)
                 await sendResponse(psid, `🏓 Pong! Ang ULHS bot kay online na ug andam na sa imong commands. Your PSID is: ${psid}\n\n✅ Salamat sa pag-PING! Kini magpabilin sa imong 24-hour window active aron makadawat ka gihapon ug attendance alerts!`);
+              } else if (text.startsWith('RESET') || text.startsWith('VERIFY')) {
+                console.log(`🔐 Verification code request from PSID ${psid}`)
+                // Generate 6-digit code
+                const code = Math.floor(100000 + Math.random() * 900000).toString();
+                // Save to database
+                const { error } = await supabase
+                  .from('verification_codes')
+                  .insert({
+                    parent_psid: psid,
+                    code: code
+                  });
+                if (error) {
+                  console.error(`❌ Error saving verification code:`, error);
+                  await sendResponse(psid, `❌ Sorry, nagkaproblema sa pag-generate sa verification code. Palihog sulayi pag-usab.`);
+                } else {
+                  console.log(`✅ Verification code sent to PSID ${psid}`);
+                  await sendResponse(psid, `🔐 Here's your verification code: ${code}\n\nKini nga code mag-expire after 10 minutes. Gamita kini aron ma-set or ma-reset ang imong PIN sa parent portal.`);
+                }
               } else if (/^\d{12}$/.test(text)) {
                 // If user sends JUST the 12-digit LRN
                 const lrn = text;

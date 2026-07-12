@@ -40,6 +40,25 @@
                         <input type="text" id="lrn-input" maxlength="12" placeholder="Enter 12-digit LRN" 
                             class="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-blue-500 focus:outline-none font-bold text-gray-900 transition-all font-mono text-center">
                     </div>
+                    
+                    <div class="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                        <h4 class="text-xs font-black text-blue-800 uppercase mb-2 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"></path></svg>
+                            Verification Required
+                        </h4>
+                        <p class="text-[9px] text-blue-700 mb-3">First, send "RESET" to our Facebook Messenger bot to get a verification code!</p>
+                        <a href="https://m.me/ulhsofficial" target="_blank" rel="noopener noreferrer" 
+                           class="inline-flex items-center gap-2 bg-[#0084FF] text-white px-4 py-2 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-[#0073e6] transition-all">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.04c-5.5 0-10 4.17-10 9.3 0 2.91 1.4 5.54 3.6 7.32v3.3l3.15-1.74c1.02.28 2.1.43 3.25.43 5.5 0 10-4.17 10-9.3s-4.5-9.31-10-9.31zm1.09 12.42l-2.58-2.75-5.04 2.75 5.54-5.89 2.65 2.75 4.97-2.75-5.54 5.89z"/></svg>
+                            Open Messenger
+                        </a>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Verification Code (from Messenger)</label>
+                        <input type="text" id="verification-code-input" maxlength="6" placeholder="Enter 6-digit code" 
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-blue-500 focus:outline-none font-bold text-gray-900 transition-all font-mono text-center">
+                    </div>
 
                     <div>
                         <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">New 4-Digit PIN</label>
@@ -89,6 +108,7 @@
 
     <script>
         const lrnInput = document.getElementById('lrn-input');
+        const verificationCodeInput = document.getElementById('verification-code-input');
         const pinInput = document.getElementById('pin-input');
         const confirmPinInput = document.getElementById('confirm-pin-input');
         const setPinBtn = document.getElementById('set-pin-btn');
@@ -104,11 +124,13 @@
 
         function validateInputs() {
             const lrn = lrnInput.value.trim();
+            const code = verificationCodeInput.value.trim();
             const pin = pinInput.value.trim();
             const confirmPin = confirmPinInput.value.trim();
             const lrnRegex = /^\d{12}$/;
+            const codeRegex = /^\d{6}$/;
             const pinRegex = /^\d{4}$/;
-            return lrnRegex.test(lrn) && pinRegex.test(pin) && pin === confirmPin;
+            return lrnRegex.test(lrn) && codeRegex.test(code) && pinRegex.test(pin) && pin === confirmPin;
         }
 
         function updateButtonState() {
@@ -125,6 +147,7 @@
         }
 
         lrnInput.addEventListener('input', updateButtonState);
+        verificationCodeInput.addEventListener('input', updateButtonState);
         pinInput.addEventListener('input', updateButtonState);
         confirmPinInput.addEventListener('input', updateButtonState);
 
@@ -156,6 +179,7 @@
             }
 
             const lrn = lrnInput.value.trim();
+            const code = verificationCodeInput.value.trim();
             const pin = pinInput.value.trim();
 
             setPinBtn.disabled = true;
@@ -164,42 +188,20 @@
             try {
                 console.log('Starting PIN set process for LRN:', lrn);
                 
-                // Check if student exists and has parent_messenger_id
-                const { data: student, error } = await window.supabaseClient
-                    .from('students')
-                    .select('lrn, parent_messenger_id')
-                    .eq('lrn', lrn)
-                    .single();
+                // Call our verify-pin Edge Function
+                const response = await fetch(`${window.supabaseClient.supabaseUrl}/functions/v1/verify-pin`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': window.supabaseClient.supabaseKey
+                    },
+                    body: JSON.stringify({ lrn, code, pin })
+                });
 
-                console.log('Student fetch result:', { data: student, error });
+                const result = await response.json();
 
-                if (error || !student || !student.parent_messenger_id) {
-                    throw new Error('Invalid LRN or student not linked to parent');
-                }
-
-                // Hash PIN
-                const salt = CryptoJS.lib.WordArray.random(128/8).toString();
-                const hashedPin = CryptoJS.SHA256(pin + salt).toString();
-                const parentPin = salt + ':' + hashedPin;
-
-                console.log('Hashed PIN:', parentPin);
-
-                // Update ALL students linked to this parent with the new PIN
-                const { error: updateError, data: updateData, count } = await window.supabaseClient
-                    .from('students')
-                    .update({ parent_pin: parentPin })
-                    .eq('parent_messenger_id', student.parent_messenger_id)
-                    .select()
-                    .then(response => {
-                        console.log('Full response:', response);
-                        return response;
-                    });
-
-                console.log('Update result:', { error: updateError, data: updateData, count });
-                console.log('Number of students updated:', updateData?.length);
-
-                if (updateError) {
-                    throw updateError;
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to set PIN');
                 }
 
                 // Success!
