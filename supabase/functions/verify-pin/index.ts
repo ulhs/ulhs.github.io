@@ -36,17 +36,24 @@ serve(async (req) => {
     });
 
     // First get the student to get parent PSID
+    console.log(`🔍 Fetching student with LRN ${lrn}...`);
     const { data: student, error: studentError } = await supabase
       .from('students')
       .select('lrn, parent_messenger_id')
       .eq('lrn', lrn)
       .single();
 
-    if (studentError || !student || !student.parent_messenger_id) {
+    if (studentError) {
+      console.error(`❌ Error fetching student:`, studentError);
+    }
+    
+    if (!student || !student.parent_messenger_id) {
       throw new Error('Invalid LRN or student not linked to parent');
     }
+    console.log(`✅ Found student with parent PSID ${student.parent_messenger_id}`);
 
     // Verify the code
+    console.log(`🔍 Verifying code ${code}...`);
     const { data: validCode, error: codeError } = await supabase
       .from('verification_codes')
       .select('*')
@@ -58,11 +65,17 @@ serve(async (req) => {
       .limit(1)
       .single();
 
-    if (codeError || !validCode) {
+    if (codeError) {
+      console.error(`❌ Error checking verification code:`, codeError);
+    }
+    
+    if (!validCode) {
       throw new Error('Invalid or expired verification code');
     }
-
+    console.log(`✅ Code is valid!`);
+    
     // Mark code as used
+    console.log(`💾 Marking code as used...`);
     const { error: updateCodeError } = await supabase
       .from('verification_codes')
       .update({ used: true })
@@ -73,19 +86,24 @@ serve(async (req) => {
     }
 
     // Hash the new PIN using the same method as send-messenger-alert and login
+    console.log(`🔐 Hashing PIN...`);
     const salt = CryptoJS.lib.WordArray.random(128/8).toString();
     const hashedPin = CryptoJS.SHA256(pin + salt).toString();
     const parentPin = salt + ':' + hashedPin;
+    console.log(`✅ PIN hashed successfully!`);
 
     // Update parent PIN for all linked students
+    console.log(`💾 Updating parent PIN for PSID ${student.parent_messenger_id}...`);
     const { error: updatePinError } = await supabase
       .from('students')
       .update({ parent_pin: parentPin })
       .eq('parent_messenger_id', student.parent_messenger_id);
 
     if (updatePinError) {
+      console.error(`❌ Error updating PIN:`, updatePinError);
       throw updatePinError;
     }
+    console.log(`✅ PIN updated successfully!`);
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

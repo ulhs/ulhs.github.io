@@ -1,16 +1,16 @@
 // @ts-nocheck
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
-console.log("Edge function loaded and starting")
+console.log("Edge function loaded and starting");
 
-const FB_PAGE_ACCESS_TOKEN = Deno.env.get('FB_PAGE_ACCESS_TOKEN')
-const VERIFY_TOKEN = Deno.env.get('MESSENGER_VERIFY_TOKEN') || 'ULHS_VERIFY_TOKEN'
+const FB_PAGE_ACCESS_TOKEN = Deno.env.get('FB_PAGE_ACCESS_TOKEN');
+const VERIFY_TOKEN = Deno.env.get('MESSENGER_VERIFY_TOKEN') || 'ULHS_VERIFY_TOKEN';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -22,7 +22,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 const supabase = createClient(
   SUPABASE_URL ?? '',
   SUPABASE_SERVICE_ROLE_KEY ?? ''
-)
+);
 
 // Helper: Fetch user's name from Facebook Graph API
 async function getMessengerUserName(psid) {
@@ -44,49 +44,49 @@ serve(async (req) => {
   console.log("Edge function received request:", req.method, req.url);
   
   if (req.method === 'OPTIONS') {
-    console.log("Handling OPTIONS request")
-    return new Response('ok', { headers: corsHeaders })
+    console.log("Handling OPTIONS request");
+    return new Response('ok', { headers: corsHeaders });
   }
   
-  const url = new URL(req.url)
+  const url = new URL(req.url);
   console.log(`📥 Incoming request: ${req.method} ${url.pathname}`);
 
   try {
     // 1. Webhook Verification (GET request)
     if (req.method === 'GET') {
-      const mode = url.searchParams.get('hub.mode')
-      const token = url.searchParams.get('hub.verify_token')
-      const challenge = url.searchParams.get('hub.challenge')
+      const mode = url.searchParams.get('hub.mode');
+      const token = url.searchParams.get('hub.verify_token');
+      const challenge = url.searchParams.get('hub.challenge');
 
       if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-        console.log('✅ Webhook Verified')
-        return new Response(challenge, { headers: { ...corsHeaders, 'Content-Type': 'text/plain' }, status: 200 })
+        console.log('✅ Webhook Verified');
+        return new Response(challenge, { headers: { ...corsHeaders, 'Content-Type': 'text/plain' }, status: 200 });
       }
-      return new Response('Forbidden', { headers: { ...corsHeaders, 'Content-Type': 'text/plain' }, status: 403 })
+      return new Response('Forbidden', { headers: { ...corsHeaders, 'Content-Type': 'text/plain' }, status: 403 });
     }
 
     // 2. Handle Incoming Events (POST request)
     if (req.method === 'POST') {
-      const body = await req.json()
+      const body = await req.json();
 
       if (body.object === 'page') {
         for (const entry of body.entry) {
-          if (!entry.messaging) continue
+          if (!entry.messaging) continue;
 
           for (const messagingEvent of entry.messaging) {
-            const psid = messagingEvent.sender?.id
-            if (!psid) continue
+            const psid = messagingEvent.sender?.id;
+            if (!psid) continue;
 
             // 2a. Handle Registration (via Referral or Postback)
-            const rawLrn = messagingEvent.referral?.ref || messagingEvent.postback?.referral?.ref
+            const rawLrn = messagingEvent.referral?.ref || messagingEvent.postback?.referral?.ref;
 
             if (rawLrn) {
               const lrn = rawLrn.replace(/reg_/i, '').replace(/[^0-9]/g, '').trim();
-              console.log(`📝 Registration attempt: PSID ${psid} for LRN ${lrn} (Raw: ${rawLrn})`)
+              console.log(`📝 Registration attempt: PSID ${psid} for LRN ${lrn} (Raw: ${rawLrn})`);
               
               if (lrn.length !== 12) {
-                console.warn(`⚠️ Invalid LRN length (${lrn.length}): ${lrn}`)
-                await sendResponse(psid, `❌ Registration Failed: Ang LRN ${lrn} dapat 12 ka digits gyud.`)
+                console.warn(`⚠️ Invalid LRN length (${lrn.length}): ${lrn}`);
+                await sendResponse(psid, `❌ Registration Failed: Ang LRN ${lrn} dapat 12 ka digits gyud.`);
               } else {
                 // Try to get user's name from Messenger
                 const defaultName = await getMessengerUserName(psid);
@@ -103,35 +103,82 @@ serve(async (req) => {
                   .from('students')
                   .update(updateData)
                   .eq('lrn', lrn)
-                  .select()
+                  .select();
 
                 if (error) {
-                  console.error(`❌ Database error during registration for LRN ${lrn}:`, error.message)
-                  await sendResponse(psid, `❌ Registration Error: Dili ma-update ang database sa pagkakaron.`)
+                  console.error(`❌ Database error during registration for LRN ${lrn}:`, error.message);
+                  await sendResponse(psid, `❌ Registration Error: Dili ma-update ang database sa pagkakaron.`);
                 } else if (data && data.length > 0) {
-                  console.log(`✅ PSID ${psid} successfully linked to ${data[0].full_name} (LRN: ${lrn})`)
+                  console.log(`✅ PSID ${psid} successfully linked to ${data[0].full_name} (LRN: ${lrn})`);
                   const nameMsg = defaultName ? ` (Using your name: ${defaultName})` : '';
-                  await sendResponse(psid, `✅ Registration Successful! Makadawat na ka og attendance alerts ni ${data[0].full_name}.${nameMsg}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]\nPara makita ang tanan nimo nga linked students, i-send: LIST`);
+                  await sendResponse(psid, `✅ Registration Successful! Makadawat na ka ug attendance alerts ni ${data[0].full_name}.${nameMsg}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nPara i-set or i-reset imong PIN, i-send: RESET\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]\nPara makita ang tanan nimo nga linked students, i-send: LIST`);
                 } else {
-                  console.warn(`⚠️ Registration failed: LRN ${lrn} not found in database.`)
-                  await sendResponse(psid, `❌ Registration Failed: Dili makit-an ang LRN ${lrn} sa among listahan.`)
+                  console.warn(`⚠️ Registration failed: LRN ${lrn} not found in database.`);
+                  await sendResponse(psid, `❌ Registration Failed: Dili makit-an ang LRN ${lrn} sa among listahan.`);
                 }
               }
             } 
             // Handle Get Started button without referral
             else if (messagingEvent.postback?.payload === 'GET_STARTED') {
-              console.log(`🚀 GET_STARTED received from PSID ${psid}`)
-              await sendResponse(psid, `👋 Flehew! Welcome to the ULHS Attendance Alert System.\n\nPara ma-link ang estudyante, gamita ang registration link sa among website o i-send ang: LINK [12-digit LRN]`);
+              console.log(`🚀 GET_STARTED received from PSID ${psid}`);
+              await sendResponse(psid, `👋 Flehew! Welcome to the ULHS Attendance Alert System.\n\nPara ma-link ang estudyante, gamita ang registration link sa among website o i-send ang: LINK [12-digit LRN]\nPara makakuha ug verification code para sa PIN, i-send: RESET`);
             }
             
             // 2b. Handle Commands (via Text Message)
             else if (messagingEvent.message?.text) {
               const rawText = messagingEvent.message.text.trim();
               const text = rawText.toUpperCase();
-              console.log(`💬 Processing text from PSID ${psid}: "${rawText}"`)
+              console.log(`💬 Processing text from PSID ${psid}: "${rawText}" (uppercase: "${text}")`);
+              
+              // Handle RESET/VERIFY commands first (highest priority)
+              if (text.startsWith('RESET') || text.startsWith('VERIFY')) {
+                console.log(`🔐 Verification code request from PSID ${psid}`);
+                
+                // Generate 6-digit code first (even before checking students or saving to DB)
+                const code = Math.floor(100000 + Math.random() * 900000).toString();
+                console.log(`🔐 Generated verification code: ${code}`);
+                
+                // First check if parent has at least one linked student
+                console.log(`🔍 Checking linked students for PSID ${psid}`);
+                const { data: students, error: studentsError } = await supabase
+                  .from('students')
+                  .select('lrn, full_name')
+                  .eq('parent_messenger_id', psid);
+                
+                if (studentsError) {
+                  console.error(`❌ Error checking linked students for PSID ${psid}:`, JSON.stringify(studentsError));
+                }
+                
+                if (!students || students.length === 0) {
+                  console.warn(`⚠️ No linked students found for PSID ${psid}`);
+                  await sendResponse(psid, `⚠️ Wala pa kay naka-link nga estudyante. Palihug link sa usa ka estudyante una gamit ang LINK command.`);
+                  continue;
+                }
+                
+                console.log(`✅ Found ${students.length} linked students for PSID ${psid}:`, students.map(s => `${s.full_name} (${s.lrn})`).join(', '));
+                
+                // Try to save to database, but even if it fails, still send the code
+                console.log(`💾 Saving verification code to database...`);
+                const { error } = await supabase
+                  .from('verification_codes')
+                  .insert({
+                    parent_psid: psid,
+                    code: code
+                  });
+                
+                if (error) {
+                  console.error(`❌ Error saving verification code to database:`, JSON.stringify(error));
+                  // Still send the code, just warn about the DB issue
+                  await sendResponse(psid, `🔐 Here's your verification code: ${code}\n\nKini nga code mag-expire after 10 minutes. Gamita kini aron ma-set or ma-reset ang imong PIN sa parent portal.\n\n⚠️ Note: Nagkaproblema sa pag-save sa code sa database, but okay ra gamiton ni!`);
+                } else {
+                  console.log(`✅ Verification code ${code} saved successfully for PSID ${psid}`);
+                  await sendResponse(psid, `🔐 Here's your verification code: ${code}\n\nKini nga code mag-expire after 10 minutes. Gamita kini aron ma-set or ma-reset ang imong PIN sa parent portal.`);
+                }
+                continue;
+              }
               
               // Handle NAME command: Set parent/guardian name
-              if (text.startsWith('NAME')) {
+              else if (text.startsWith('NAME')) {
                 const newName = rawText.replace(/NAME/i, '').trim();
                 console.log(`🔍 NAME command: Setting name to "${newName}" for PSID ${psid}`);
                 
@@ -163,7 +210,7 @@ serve(async (req) => {
                 
                 if (targetLrn.length === 12) {
                   const defaultName = await getMessengerUserName(psid);
-                  const updateData: any = {
+                  const updateData = {
                     parent_messenger_id: psid,
                     notify_parent: true 
                   };
@@ -173,15 +220,15 @@ serve(async (req) => {
                     .from('students')
                     .update(updateData)
                     .eq('lrn', targetLrn)
-                    .select()
+                    .select();
 
                   if (error) {
-                    console.error(`❌ DB Error (REG_):`, error.message)
+                    console.error(`❌ DB Error (REG_):`, error.message);
                     await sendResponse(psid, `❌ System Error: Dili ma-link ang LRN ${targetLrn} sa pagkakaron.`);
                   } else if (data && data.length > 0) {
                     console.log(`✅ Manual link success: ${data[0].full_name} (LRN: ${targetLrn})`);
                     const nameMsg = defaultName ? ` (Using your name: ${defaultName})` : '';
-                    await sendResponse(psid, `✅ Successfully linked to ${data[0].full_name}!${nameMsg}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]`);
+                    await sendResponse(psid, `✅ Successfully linked to ${data[0].full_name}!${nameMsg}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nPara i-set or i-reset imong PIN, i-send: RESET\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]`);
                   } else {
                     console.warn(`⚠️ Manual REG LRN not found: ${targetLrn}`);
                     await sendResponse(psid, `❌ Registration Failed: Dili makit-an ang LRN ${targetLrn} sa among listahan.`);
@@ -197,7 +244,7 @@ serve(async (req) => {
                 
                 if (targetLrn.length === 12) {
                   const defaultName = await getMessengerUserName(psid);
-                  const updateData: any = {
+                  const updateData = {
                     parent_messenger_id: psid,
                     notify_parent: true 
                   };
@@ -207,15 +254,15 @@ serve(async (req) => {
                     .from('students')
                     .update(updateData)
                     .eq('lrn', targetLrn)
-                    .select()
+                    .select();
 
                   if (error) {
-                    console.error(`❌ DB Error (LINK):`, error.message)
-                    await sendResponse(psid, `❌ Error: Nagkaproblema ang system sa pag-link sa LRN ${targetLrn}.`)
+                    console.error(`❌ DB Error (LINK):`, error.message);
+                    await sendResponse(psid, `❌ Error: Nagkaproblema ang system sa pag-link sa LRN ${targetLrn}.`);
                   } else if (data && data.length > 0) {
                     console.log(`✅ LINK success for ${data[0].full_name} (LRN: ${targetLrn})`);
                     const nameMsg = defaultName ? ` (Using your name: ${defaultName})` : '';
-                    await sendResponse(psid, `✅ Successfully linked to ${data[0].full_name}!${nameMsg}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]`);
+                    await sendResponse(psid, `✅ Successfully linked to ${data[0].full_name}!${nameMsg}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nPara i-set or i-reset imong PIN, i-send: RESET\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]`);
                   } else {
                     console.warn(`⚠️ LINK LRN not found: ${targetLrn}`);
                     await sendResponse(psid, `❌ Link failed. Ang 12-digit LRN ${targetLrn} wala sa among system.`);
@@ -237,7 +284,7 @@ serve(async (req) => {
                     })
                     .eq('lrn', targetLrn)
                     .eq('parent_messenger_id', psid)
-                    .select()
+                    .select();
 
                   if (error) {
                     console.error(`❌ DB Error (UNLINK):`, error.message);
@@ -270,32 +317,14 @@ serve(async (req) => {
                     const nameInfo = s.parent_guardian_name ? ` (Guardian: ${s.parent_guardian_name})` : '';
                     return `• ${s.full_name} (${s.lrn})${nameInfo}`;
                   }).join('\n');
-                  await sendResponse(psid, `📋 Nagadawat ka ug alerts ni:\n\n${studentList}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nCommands:\n• LIST - See linked students\n• NAME [Your Name] - Para i-set o i-update ang imong name\n• LINK [LRN] - Link another student\n• UNLINK [LRN] - Stop receiving alerts`);
+                  await sendResponse(psid, `📋 Nagadawat ka ug alerts ni:\n\n${studentList}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nCommands:\n• LIST - See linked students\n• NAME [Your Name] - Para i-set o i-update ang imong name\n• LINK [LRN] - Link another student\n• UNLINK [LRN] - Stop receiving alerts\n• RESET - Get a verification code to set/reset your PIN\n• PING - Test connection`);
                 } else {
                   console.warn(`⚠️ No students found for PSID ${psid}`);
                   await sendResponse(psid, `👋 Flehew! Wala pa kay estudyante nga naka-link sa imong account.\n\nPara ma-link ang estudyante, i-send ang: LINK [12-digit LRN]`);
                 }
               } else if (text === 'PING') {
-                console.log(`🏓 PING received from PSID ${psid}`)
+                console.log(`🏓 PING received from PSID ${psid}`);
                 await sendResponse(psid, `🏓 Pong! Ang ULHS bot kay online na ug andam na sa imong commands. Your PSID is: ${psid}\n\n✅ Salamat sa pag-PING! Kini magpabilin sa imong 24-hour window active aron makadawat ka gihapon ug attendance alerts!`);
-              } else if (text.startsWith('RESET') || text.startsWith('VERIFY')) {
-                console.log(`🔐 Verification code request from PSID ${psid}`)
-                // Generate 6-digit code
-                const code = Math.floor(100000 + Math.random() * 900000).toString();
-                // Save to database
-                const { error } = await supabase
-                  .from('verification_codes')
-                  .insert({
-                    parent_psid: psid,
-                    code: code
-                  });
-                if (error) {
-                  console.error(`❌ Error saving verification code:`, error);
-                  await sendResponse(psid, `❌ Sorry, nagkaproblema sa pag-generate sa verification code. Palihog sulayi pag-usab.`);
-                } else {
-                  console.log(`✅ Verification code sent to PSID ${psid}`);
-                  await sendResponse(psid, `🔐 Here's your verification code: ${code}\n\nKini nga code mag-expire after 10 minutes. Gamita kini aron ma-set or ma-reset ang imong PIN sa parent portal.`);
-                }
               } else if (/^\d{12}$/.test(text)) {
                 // If user sends JUST the 12-digit LRN
                 const lrn = text;
@@ -311,41 +340,41 @@ serve(async (req) => {
                   .from('students')
                   .update(updateData)
                   .eq('lrn', lrn)
-                  .select()
+                  .select();
 
                 if (error) {
-                  console.error(`❌ DB Error (LRN Only) for LRN ${lrn}:`, error.message)
+                  console.error(`❌ DB Error (LRN Only) for LRN ${lrn}:`, error.message);
                   await sendResponse(psid, `❌ System Error: Dili ma-link ang LRN ${lrn} sa pagkakaron.`);
                 } else if (data && data.length > 0) {
                   console.log(`✅ LRN link success: ${data[0].full_name} (LRN: ${lrn})`);
                   const nameMsg = defaultName ? ` (Using your name: ${defaultName})` : '';
-                  await sendResponse(psid, `✅ Successfully linked to ${data[0].full_name}!${nameMsg}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]`);
+                  await sendResponse(psid, `✅ Successfully linked to ${data[0].full_name}!${nameMsg}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nPara i-set or i-reset imong PIN, i-send: RESET\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]`);
                 } else {
                   console.warn(`⚠️ LRN not found (LRN Only): ${lrn}`);
                   await sendResponse(psid, `❌ Registration Failed: Ang LRN ${lrn} wala sa among listahan.`);
                 }
               } else {
                 console.log(`❓ Unknown command from PSID ${psid}: "${rawText}"`);
-                await sendResponse(psid, `🤖 Ha? Usba daw pag-type. Pwede nimo i-send ang:\n• LIST - Para makita ang linked students\n• NAME [Your Name] - Para i-set o i-update ang imong name\n• LINK [LRN] - Para mag-add ug estudyante\n• PING - Para i-test ang connection`);
+                await sendResponse(psid, `🤖 Ha? Usba daw pag-type. Pwede nimo i-send ang:\n• LIST - Para makita ang linked students\n• NAME [Your Name] - Para i-set o i-update ang imong name\n• LINK [LRN] - Para mag-add ug estudyante\n• UNLINK [LRN] - Para mu-undang ug alerts\n• RESET - Para makakuha ug verification code sa PIN\n• PING - Para i-test ang connection`);
               }
             }
           }
         }
-        return new Response('EVENT_RECEIVED', { headers: { ...corsHeaders, 'Content-Type': 'text/plain' }, status: 200 })
+        return new Response('EVENT_RECEIVED', { headers: { ...corsHeaders, 'Content-Type': 'text/plain' }, status: 200 });
       }
       console.warn(`⚠️ Received non-page object: ${body.object}`);
-      return new Response('NOT_PAGE', { headers: { ...corsHeaders, 'Content-Type': 'text/plain' }, status: 200 })
+      return new Response('NOT_PAGE', { headers: { ...corsHeaders, 'Content-Type': 'text/plain' }, status: 200 });
     }
 
-    return new Response('Not Found', { headers: { ...corsHeaders, 'Content-Type': 'text/plain' }, status: 404 })
+    return new Response('Not Found', { headers: { ...corsHeaders, 'Content-Type': 'text/plain' }, status: 404 });
   } catch (error) {
-    console.error("Edge function error:", error)
+    console.error("Edge function error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
-    })
+    });
   }
-})
+});
 
 async function sendResponse(psid, text) {
   console.log(`📡 Sending message to PSID ${psid}: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
@@ -366,7 +395,7 @@ async function sendResponse(psid, text) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
-    })
+    });
     
     const responseData = await res.json();
     
@@ -397,9 +426,9 @@ async function sendResponse(psid, text) {
         }
       }
     } else {
-      console.log(`✅ Message sent successfully to PSID ${psid}. ID: ${responseData.message_id}`)
+      console.log(`✅ Message sent successfully to PSID ${psid}. ID: ${responseData.message_id}`);
     }
   } catch (err) {
-    console.error(`🔥 Network error sending to PSID ${psid}:`, err.message)
+    console.error(`🔥 Network error sending to PSID ${psid}:`, err.message);
   }
 }

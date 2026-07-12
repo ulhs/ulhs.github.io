@@ -236,20 +236,33 @@
 
         async function fetchAchievements() {
             const container = document.getElementById('achievements-container');
+            const parentPsid = secureSession.getItem('parentPsid');
             
             try {
-                // First, try to fetch from an 'achievements' table in Supabase
-                const { data, error } = await window.supabaseClient
-                    .from('achievements')
-                    .select('*')
-                    .eq('student_lrn', activeStudent.lrn)
-                    .order('awarded_at', { ascending: false });
-                
-                if (error || !data || data.length === 0) {
-                    // If no achievements in Supabase, show sample data
+                const response = await fetch(`${window.supabaseClient.supabaseUrl}/functions/v1/parent-data`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': window.supabaseClient.supabaseKey
+                    },
+                    body: JSON.stringify({
+                        parentPsid,
+                        studentLrn: activeStudent.lrn,
+                        type: 'achievements'
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error);
+                }
+
+                if (!result.achievements || result.achievements.length === 0) {
+                    // If no achievements, show sample data
                     renderSampleAchievements();
                 } else {
-                    renderAchievements(data);
+                    renderAchievements(result.achievements);
                 }
             } catch (err) {
                 console.error('Error fetching achievements:', err);

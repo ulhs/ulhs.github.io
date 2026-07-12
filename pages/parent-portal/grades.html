@@ -244,20 +244,34 @@
 
         async function fetchGrades() {
             const container = document.getElementById('grades-container');
+            const parentPsid = secureSession.getItem('parentPsid');
             
             try {
-                // First, try to fetch from a 'grades' table in Supabase
-                const { data, error } = await window.supabaseClient
-                    .from('grades')
-                    .select('*')
-                    .eq('student_lrn', activeStudent.lrn)
-                    .eq('term', currentTerm);
-                
-                if (error || !data || data.length === 0) {
-                    // If no grades in Supabase, show sample data
+                const response = await fetch(`${window.supabaseClient.supabaseUrl}/functions/v1/parent-data`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': window.supabaseClient.supabaseKey
+                    },
+                    body: JSON.stringify({
+                        parentPsid,
+                        studentLrn: activeStudent.lrn,
+                        type: 'grades',
+                        term: currentTerm
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error);
+                }
+
+                if (!result.grades || result.grades.length === 0) {
+                    // If no grades, show sample data
                     renderSampleGrades();
                 } else {
-                    renderGrades(data);
+                    renderGrades(result.grades);
                 }
             } catch (err) {
                 console.error('Error fetching grades:', err);

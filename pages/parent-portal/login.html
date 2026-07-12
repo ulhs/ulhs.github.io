@@ -187,64 +187,41 @@
             loadingContainer.classList.remove('hidden');
 
             try {
-                const { data: student, error } = await window.supabaseClient
-                    .from('students')
-                    .select('lrn, full_name, parent_messenger_id, parent_guardian_name, section, grade_level, photo_url, student_id_number, parent_pin')
-                    .eq('lrn', lrn)
-                    .single();
+                // Call our parent-login Edge Function instead of fetching directly
+                const response = await fetch(`${window.supabaseClient.supabaseUrl}/functions/v1/parent-login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': window.supabaseClient.supabaseKey
+                    },
+                    body: JSON.stringify({ lrn, pin })
+                });
 
-                console.log('Student data:', student);
-                console.log('Student error:', error);
-                console.log('Parent PIN value:', student?.parent_pin);
+                const result = await response.json();
 
-                // Generic error message to avoid information leakage
-                if (error || !student || !student.parent_messenger_id) {
-                    throw new Error('Invalid login attempt. Please check your information and try again.');
-                }
-                
-                // Verify PIN
-                console.log('Verifying PIN...');
-                if (student.parent_pin) {
-                    const [salt, storedHash] = student.parent_pin.split(':');
-                    console.log('Salt:', salt);
-                    console.log('Stored Hash:', storedHash);
-                    const inputHash = CryptoJS.SHA256(pin + salt).toString();
-                    console.log('Input Hash:', inputHash);
-                    console.log('PIN match:', inputHash === storedHash);
-                    if (inputHash !== storedHash) {
-                        throw new Error('Invalid login attempt. Please check your information and try again.');
+                if (!response.ok) {
+                    if (result.error && result.error.includes('PIN not set')) {
+                        showError(result.error);
+                        // Add link to set PIN
+                        setTimeout(() => {
+                            if (errorContainer) {
+                                const linkHtml = '<p class="text-center mt-4"><a href="set-pin.html" class="text-blue-600 font-bold underline">Set PIN Now</a></p>';
+                                errorContainer.insertAdjacentHTML('beforeend', linkHtml);
+                            }
+                        }, 100);
+                        return;
                     }
-                } else {
-                    console.log('No parent PIN found!');
-                    // Show error and ask to set PIN
-                    showError('No PIN set for this account. Please set a PIN first.');
-                    // Add a link to set PIN page
-                    setTimeout(() => {
-                        if (errorContainer) {
-                            const linkHtml = '<p class="text-center mt-4"><a href="set-pin.html" class="text-blue-600 font-bold underline">Set PIN Now</a></p>';
-                            errorContainer.insertAdjacentHTML('beforeend', linkHtml);
-                        }
-                    }, 100);
-                    return;
+                    throw new Error(result.error || 'Invalid login attempt.');
                 }
 
-                // Success! Reset attempts and set up parent session
+                // Success! Reset attempts and set up parent session using data from Edge Function
                 loginAttempts = 0;
-                secureSession.setItem('parentPsid', student.parent_messenger_id);
-                if (student.parent_guardian_name) {
-                    secureSession.setItem('parentName', student.parent_guardian_name);
+                secureSession.setItem('parentPsid', result.parentPsid);
+                if (result.parentName) {
+                    secureSession.setItem('parentName', result.parentName);
                 }
-
-                // Fetch all students linked to this parent
-                const { data: allStudents, error: studentsError } = await window.supabaseClient
-                    .from('students')
-                    .select('lrn, full_name, section, grade_level, photo_url, student_id_number')
-                    .eq('parent_messenger_id', student.parent_messenger_id);
-
-                if (!studentsError && allStudents) {
-                    secureSession.setItem('parentStudents', allStudents);
-                    secureSession.setItem('activeStudentLrn', lrn);
-                }
+                secureSession.setItem('parentStudents', result.students);
+                secureSession.setItem('activeStudentLrn', result.activeStudentLrn);
 
                 loadingContainer.innerHTML = `
                     <div class="flex flex-col items-center justify-center gap-4 py-4">
