@@ -1,5 +1,13 @@
 // @ts-nocheck
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+console.log("Edge function loaded and starting")
 
 const FB_PAGE_ACCESS_TOKEN = Deno.env.get('FB_PAGE_ACCESS_TOKEN')
 const VERIFY_TOKEN = Deno.env.get('MESSENGER_VERIFY_TOKEN') || 'ULHS_VERIFY_TOKEN'
@@ -32,26 +40,33 @@ async function getMessengerUserName(psid) {
   }
 }
 
-Deno.serve(async (req) => {
+serve(async (req) => {
+  console.log("Edge function received request:", req.method, req.url);
+  
+  if (req.method === 'OPTIONS') {
+    console.log("Handling OPTIONS request")
+    return new Response('ok', { headers: corsHeaders })
+  }
+  
   const url = new URL(req.url)
   console.log(`📥 Incoming request: ${req.method} ${url.pathname}`);
 
-  // 1. Webhook Verification (GET request)
-  if (req.method === 'GET') {
-    const mode = url.searchParams.get('hub.mode')
-    const token = url.searchParams.get('hub.verify_token')
-    const challenge = url.searchParams.get('hub.challenge')
+  try {
+    // 1. Webhook Verification (GET request)
+    if (req.method === 'GET') {
+      const mode = url.searchParams.get('hub.mode')
+      const token = url.searchParams.get('hub.verify_token')
+      const challenge = url.searchParams.get('hub.challenge')
 
-    if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-      console.log('✅ Webhook Verified')
-      return new Response(challenge, { status: 200 })
+      if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+        console.log('✅ Webhook Verified')
+        return new Response(challenge, { headers: { ...corsHeaders, 'Content-Type': 'text/plain' }, status: 200 })
+      }
+      return new Response('Forbidden', { headers: { ...corsHeaders, 'Content-Type': 'text/plain' }, status: 403 })
     }
-    return new Response('Forbidden', { status: 403 })
-  }
 
-  // 2. Handle Incoming Events (POST request)
-  if (req.method === 'POST') {
-    try {
+    // 2. Handle Incoming Events (POST request)
+    if (req.method === 'POST') {
       const body = await req.json()
 
       if (body.object === 'page') {
@@ -298,17 +313,20 @@ Deno.serve(async (req) => {
             }
           }
         }
-        return new Response('EVENT_RECEIVED', { status: 200 })
+        return new Response('EVENT_RECEIVED', { headers: { ...corsHeaders, 'Content-Type': 'text/plain' }, status: 200 })
       }
       console.warn(`⚠️ Received non-page object: ${body.object}`);
-      return new Response('NOT_PAGE', { status: 200 })
-    } catch (err) {
-      console.error('🔥 Webhook Processing Error:', err instanceof Error ? err.stack : err)
-      return new Response('Internal Error', { status: 500 })
+      return new Response('NOT_PAGE', { headers: { ...corsHeaders, 'Content-Type': 'text/plain' }, status: 200 })
     }
-  }
 
-  return new Response('Not Found', { status: 404 })
+    return new Response('Not Found', { headers: { ...corsHeaders, 'Content-Type': 'text/plain' }, status: 404 })
+  } catch (error) {
+    console.error("Edge function error:", error)
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+    })
+  }
 })
 
 async function sendResponse(psid, text) {

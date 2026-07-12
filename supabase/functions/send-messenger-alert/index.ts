@@ -28,15 +28,15 @@ serve(async (req) => {
       type, 
       context = 'regular-scan',
       suspendedDayDate = null
-    } = await req.json()
+    }: any = await req.json()
     
     console.log("Received request with context:", context)
     console.log("Full request data:", { psid, studentName, studentLrn, session, status, time, type, context })
     console.log("studentLrn exists:", !!studentLrn)
     
-    const FB_PAGE_ACCESS_TOKEN = Deno.env.get('FB_PAGE_ACCESS_TOKEN')
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const FB_PAGE_ACCESS_TOKEN: string | undefined = Deno.env.get('FB_PAGE_ACCESS_TOKEN')
+    const SUPABASE_URL: string | undefined = Deno.env.get('SUPABASE_URL')
+    const SUPABASE_SERVICE_ROLE_KEY: string | undefined = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
     if (!FB_PAGE_ACCESS_TOKEN) {
         throw new Error("Missing FB_PAGE_ACCESS_TOKEN secret.")
@@ -85,10 +85,10 @@ serve(async (req) => {
     }
 
     // First, log to notification_logs table (even before Facebook API call)
-    let fbResult = null;
-    let fbSuccess = false;
-    let fbErrorMessage = null;
-    let logId = null;
+    let fbResult: any = null;
+    let fbSuccess: boolean = false;
+    let fbErrorMessage: string | null = null;
+    let logId: number | null = null;
 
     if (studentLrn) {
       console.log("Attempting to insert into notification_logs with data:", {
