@@ -18,22 +18,26 @@
     <script src="../../assets/lib/tailwind.min.js"></script>
     <style>
         .student-card {
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .student-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
         .student-card.active {
             border-color: #2563eb;
             background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2);
         }
         .nav-item {
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .nav-item:hover {
-            background: #f3f4f6;
-            transform: translateX(4px);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .welcome-banner {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
         }
     </style>
 </head>
@@ -60,25 +64,61 @@
     </header>
 
     <main class="max-w-6xl mx-auto px-4 py-8">
+        <!-- Parent Welcome -->
+        <div id="parent-welcome" class="mb-8"></div>
+
         <!-- Student Selector -->
         <div class="mb-8">
-            <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Select Student</h2>
+            <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Select a student below to view their school information</h2>
             <div id="student-selector" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <!-- Student cards will be inserted here -->
             </div>
         </div>
 
-        <!-- Welcome & Quick Stats -->
-        <div id="dashboard-content" class="space-y-6">
+        <!-- Welcome & Quick Stats (only when student selected) -->
+        <div id="dashboard-content" class="space-y-6 hidden">
             <!-- Content will be dynamically loaded based on selected student -->
         </div>
     </main>
 
-
-
     <script>
         let students = [];
         let activeStudent = null;
+
+        async function loadStudentPhotoSecurely(lrn, photoUrl, imgElement, placeholderSvg) {
+            if (!imgElement) return;
+
+            const parentPsid = secureSession.getItem('parentPsid');
+            if (!parentPsid) {
+                imgElement.style.display = 'none';
+                return;
+            }
+
+            try {
+                // Request a signed URL from our edge function
+                const response = await fetch(`${window.supabaseClient.supabaseUrl}/functions/v1/parent-photo`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': window.supabaseClient.supabaseKey
+                    },
+                    body: JSON.stringify({ parentPsid, studentLrn: lrn })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'Failed to get photo');
+                }
+
+                // Use the signed URL
+                imgElement.src = result.signedUrl;
+                imgElement.style.display = 'block';
+            } catch (err) {
+                console.error('Error loading photo:', err);
+                imgElement.style.display = 'none';
+            }
+        }
 
         // Initialize dashboard
         async function initDashboard() {
@@ -89,21 +129,52 @@
 
             students = secureSession.getItem('parentStudents') || [];
             const activeLrn = secureSession.getItem('activeStudentLrn');
+            const parentName = secureSession.getItem('parentName');
             
             console.log('=== INIT DASHBOARD ===');
             console.log('All students:', students);
             console.log('Active LRN from storage:', activeLrn);
+            console.log('Parent name from storage:', parentName);
             
             if (students.length === 0) {
                 window.location.replace('./login.html');
                 return;
             }
 
-            activeStudent = students.find(s => String(s.lrn) === String(activeLrn)) || students[0];
-            console.log('Active student set to:', activeStudent);
+            // Render parent welcome first
+            renderParentWelcome(parentName);
+            
+            // Check if there's an active student
+            if (activeLrn) {
+                activeStudent = students.find(s => String(s.lrn) === String(activeLrn));
+            }
             
             renderStudentSelector();
-            renderDashboardContent();
+            
+            if (activeStudent) {
+                renderDashboardContent();
+            }
+        }
+
+        // Render parent welcome
+        function renderParentWelcome(parentName) {
+            const container = document.getElementById('parent-welcome');
+            
+            container.innerHTML = `
+                <div class="welcome-banner rounded-3xl p-7 text-white shadow-xl">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-xs font-bold text-blue-100 uppercase tracking-widest mb-2">Welcome to Parent Portal</p>
+                            <h2 class="text-2xl font-black">Hello, ${parentName || 'Parent'}!</h2>
+                        </div>
+                        <div class="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         // Render student selector
@@ -123,12 +194,7 @@
                          data-student-name="${student.full_name}">
                         <div class="flex items-center gap-4">
                             <div class="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                                ${student.photo_url ? 
-                                    `<img src="${student.photo_url}" alt="${student.full_name}" class="w-full h-full object-cover" onerror="this.style.display='none'">` :
-                                    `<svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
-                                    </svg>`
-                                }
+                                <img class="student-photo w-full h-full object-cover object-top" data-lrn="${student.lrn}" data-photo-url="${student.photo_url || ''}" style="display:none" alt="${student.full_name}">
                             </div>
                             <div class="flex-1 min-w-0">
                                 <h3 class="text-sm font-black text-gray-900 truncate">${student.full_name}</h3>
@@ -148,13 +214,15 @@
                 `;
             }).join('');
             
-            // Add click listeners to student cards
+            // Load photos and add click listeners
             const cards = container.querySelectorAll('.student-card');
             console.log(`Found ${cards.length} student cards`);
             
-            cards.forEach(card => {
-                const studentName = card.getAttribute('data-student-name');
-                console.log(`Adding listener for: ${studentName}`);
+            cards.forEach(async (card) => {
+                const imgElement = card.querySelector('.student-photo');
+                const lrn = imgElement.dataset.lrn;
+                const photoUrl = imgElement.dataset.photoUrl || `profiles/${lrn}.webp`;
+                await loadStudentPhotoSecurely(lrn, photoUrl, imgElement);
                 
                 card.addEventListener('click', (e) => {
                     console.log('Card clicked!', e.target);
@@ -176,101 +244,78 @@
         }
 
         // Render dashboard content
-        function renderDashboardContent() {
+        async function renderDashboardContent() {
             const container = document.getElementById('dashboard-content');
             
+            if (!activeStudent) {
+                container.classList.add('hidden');
+                return;
+            }
+            
+            container.classList.remove('hidden');
+            
             container.innerHTML = `
-                <!-- Welcome -->
-                <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-3xl p-6 text-white shadow-lg">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-xs font-bold text-blue-100 uppercase tracking-widest mb-1">Welcome to Parent Portal</p>
-                            <h2 class="text-xl font-black">Viewing: ${activeStudent.full_name}</h2>
-                        </div>
-                        <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Quick Actions Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
                     <!-- Attendance -->
-                    <div class="nav-item bg-white rounded-2xl p-5 border border-gray-100 shadow-sm cursor-pointer" onclick="window.location.href='attendance-history.html'">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center">
-                                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    <div class="nav-item bg-white rounded-2xl p-6 border border-gray-100 shadow-md cursor-pointer" onclick="window.location.href='attendance-history.html'">
+                        <div class="flex flex-col items-center text-center">
+                            <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                             </div>
-                            <div>
-                                <h3 class="text-sm font-black text-gray-900">Attendance</h3>
-                                <p class="text-xs text-gray-500 font-semibold">View attendance history</p>
-                            </div>
-                            <svg class="w-5 h-5 text-gray-300 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                            </svg>
+                            <h3 class="text-base font-black text-gray-900 mb-1">Attendance</h3>
+                            <p class="text-xs text-gray-500 font-semibold">View history</p>
                         </div>
                     </div>
 
                     <!-- Grades -->
-                    <div class="nav-item bg-white rounded-2xl p-5 border border-gray-100 shadow-sm cursor-pointer" onclick="window.location.href='grades.html'">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center">
-                                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                    <div class="nav-item bg-white rounded-2xl p-6 border border-gray-100 shadow-md cursor-pointer" onclick="window.location.href='grades.html'">
+                        <div class="flex flex-col items-center text-center">
+                            <div class="w-16 h-16 bg-gradient-to-br from-purple-400 to-violet-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                                 </svg>
                             </div>
-                            <div>
-                                <h3 class="text-sm font-black text-gray-900">Grades</h3>
-                                <p class="text-xs text-gray-500 font-semibold">View term grades</p>
-                            </div>
-                            <svg class="w-5 h-5 text-gray-300 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                            </svg>
+                            <h3 class="text-base font-black text-gray-900 mb-1">Grades</h3>
+                            <p class="text-xs text-gray-500 font-semibold">View term grades</p>
                         </div>
                     </div>
 
                     <!-- Achievements -->
-                    <div class="nav-item bg-white rounded-2xl p-5 border border-gray-100 shadow-sm cursor-pointer" onclick="window.location.href='achievements.html'">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-yellow-100 rounded-2xl flex items-center justify-center">
-                                <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                    <div class="nav-item bg-white rounded-2xl p-6 border border-gray-100 shadow-md cursor-pointer" onclick="window.location.href='achievements.html'">
+                        <div class="flex flex-col items-center text-center">
+                            <div class="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
                                 </svg>
                             </div>
-                            <div>
-                                <h3 class="text-sm font-black text-gray-900">Achievements</h3>
-                                <p class="text-xs text-gray-500 font-semibold">Awards & recognitions</p>
-                            </div>
-                            <svg class="w-5 h-5 text-gray-300 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                            </svg>
+                            <h3 class="text-base font-black text-gray-900 mb-1">Achievements</h3>
+                            <p class="text-xs text-gray-500 font-semibold">Awards & recognitions</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Quick Info -->
-                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                    <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Student Information</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">LRN</p>
-                            <p class="text-sm font-black text-gray-900 font-mono">${activeStudent.lrn}</p>
+                <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-md">
+                    <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-5">Student Information</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
+                        <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">LRN</p>
+                            <p class="text-sm font-black text-gray-800 font-mono">${activeStudent.lrn}</p>
                         </div>
-                        <div>
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Student ID</p>
-                            <p class="text-sm font-black text-gray-900 font-mono">${activeStudent.student_id_number || 'N/A'}</p>
+                        <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Student ID</p>
+                            <p class="text-sm font-black text-gray-800 font-mono">${activeStudent.student_id_number || 'N/A'}</p>
                         </div>
-                        <div>
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Section</p>
-                            <p class="text-sm font-black text-gray-900">${activeStudent.section || 'N/A'}</p>
+                        <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                            <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-2">Section</p>
+                            <p class="text-sm font-black text-blue-700">${activeStudent.section || 'N/A'}</p>
                         </div>
-                        <div>
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Grade Level</p>
-                            <p class="text-sm font-black text-gray-900">Grade ${activeStudent.grade_level || 'N/A'}</p>
+                        <div class="bg-purple-50 rounded-xl p-4 border border-purple-100">
+                            <p class="text-[10px] font-bold text-purple-600 uppercase tracking-widest mb-2">Grade Level</p>
+                            <p class="text-sm font-black text-purple-700">Grade ${activeStudent.grade_level || 'N/A'}</p>
                         </div>
                     </div>
                 </div>
