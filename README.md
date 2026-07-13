@@ -15,10 +15,11 @@ Welcome to the official website for **Upper Labay High School**. This project is
 
 ### Parent Portal Features
 - **Secure Login**: PIN-based authentication with rate limiting and encrypted session storage.
-- **Student Selector**: Switch between multiple linked children.
+- **Student Selector**: Switch between multiple linked children with student photos.
 - **Grades Viewing**: Access term grades with color-coded performance indicators.
 - **Attendance History**: View detailed attendance logs.
 - **Achievements Tracking**: See student awards and recognitions.
+- **Secure Photo Access**: Student photos are served via time-limited signed URLs using a dedicated Edge Function for enhanced privacy and security.
 
 ### Admin/Personnel Features
 - **Attendance Scanner**: Real‑time attendance tracking with QR code scanning.
