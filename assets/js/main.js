@@ -539,42 +539,46 @@ document.addEventListener('DOMContentLoaded', () => {
         initVisitorCounter();
     }
 
-    async function initVisitorCounter() {
-        const counterEl = document.getElementById('visitor-count');
-        const counterContainer = document.querySelector('.visitor-counter');
-        if (!counterEl) return;
-
-        // 1. Refined Homepage Detection
+    function isHomepagePage() {
         const path = window.location.pathname.toLowerCase();
-        const isHomePage = path === '/' || 
-                          path.endsWith('/index.html') || 
-                          path.endsWith('/') ||
-                          path === '' ||
-                          path.includes('index.html') ||
-                          (!path.includes('.html') && !path.includes('/pages/'));
+        return path === '/' ||
+            path.endsWith('/index.html') ||
+            path.endsWith('/') ||
+            path === '' ||
+            (!path.includes('.html') && !path.includes('/pages/'));
+    }
 
-        // 2. Hide counter if not on homepage
-        if (!isHomePage) {
-            if (counterContainer) counterContainer.style.display = 'none';
+    async function initVisitorCounter() {
+        const footerBottom = document.querySelector('footer .footer-bottom');
+        if (!footerBottom) return;
+
+        if (!isHomepagePage()) {
+            footerBottom.querySelector('.visitor-counter')?.remove();
             return;
         }
 
-        // 3. Logic for Homepage
+        let counterContainer = footerBottom.querySelector('.visitor-counter');
+        if (!counterContainer) {
+            counterContainer = document.createElement('div');
+            counterContainer.className = 'visitor-counter';
+            counterContainer.innerHTML = '<i class="fa-solid fa-eye"></i><span>Website Visits: </span><span id="visitor-count">...</span>';
+            footerBottom.appendChild(counterContainer);
+        }
+
+        const counterEl = counterContainer.querySelector('#visitor-count');
+        if (!counterEl) return;
+
         try {
-            // Check if already counted this session
             const sessionKey = 'ulhs_visited_session';
             const hasBeenCounted = sessionStorage.getItem(sessionKey);
-            
-            // Use 'up' to increment, or no suffix to just fetch
-            const apiEndpoint = hasBeenCounted 
-                ? 'https://api.counterapi.dev/v1/ulhs-website/visits' 
+            const apiEndpoint = hasBeenCounted
+                ? 'https://api.counterapi.dev/v1/ulhs-website/visits'
                 : 'https://api.counterapi.dev/v1/ulhs-website/visits/up';
 
-            // Use a short timeout to prevent long hangs
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-            const response = await fetch(apiEndpoint, { 
+            const response = await fetch(apiEndpoint, {
                 signal: controller.signal,
                 mode: 'cors',
                 cache: 'no-cache'
@@ -582,9 +586,9 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(timeoutId);
 
             if (!response.ok) throw new Error(`API returned ${response.status}`);
-            
+
             const data = await response.json();
-            
+
             if (data && typeof data.count !== 'undefined') {
                 counterEl.textContent = data.count.toLocaleString();
                 if (!hasBeenCounted) sessionStorage.setItem(sessionKey, 'true');
@@ -592,9 +596,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 counterEl.textContent = '---';
             }
         } catch (err) {
-            console.warn("Visitor counter failed:", err);
+            console.warn('Visitor counter failed:', err);
             counterEl.textContent = '---';
-            // If it fails, we still want to see the container but with the error state
         }
     }
 
