@@ -661,6 +661,7 @@ const SF2_MAPPINGS = {
             gradeLevel: 'AA4',
             section: 'AM4',
             month: 'AA3',
+            monthSummary: 'AM54',
             adviser: 'AN78',
             schoolHead: 'AN84'
         },
@@ -2496,6 +2497,7 @@ async function exportAllSF2(levelFilter = null) {
                 if (h.gradeLevel) worksheet.getCell(h.gradeLevel).value = String(formattedGrade);
                 if (h.section) worksheet.getCell(h.section).value = String(sectionName);
                 if (h.month) worksheet.getCell(h.month).value = String(monthName);
+                if (h.monthSummary) worksheet.getCell(h.monthSummary).value = String(monthName);
                 
                 if (h.adviser) {
                     const assignedAdviser = adviserMap[(sectionName || '').toUpperCase()];
