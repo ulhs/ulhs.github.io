@@ -34,6 +34,10 @@ function getDayRangeForLocalDate(localDate) {
     };
 }
 
+function getLogLocalDate(log) {
+    return log.local_date || getLocalDateKey(new Date(log.scanned_at));
+}
+
 function normalizeCloudStudent(s) {
     const rawSex = s.sex || s.gender || 'M';
     const gender = (rawSex.toUpperCase().startsWith('F') || rawSex.toLowerCase() === 'female') ? 'female' : 'male';
@@ -311,13 +315,12 @@ async function restoreAttendanceSession() {
         }
 
         if (window.supabaseClient && navigator.onLine) {
-            const { startIso } = getDayRangeForLocalDate(todayKey);
-            console.log("Restoring session since:", startIso);
+            console.log("Restoring session for local_date:", todayKey);
 
             const { data: logs, error } = await window.supabaseClient
                 .from('attendance_logs')
                 .select('*')
-                .gte('scanned_at', startIso);
+                .eq('local_date', todayKey);
 
             if (error) {
                 console.error("Session Restore Database Error:", error.message);
@@ -325,7 +328,7 @@ async function restoreAttendanceSession() {
                 const normalizedCloudLogs = logs.map(log => ({
                     ...log,
                     scan_id: `cloud:${log.student_lrn}:${log.session}:${log.scanned_at}`,
-                    local_date: getLocalDateKey(new Date(log.scanned_at)),
+                    local_date: log.local_date || getLocalDateKey(new Date(log.scanned_at)),
                     sync_status: 'synced'
                 }));
 
@@ -920,14 +923,12 @@ async function studentHasPMLog(studentLrn, todayKey) {
 
     // Check Supabase if online
     if (window.supabaseClient && navigator.onLine) {
-        const { startIso } = getDayRangeForLocalDate(todayKey);
-        const { data, error } = await window.supabaseClient
-            .from('attendance_logs')
-            .select('*')
-            .eq('student_lrn', studentLrn)
-            .eq('session', 'PM')
-            .gte('scanned_at', startIso)
-            .limit(1);
+            const { data, error } = await window.supabaseClient
+                .from('attendance_logs')
+                .select('*')
+                .eq('student_lrn', studentLrn)
+                .eq('session', 'PM')
+                .eq('local_date', todayKey)
         if (error) {
             console.error("Error checking PM log:", error);
         }
@@ -996,12 +997,11 @@ async function triggerEarlyDismissal() {
 
         // Then check Supabase
         if (window.supabaseClient && navigator.onLine) {
-            const { startIso } = getDayRangeForLocalDate(todayKey);
             const { data: pmLogs, error } = await window.supabaseClient
                 .from('attendance_logs')
                 .select('student_lrn')
                 .eq('session', 'PM')
-                .gte('scanned_at', startIso);
+                .eq('local_date', todayKey);
 
             if (!error && pmLogs) {
                 pmLogs.forEach(log => {
@@ -1052,6 +1052,7 @@ async function triggerEarlyDismissal() {
                         session: logData.session,
                         status: logData.status,
                         scanned_at: logData.scanned_at,
+                        local_date: logData.local_date,
                         section: logData.section,
                         scanned_by: logData.scanned_by
                     }]);
@@ -1594,18 +1595,28 @@ async function canCurrentUserScan(session) {
 async function remoteLogExists(log) {
     if (!window.supabaseClient || !navigator.onLine) return false;
 
-    const { startIso, endIso } = getDayRangeForLocalDate(log.local_date || getLocalDateKey(new Date(log.scanned_at)));
-    const { data, error } = await window.supabaseClient
-        .from('attendance_logs')
-        .select('*')
-        .eq('student_lrn', log.student_lrn)
-        .eq('session', log.session)
-        .gte('scanned_at', startIso)
-        .lte('scanned_at', endIso)
-        .limit(1);
+    let response;
+    if (log.local_date) {
+        response = await window.supabaseClient
+            .from('attendance_logs')
+            .select('*')
+            .eq('student_lrn', log.student_lrn)
+            .eq('session', log.session)
+            .eq('local_date', log.local_date)
+            .limit(1);
+    } else {
+        const localDate = getLocalDateKey(new Date(log.scanned_at));
+        response = await window.supabaseClient
+            .from('attendance_logs')
+            .select('*')
+            .eq('student_lrn', log.student_lrn)
+            .eq('session', log.session)
+            .eq('local_date', localDate)
+            .limit(1);
+    }
 
-    if (error) throw error;
-    return Array.isArray(data) && data.length > 0;
+    if (response.error) throw response.error;
+    return Array.isArray(response.data) && response.data.length > 0;
 }
 
 async function reconcilePendingScansWithRemote(session = null) {
@@ -1675,6 +1686,7 @@ async function syncPendingAttendance(options = {}) {
                             session: scan.session,
                             status: scan.status,
                             scanned_at: scan.scanned_at,
+                            local_date: scan.local_date || getLocalDateKey(new Date(scan.scanned_at)),
                             section: scan.section,
                             scanned_by: scan.scanned_by || session.user.id
                         }]);
@@ -1744,6 +1756,7 @@ async function logAttendanceToSupabase(student, timeData, scanTime = new Date())
                     session: logData.session,
                     status: logData.status,
                     scanned_at: logData.scanned_at,
+                    local_date: logData.local_date,
                     section: logData.section,
                     scanned_by: logData.scanned_by
                 }]);
@@ -2352,16 +2365,17 @@ async function exportAllSF2(levelFilter = null) {
         
         const targetMonth = exportMonth ? parseInt(exportMonth.value) : new Date().getMonth();
         const targetYear = exportYear ? parseInt(exportYear.value) : new Date().getFullYear();
-        
-        const startOfMonth = new Date(targetYear, targetMonth, 1).toISOString();
-        const endOfMonth = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59).toISOString();
+        const monthKey = String(targetMonth + 1).padStart(2, '0');
+        const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+        const startOfMonth = `${targetYear}-${monthKey}-01`;
+        const endOfMonth = `${targetYear}-${monthKey}-${String(lastDayOfMonth).padStart(2, '0')}`;
         
         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         const monthName = monthNames[targetMonth];
         
         // Parallel fetch for speed
         const [logsRes, schoolRes, headRes, profilesRes] = await Promise.all([
-            window.supabaseClient.from('attendance_logs').select('*').gte('scanned_at', startOfMonth).lte('scanned_at', endOfMonth),
+            window.supabaseClient.from('attendance_logs').select('*').gte('local_date', startOfMonth).lte('local_date', endOfMonth),
             window.supabaseClient.from('school_info').select('*'), // Fetch all to be safe
             window.supabaseClient.from('profiles').select('full_name').eq('role', 'school_head').maybeSingle(),
             window.supabaseClient.from('profiles').select('full_name, section_assigned')
@@ -2536,15 +2550,19 @@ async function exportAllSF2(levelFilter = null) {
 
                 if (colOffset >= 0 && colOffset < SF2_ATT_COLS.length) {
                     const colIndex = SF2_ATT_COLS[colOffset];
-                    initialRow.getCell(colIndex).value = weekdayInitialsMap[w];
-                    dayRow.getCell(colIndex).value = d;
-                    
-                    // Basic formatting to match SF2 style
-                    [initialRow, dayRow].forEach(r => {
-                        const cell = r.getCell(colIndex);
-                        cell.alignment = { horizontal: 'center', vertical: 'middle' };
-                        cell.font = { name: 'Arial', size: 8, bold: true };
-                    });
+                    const shouldSkipCell = level === 'JHS' && initialRowNumber === 5 && colIndex === 6;
+
+                    if (!shouldSkipCell) {
+                        initialRow.getCell(colIndex).value = weekdayInitialsMap[w];
+                        dayRow.getCell(colIndex).value = d;
+
+                        // Basic formatting to match SF2 style
+                        [initialRow, dayRow].forEach(r => {
+                            const cell = r.getCell(colIndex);
+                            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                            cell.font = { name: 'Arial', size: 8, bold: true };
+                        });
+                    }
                 }
             }
 
@@ -2591,8 +2609,9 @@ async function exportAllSF2(levelFilter = null) {
                 let maxConsecutive = 0;
 
                 schoolDays.forEach(day => {
-                    // Find AM and PM logs for this day
-                    const dayLogs = studentLogs.filter(l => new Date(l.scanned_at).getDate() === day);
+                    const currentDayKey = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    // Find AM and PM logs for this day using local_date if available
+                    const dayLogs = studentLogs.filter(l => getLogLocalDate(l) === currentDayKey);
                     const amLog = dayLogs.find(l => l.session === 'AM');
                     const pmLog = dayLogs.find(l => l.session === 'PM');
                     
@@ -2644,9 +2663,12 @@ async function exportAllSF2(levelFilter = null) {
                 });
 
                 // Fill Per-Student Totals (AM = Col 39, AO = Col 41)
-                row.getCell(39).value = studentAbsentDays || ''; // Total Absent
-                row.getCell(41).value = studentPresentDays || ''; // Total Present
-                [39, 41].forEach(c => row.getCell(c).alignment = { horizontal: 'center' });
+                // Skip writing per-student totals into AM/AO for JHS student rows 8..52
+                if (!(level === 'JHS' && row.number >= 8 && row.number <= 52)) {
+                    row.getCell(39).value = studentAbsentDays || ''; // Total Absent
+                    row.getCell(41).value = studentPresentDays || ''; // Total Present
+                    [39, 41].forEach(c => row.getCell(c).alignment = { horizontal: 'center' });
+                }
 
                 if (maxConsecutive >= 5) {
                     if (student.gender === 'male') consecutiveAbsences.male++;
@@ -2676,13 +2698,23 @@ async function exportAllSF2(levelFilter = null) {
 
                 if (colOffset >= 0 && colOffset < SF2_ATT_COLS.length) {
                     const colIndex = SF2_ATT_COLS[colOffset];
-                    maleDailyRow.getCell(colIndex).value = data.male || '';
-                    femaleDailyRow.getCell(colIndex).value = data.female || '';
-                    totalDailyRow.getCell(colIndex).value = (data.male + data.female) || '';
-                    
-                    [maleDailyRow, femaleDailyRow, totalDailyRow].forEach(r => {
-                        r.getCell(colIndex).alignment = { horizontal: 'center' };
-                    });
+                    // Skip writing daily summary into F..AK for JHS as requested
+                    const inFtoAK = colIndex >= 6 && colIndex <= 37;
+
+                    if (!(level === 'JHS' && inFtoAK && maleDailyRow.number === 24)) {
+                        maleDailyRow.getCell(colIndex).value = data.male || '';
+                        maleDailyRow.getCell(colIndex).alignment = { horizontal: 'center' };
+                    }
+
+                    if (!(level === 'JHS' && inFtoAK && femaleDailyRow.number === 51)) {
+                        femaleDailyRow.getCell(colIndex).value = data.female || '';
+                        femaleDailyRow.getCell(colIndex).alignment = { horizontal: 'center' };
+                    }
+
+                    if (!(level === 'JHS' && inFtoAK && totalDailyRow.number === 52)) {
+                        totalDailyRow.getCell(colIndex).value = (data.male + data.female) || '';
+                        totalDailyRow.getCell(colIndex).alignment = { horizontal: 'center' };
+                    }
                 }
             });
 
@@ -2693,23 +2725,25 @@ async function exportAllSF2(levelFilter = null) {
             const percFemale = females.length > 0 ? ((avgFemale / females.length) * 100) : 0;
 
             if (level === 'JHS') {
-                worksheet.getCell('AR55').value = males.length;
-                worksheet.getCell('AS55').value = females.length;
-                worksheet.getCell('AR65').value = parseFloat(avgMale.toFixed(2));
-                worksheet.getCell('AS65').value = parseFloat(avgFemale.toFixed(2));
-                worksheet.getCell('AR67').value = parseFloat(percMale.toFixed(2));
-                worksheet.getCell('AS67').value = parseFloat(percFemale.toFixed(2));
-                worksheet.getCell('AR68').value = consecutiveAbsences.male;
-                worksheet.getCell('AS68').value = consecutiveAbsences.female;
+                // Commented out per request: mappings in AR55:AT73
+                // worksheet.getCell('AR55').value = males.length;
+                // worksheet.getCell('AS55').value = females.length;
+                // worksheet.getCell('AR65').value = parseFloat(avgMale.toFixed(2));
+                // worksheet.getCell('AS65').value = parseFloat(avgFemale.toFixed(2));
+                // worksheet.getCell('AR67').value = parseFloat(percMale.toFixed(2));
+                // worksheet.getCell('AS67').value = parseFloat(percFemale.toFixed(2));
+                // worksheet.getCell('AR68').value = consecutiveAbsences.male;
+                // worksheet.getCell('AS68').value = consecutiveAbsences.female;
             } else {
-                worksheet.getCell('AR62').value = males.length;
-                worksheet.getCell('AS62').value = females.length;
-                worksheet.getCell('AR66').value = parseFloat(avgMale.toFixed(2));
-                worksheet.getCell('AS66').value = parseFloat(avgFemale.toFixed(2));
-                worksheet.getCell('AR67').value = parseFloat(percMale.toFixed(2));
-                worksheet.getCell('AS67').value = parseFloat(percFemale.toFixed(2));
-                worksheet.getCell('AR68').value = consecutiveAbsences.male;
-                worksheet.getCell('AS68').value = consecutiveAbsences.female;
+                // Commented out per request: mappings in AR55:AT73
+                // worksheet.getCell('AR62').value = males.length;
+                // worksheet.getCell('AS62').value = females.length;
+                // worksheet.getCell('AR66').value = parseFloat(avgMale.toFixed(2));
+                // worksheet.getCell('AS66').value = parseFloat(avgFemale.toFixed(2));
+                // worksheet.getCell('AR67').value = parseFloat(percMale.toFixed(2));
+                // worksheet.getCell('AS67').value = parseFloat(percFemale.toFixed(2));
+                // worksheet.getCell('AR68').value = consecutiveAbsences.male;
+                // worksheet.getCell('AS68').value = consecutiveAbsences.female;
             }
 
             // 6. Finalize Workbook
@@ -2794,16 +2828,17 @@ async function exportAllSF4(levelFilter = null) {
         
         const targetMonth = exportMonth ? parseInt(exportMonth.value) : new Date().getMonth();
         const targetYear = exportYear ? parseInt(exportYear.value) : new Date().getFullYear();
-        
-        const startOfMonth = new Date(targetYear, targetMonth, 1).toISOString();
-        const endOfMonth = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59).toISOString();
+        const monthKey = String(targetMonth + 1).padStart(2, '0');
+        const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+        const startOfMonth = `${targetYear}-${monthKey}-01`;
+        const endOfMonth = `${targetYear}-${monthKey}-${String(lastDayOfMonth).padStart(2, '0')}`;
         
         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         const monthName = monthNames[targetMonth];
         
         // Parallel fetch for speed
         const [logsRes, schoolRes, headRes, profilesRes] = await Promise.all([
-            window.supabaseClient.from('attendance_logs').select('*').gte('scanned_at', startOfMonth).lte('scanned_at', endOfMonth),
+            window.supabaseClient.from('attendance_logs').select('*').gte('local_date', startOfMonth).lte('local_date', endOfMonth),
             window.supabaseClient.from('school_info').select('*'), // Fetch all to be safe
             window.supabaseClient.from('profiles').select('full_name').eq('role', 'school_head').maybeSingle(),
             window.supabaseClient.from('profiles').select('full_name, section_assigned')

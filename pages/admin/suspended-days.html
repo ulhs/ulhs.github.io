@@ -675,29 +675,56 @@
                     ? masterStudentDatabase.filter(s => s.section === section)
                     : masterStudentDatabase;
 
-                const { data: existingLogs, error: logsError } = await window.supabaseClient
+                let existingLogs = [];
+                let logsError = null;
+                const logsQuery = await window.supabaseClient
                     .from('attendance_logs')
                     .select('student_lrn, session')
-                    .gte('scanned_at', new Date(date + 'T00:00:00').toISOString())
-                    .lte('scanned_at', new Date(date + 'T23:59:59').toISOString());
+                    .eq('local_date', date);
 
-                if (logsError) throw logsError;
+                if (logsQuery.error) {
+                    logsError = logsQuery.error;
+                    if (logsError.message && logsError.message.includes('local_date')) {
+                        const [year, month, day] = date.split('-').map(Number);
+                        const startIso = new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
+                        const endIso = new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
+                        const fallbackQuery = await window.supabaseClient
+                            .from('attendance_logs')
+                            .select('student_lrn, session')
+                            .gte('scanned_at', startIso)
+                            .lte('scanned_at', endIso);
+                        if (fallbackQuery.error) throw fallbackQuery.error;
+                        existingLogs = fallbackQuery.data || [];
+                    } else {
+                        throw logsError;
+                    }
+                } else {
+                    existingLogs = logsQuery.data || [];
+                }
 
-                // Create a map of existing logs to avoid duplicates
-                const existingLogKey = new Set(existingLogs.map(l => `${l.student_lrn}-${l.session}`));
+                // Normalize student LRNs and create a map of existing logs to avoid duplicates
+                const normalizedEligibleStudents = eligibleStudents.map(s => ({ ...s, lrn: String(s.lrn) }));
+                const existingLogKey = new Set(existingLogs.map(l => `${String(l.student_lrn)}-${String(l.session)}`));
 
                 const attendanceLogs = [];
                 const notificationPromises = [];
 
-                for (const student of eligibleStudents) {
+                const buildScanTimestamp = (targetDate, hour, minute = 0, second = 0) => {
+                    const [y, m, d] = targetDate.split('-').map(Number);
+                    return new Date(y, m - 1, d, hour, minute, second).toISOString();
+                };
+
+                for (const student of normalizedEligibleStudents) {
                     const scanTime = new Date();
+
                     // AM session
                     if (!existingLogKey.has(`${student.lrn}-AM`)) {
                         attendanceLogs.push({
                             student_lrn: student.lrn,
                             session: 'AM',
                             status: 'PRESENT',
-                            scanned_at: new Date(date + 'T07:30:00').toISOString(),
+                            scanned_at: buildScanTimestamp(date, 7, 30, 0),
+                            local_date: date,
                             section: student.section,
                             modality: modality,
                             scanned_by: userId
@@ -707,9 +734,9 @@
                         if (student.notify_parent && student.parent_messenger_id) {
                             notificationPromises.push(
                                 triggerParentNotification(
-                                    student, 
-                                    { session: 'AM', status: 'PRESENT' }, 
-                                    scanTime, 
+                                    student,
+                                    { session: 'AM', status: 'PRESENT' },
+                                    scanTime,
                                     'arrival',
                                     'suspended-day',
                                     date
@@ -724,7 +751,8 @@
                             student_lrn: student.lrn,
                             session: 'PM',
                             status: 'PRESENT',
-                            scanned_at: new Date(date + 'T13:00:00').toISOString(),
+                            scanned_at: buildScanTimestamp(date, 13, 0, 0),
+                            local_date: date,
                             section: student.section,
                             modality: modality,
                             scanned_by: userId
@@ -734,9 +762,9 @@
                         if (student.notify_parent && student.parent_messenger_id) {
                             notificationPromises.push(
                                 triggerParentNotification(
-                                    student, 
-                                    { session: 'PM', status: 'PRESENT' }, 
-                                    scanTime, 
+                                    student,
+                                    { session: 'PM', status: 'PRESENT' },
+                                    scanTime,
                                     'arrival',
                                     'suspended-day',
                                     date

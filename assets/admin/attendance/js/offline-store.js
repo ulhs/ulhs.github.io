@@ -1,6 +1,6 @@
 (() => {
     const DB_NAME = 'ulhs-attendance-offline';
-    const DB_VERSION = 1;
+    const DB_VERSION = 2;
     const STORES = {
         students: 'students',
         logs: 'logs',
@@ -44,11 +44,27 @@
                     logsStore.createIndex('by_local_date', 'local_date', { unique: false });
                     logsStore.createIndex('by_student_session_date', ['student_lrn', 'session', 'local_date'], { unique: false });
                     logsStore.createIndex('by_sync_status', 'sync_status', { unique: false });
+                } else {
+                    const logsStore = request.transaction.objectStore(STORES.logs);
+                    if (!logsStore.indexNames.contains('by_local_date')) {
+                        logsStore.createIndex('by_local_date', 'local_date', { unique: false });
+                    }
+                    if (!logsStore.indexNames.contains('by_student_session_date')) {
+                        logsStore.createIndex('by_student_session_date', ['student_lrn', 'session', 'local_date'], { unique: false });
+                    }
+                    if (!logsStore.indexNames.contains('by_sync_status')) {
+                        logsStore.createIndex('by_sync_status', 'sync_status', { unique: false });
+                    }
                 }
 
                 if (!db.objectStoreNames.contains(STORES.pending)) {
                     const pendingStore = db.createObjectStore(STORES.pending, { keyPath: 'scan_id' });
                     pendingStore.createIndex('by_created_at', 'created_at', { unique: false });
+                } else {
+                    const pendingStore = request.transaction.objectStore(STORES.pending);
+                    if (!pendingStore.indexNames.contains('by_created_at')) {
+                        pendingStore.createIndex('by_created_at', 'created_at', { unique: false });
+                    }
                 }
 
                 if (!db.objectStoreNames.contains(STORES.photos)) {
