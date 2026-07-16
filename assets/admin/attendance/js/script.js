@@ -2815,13 +2815,7 @@ async function exportAllSF2(levelFilter = null) {
                     }
                 });
 
-                // Fill Per-Student Totals (AM = Col 39, AO = Col 41)
-                // Skip writing per-student totals into AM/AO for JHS student rows 8..52
-                if (!(level === 'JHS' && row.number >= 8 && row.number <= 52)) {
-                    row.getCell(39).value = studentAbsentDays || ''; // Total Absent
-                    row.getCell(41).value = studentPresentDays || ''; // Total Present
-                    [39, 41].forEach(c => row.getCell(c).alignment = { horizontal: 'center' });
-                }
+                // Per-student totals (columns 39, 41) are calculated via template formulas - do not overwrite
 
                 if (maxConsecutive >= 5) {
                     if (student.gender === 'male') consecutiveAbsences.male++;
@@ -2849,26 +2843,7 @@ async function exportAllSF2(levelFilter = null) {
                 const remainingDays = daysSinceGridStart % 7;
                 const colOffset = (fullWeeks * 5) + remainingDays;
 
-                if (colOffset >= 0 && colOffset < SF2_ATT_COLS.length) {
-                    const colIndex = SF2_ATT_COLS[colOffset];
-                    // Skip writing daily summary into F..AK for JHS as requested
-                    const inFtoAK = colIndex >= 6 && colIndex <= 37;
-
-                    if (!(level === 'JHS' && inFtoAK && maleDailyRow.number === 24)) {
-                        maleDailyRow.getCell(colIndex).value = data.male || '';
-                        maleDailyRow.getCell(colIndex).alignment = { horizontal: 'center' };
-                    }
-
-                    if (!(level === 'JHS' && inFtoAK && femaleDailyRow.number === 51)) {
-                        femaleDailyRow.getCell(colIndex).value = data.female || '';
-                        femaleDailyRow.getCell(colIndex).alignment = { horizontal: 'center' };
-                    }
-
-                    if (!(level === 'JHS' && inFtoAK && totalDailyRow.number === 52)) {
-                        totalDailyRow.getCell(colIndex).value = (data.male + data.female) || '';
-                        totalDailyRow.getCell(colIndex).alignment = { horizontal: 'center' };
-                    }
-                }
+                // Daily summary totals are calculated via template formulas - do not overwrite
             });
 
             // Monthly Summary Totals
