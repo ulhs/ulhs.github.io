@@ -2674,20 +2674,20 @@ async function exportAllSF2(levelFilter = null) {
                 if (colOffset >= 0 && colOffset < SF2_ATT_COLS.length) {
                     const colIndex = SF2_ATT_COLS[colOffset];
                     
-                    // 🛑 Never overwrite template header: F5 for JHS contains "(1st row for date)"
-                    const isProtectedCell = level === 'JHS' && colIndex === 6;
-
-                    if (!isProtectedCell) {
+                    // 🛑 Protect merged cell F5:AL5 (contains "(1st row for date)" header)
+                    // Only write day numbers to dayRow; skip writing to initialRow for JHS
+                    if (level !== 'JHS') {
                         initialRow.getCell(colIndex).value = weekdayInitialsMap[w];
-                        dayRow.getCell(colIndex).value = d;
-
-                        // Basic formatting to match SF2 style
-                        [initialRow, dayRow].forEach(r => {
-                            const cell = r.getCell(colIndex);
-                            cell.alignment = { horizontal: 'center', vertical: 'middle' };
-                            cell.font = { name: 'Arial', size: 8, bold: true };
-                        });
                     }
+                    dayRow.getCell(colIndex).value = d;
+
+                    // Basic formatting to match SF2 style
+                    const cellsToFormat = level === 'JHS' ? [dayRow] : [initialRow, dayRow];
+                    cellsToFormat.forEach(r => {
+                        const cell = r.getCell(colIndex);
+                        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                        cell.font = { name: 'Arial', size: 8, bold: true };
+                    });
                 }
             }
 
