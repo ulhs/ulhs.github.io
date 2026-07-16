@@ -37,12 +37,12 @@ node_modules/
 # === School Data Security (DPA 2012 Compliance) ===
 
 # Ignore any filled SF2 forms or student lists
-*sf2_filled*
-*attendance_report*
-*student_data*
-*.xlsx
-*.csv
-*.pdf
+# *sf2_filled*
+# *attendance_report*
+# *student_data*
+# *.xlsx
+# *.csv
+# *.pdf
 
 # Allow ONLY the blank template (example: assets/templates/SF2_Blank.xlsx)
 # This uses a "negation" rule: ignore all xlsx, but keep the template

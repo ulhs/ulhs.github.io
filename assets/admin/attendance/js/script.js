@@ -35,7 +35,88 @@ function getDayRangeForLocalDate(localDate) {
 }
 
 function getLogLocalDate(log) {
-    return log.local_date || getLocalDateKey(new Date(log.scanned_at));
+    if (log?.local_date) return String(log.local_date);
+    if (log?.scanned_at) {
+        const parsed = new Date(log.scanned_at);
+        if (!Number.isNaN(parsed.getTime())) return getLocalDateKey(parsed);
+    }
+    return '';
+}
+
+async function fetchAttendanceLogsForMonth(supabaseClient, startOfMonth, endOfMonth) {
+    const selectFields = 'student_lrn, session, status, local_date, scanned_at';
+    const startIso = `${startOfMonth}T00:00:00.000Z`;
+    const endIso = `${endOfMonth}T23:59:59.999Z`;
+
+    const filteredRes = await supabaseClient
+        .from('attendance_logs')
+        .select(selectFields, { count: 'exact' })
+        .gte('local_date', startOfMonth)
+        .lte('local_date', endOfMonth)
+        .order('local_date', { ascending: true })
+        .order('scanned_at', { ascending: true })
+        .range(0, 50000);
+
+    if (!filteredRes.error && Array.isArray(filteredRes.data) && filteredRes.data.length > 0) {
+        return filteredRes;
+    }
+
+    const fallbackRes = await supabaseClient
+        .from('attendance_logs')
+        .select(selectFields, { count: 'exact' })
+        .order('local_date', { ascending: true })
+        .order('scanned_at', { ascending: true })
+        .range(0, 50000);
+
+    if (fallbackRes.error) {
+        return fallbackRes;
+    }
+
+    const fallbackData = Array.isArray(fallbackRes.data) ? fallbackRes.data : [];
+    const filteredData = fallbackData.filter(log => {
+        const logDate = getLogLocalDate(log);
+        const matchesLocalDate = logDate >= startOfMonth && logDate <= endOfMonth;
+        const matchesScannedAt = Boolean(log?.scanned_at && log.scanned_at >= startIso && log.scanned_at <= endIso);
+        return matchesLocalDate || matchesScannedAt;
+    });
+
+    return {
+        ...fallbackRes,
+        data: filteredData,
+        count: filteredData.length
+    };
+}
+
+function logAttendanceLogsResponse(prefix, logsRes, startOfMonth, endOfMonth) {
+    const logs = Array.isArray(logsRes?.data) ? logsRes.data : [];
+    console.group(`[Attendance Logs Debug] ${prefix}`);
+    console.log(`${prefix} - Supabase response:`, logsRes);
+    console.log(`${prefix} - Query date range: ${startOfMonth} -> ${endOfMonth}`);
+    console.log(`${prefix} - Rows returned:`, logs.length);
+
+    const sampleRows = logs.slice(0, 10).map((log, index) => ({
+        index,
+        keys: Object.keys(log || {}).sort(),
+        hasStudentLrn: Object.prototype.hasOwnProperty.call(log || {}, 'student_lrn'),
+        student_lrn: log?.student_lrn,
+        local_date: log?.local_date,
+        scanned_at: log?.scanned_at,
+        status: log?.status,
+        session: log?.session
+    }));
+
+    console.log(`${prefix} - Sample rows:`, sampleRows);
+
+    const missingLrnCount = logs.filter(log => !Object.prototype.hasOwnProperty.call(log || {}, 'student_lrn') || log?.student_lrn == null || String(log?.student_lrn || '').trim() === '').length;
+    console.log(`${prefix} - Missing or empty student_lrn count:`, missingLrnCount);
+
+    const countsByDate = logs.reduce((agg, log) => {
+        const date = log?.local_date || (log?.scanned_at ? getLocalDateKey(new Date(log.scanned_at)) : 'unknown');
+        agg[date] = (agg[date] || 0) + 1;
+        return agg;
+    }, {});
+    console.log(`${prefix} - Counts by local_date:`, countsByDate);
+    console.groupEnd();
 }
 
 function normalizeCloudStudent(s) {
@@ -2346,6 +2427,10 @@ async function exportAllSF2(levelFilter = null) {
             section: s.section 
         })));
         
+        // DEBUG: Sample student LRNs to check format
+        const sampleStudentLrns = filteredDatabase.slice(0, 5).map(s => ({ lrn: s.lrn, type: typeof s.lrn, section: s.section }));
+        console.log("🔍 Sample student LRNs from masterStudentDatabase:", sampleStudentLrns);
+        
         // 🔥 PLAIN TEXT LIST OF ALL SELECTED STUDENTS 🔥
         console.log(`📋 PLAIN TEXT LIST - ${levelFilter || 'ALL'} STUDENTS:`);
         filteredDatabase.forEach((s, i) => {
@@ -2375,12 +2460,15 @@ async function exportAllSF2(levelFilter = null) {
         const monthName = monthNames[targetMonth];
         
         // Parallel fetch for speed
-        const [logsRes, schoolRes, headRes, profilesRes] = await Promise.all([
-            window.supabaseClient.from('attendance_logs').select('*').gte('local_date', startOfMonth).lte('local_date', endOfMonth),
+        const [logsRes, schoolRes, headRes, profilesRes, suspendedRes] = await Promise.all([
+            fetchAttendanceLogsForMonth(window.supabaseClient, startOfMonth, endOfMonth),
             window.supabaseClient.from('school_info').select('*'), // Fetch all to be safe
             window.supabaseClient.from('profiles').select('full_name').eq('role', 'school_head').maybeSingle(),
-            window.supabaseClient.from('profiles').select('full_name, section_assigned')
+            window.supabaseClient.from('profiles').select('full_name, section_assigned'),
+            window.supabaseClient.from('suspended_days').select('date').gte('date', startOfMonth).lte('date', endOfMonth)
         ]);
+
+        logAttendanceLogsResponse('SF2 Export logs', logsRes, startOfMonth, endOfMonth);
 
         // Check for critical errors
         if (logsRes.error) {
@@ -2388,11 +2476,44 @@ async function exportAllSF2(levelFilter = null) {
             throw new Error("Could not fetch attendance logs.");
         }
         
+        // Build suspended dates set
+        const suspendedDates = new Set();
+        if (!suspendedRes.error && suspendedRes.data) {
+            suspendedRes.data.forEach(row => {
+                suspendedDates.add(String(row.date));
+            });
+        }
+        console.log("📛 Suspended dates for export:", Array.from(suspendedDates));
         const monthLogs = logsRes.data || [];
         const schoolInfo = (schoolRes.data && schoolRes.data.length > 0) ? schoolRes.data[0] : {};
         const schoolHead = headRes.data?.full_name || schoolInfo.school_head || schoolInfo.schoolHead || '';
         
         console.log("SF2 Export - School Info Loaded:", schoolInfo);
+        console.log(`📊 SF2 Export - Total month logs fetched: ${monthLogs.length}`);
+        
+        // DEBUG: Check actual structure of returned logs
+        console.log("🔍 First log object structure:", monthLogs[0]);
+        console.log("🔍 First log keys:", monthLogs[0] ? Object.keys(monthLogs[0]) : 'No logs');
+        
+        // DEBUG: Count logs by local_date to understand distribution
+        const logsByDate = {};
+        monthLogs.forEach(log => {
+            const logDate = getLogLocalDate(log);
+            logsByDate[logDate] = (logsByDate[logDate] || 0) + 1;
+        });
+        console.log("📅 Logs distribution by date:", logsByDate);
+        
+        // DEBUG: Sample LRNs from monthLogs with full object
+        const sampleLogs = monthLogs.slice(0, 3).map(l => ({ 
+            student_lrn: l.student_lrn, 
+            lrn: l.lrn,
+            studentLrn: l.studentLrn,
+            status: l.status, 
+            session: l.session,
+            date: getLogLocalDate(l),
+            fullObj: l
+        }));
+        console.log("🔍 Sample logs with all potential LRN fields:", sampleLogs);
         if (Object.keys(schoolInfo).length === 0) {
             console.warn("⚠️ SF2 Export: school_info table is empty or inaccessible. Headers will not be filled.");
         }
@@ -2552,9 +2673,11 @@ async function exportAllSF2(levelFilter = null) {
 
                 if (colOffset >= 0 && colOffset < SF2_ATT_COLS.length) {
                     const colIndex = SF2_ATT_COLS[colOffset];
-                    const shouldSkipCell = level === 'JHS' && initialRowNumber === 5 && colIndex === 6;
+                    
+                    // 🛑 Never overwrite template header: F5 for JHS contains "(1st row for date)"
+                    const isProtectedCell = level === 'JHS' && colIndex === 6;
 
-                    if (!shouldSkipCell) {
+                    if (!isProtectedCell) {
                         initialRow.getCell(colIndex).value = weekdayInitialsMap[w];
                         dayRow.getCell(colIndex).value = d;
 
@@ -2603,6 +2726,16 @@ async function exportAllSF2(levelFilter = null) {
 
                 // Fill Logs for this student
                 const studentLogs = monthLogs.filter(l => String(l.student_lrn) === String(student.lrn));
+                
+                // DEBUG: Log LRN matching for first few students of each gender
+                if ((maleIdx <= 2 && student.gender === 'male') || (femaleIdx <= 2 && student.gender === 'female')) {
+                    console.log(`🔍 LRN Match Debug - ${student.excelName}:`, {
+                        studentLrn: student.lrn,
+                        studentLrnType: typeof student.lrn,
+                        matchedLogs: studentLogs.length,
+                        sampleMonthLogLrns: monthLogs.slice(0, 3).map(l => ({ lrn: l.student_lrn, type: typeof l.student_lrn, date: getLogLocalDate(l) }))
+                    });
+                }
 
                 // Track absences/presence for this student
                 let studentPresentDays = 0;
@@ -2612,6 +2745,24 @@ async function exportAllSF2(levelFilter = null) {
 
                 schoolDays.forEach(day => {
                     const currentDayKey = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    
+                    // 🛑 SKIP MARKING SUSPENDED DAYS - leave cell empty
+                    if (suspendedDates.has(currentDayKey)) {
+                        // Calculate Column for this day
+                        const date = new Date(targetYear, targetMonth, day);
+                        const firstWeekday = new Date(targetYear, targetMonth, 1).getDay();
+                        const daysSinceGridStart = (day - 1) + (firstWeekday === 0 ? 1 : (firstWeekday === 6 ? 2 : firstWeekday - 1));
+                        const fullWeeks = Math.floor(daysSinceGridStart / 7);
+                        const remainingDays = daysSinceGridStart % 7;
+                        const colOffset = (fullWeeks * 5) + remainingDays;
+                        
+                        if (colOffset >= 0 && colOffset < SF2_ATT_COLS.length) {
+                            const colIndex = SF2_ATT_COLS[colOffset];
+                            row.getCell(colIndex).value = ''; // Leave suspended day empty
+                        }
+                        return; // Skip rest of logic for this day
+                    }
+                    
                     // Find AM and PM logs for this day using local_date if available
                     const dayLogs = studentLogs.filter(l => getLogLocalDate(l) === currentDayKey);
                     const amLog = dayLogs.find(l => l.session === 'AM');
@@ -2839,18 +2990,30 @@ async function exportAllSF4(levelFilter = null) {
         const monthName = monthNames[targetMonth];
         
         // Parallel fetch for speed
-        const [logsRes, schoolRes, headRes, profilesRes] = await Promise.all([
-            window.supabaseClient.from('attendance_logs').select('*').gte('local_date', startOfMonth).lte('local_date', endOfMonth),
+        const [logsRes, schoolRes, headRes, profilesRes, suspendedRes] = await Promise.all([
+            fetchAttendanceLogsForMonth(window.supabaseClient, startOfMonth, endOfMonth),
             window.supabaseClient.from('school_info').select('*'), // Fetch all to be safe
             window.supabaseClient.from('profiles').select('full_name').eq('role', 'school_head').maybeSingle(),
-            window.supabaseClient.from('profiles').select('full_name, section_assigned')
+            window.supabaseClient.from('profiles').select('full_name, section_assigned'),
+            window.supabaseClient.from('suspended_days').select('date').gte('date', startOfMonth).lte('date', endOfMonth)
         ]);
+
+        logAttendanceLogsResponse('SF4 Export logs', logsRes, startOfMonth, endOfMonth);
 
         // Check for critical errors
         if (logsRes.error) {
             console.error("Logs Fetch Error:", logsRes.error);
             throw new Error("Could not fetch attendance logs.");
         }
+        
+        // Build suspended dates set
+        const suspendedDates = new Set();
+        if (!suspendedRes.error && suspendedRes.data) {
+            suspendedRes.data.forEach(row => {
+                suspendedDates.add(String(row.date));
+            });
+        }
+        console.log("📛 Suspended dates for SF4 export:", Array.from(suspendedDates));
         
         const monthLogs = logsRes.data || [];
         const schoolInfo = (schoolRes.data && schoolRes.data.length > 0) ? schoolRes.data[0] : {};
@@ -3016,18 +3179,20 @@ async function exportAllSF4(levelFilter = null) {
                     const males = sectionStudents.filter(s => s.gender === 'male');
                     const females = sectionStudents.filter(s => s.gender === 'female');
                     
-                    // Calculate attendance totals
+                    // Calculate attendance totals (EXCLUDING suspended days)
                     let totalMaleAttendance = 0;
                     let totalFemaleAttendance = 0;
                     
                     males.forEach(s => {
-                        const logs = studentLogMap.get(s.lrn) || [];
-                        totalMaleAttendance += logs.length;
+                        const allLogs = studentLogMap.get(s.lrn) || [];
+                        const filteredLogs = allLogs.filter(log => !suspendedDates.has(getLogLocalDate(log)));
+                        totalMaleAttendance += filteredLogs.length;
                     });
                     
                     females.forEach(s => {
-                        const logs = studentLogMap.get(s.lrn) || [];
-                        totalFemaleAttendance += logs.length;
+                        const allLogs = studentLogMap.get(s.lrn) || [];
+                        const filteredLogs = allLogs.filter(log => !suspendedDates.has(getLogLocalDate(log)));
+                        totalFemaleAttendance += filteredLogs.length;
                     });
                     
                     // Calculate averages and percentages
@@ -3133,13 +3298,15 @@ async function exportAllSF4(levelFilter = null) {
                         let totalFemaleAttendance = 0;
                         
                         males.forEach(s => {
-                            const logs = studentLogMap.get(s.lrn) || [];
-                            totalMaleAttendance += logs.length;
+                            const allLogs = studentLogMap.get(s.lrn) || [];
+                            const filteredLogs = allLogs.filter(log => !suspendedDates.has(getLogLocalDate(log)));
+                            totalMaleAttendance += filteredLogs.length;
                         });
                         
                         females.forEach(s => {
-                            const logs = studentLogMap.get(s.lrn) || [];
-                            totalFemaleAttendance += logs.length;
+                            const allLogs = studentLogMap.get(s.lrn) || [];
+                            const filteredLogs = allLogs.filter(log => !suspendedDates.has(getLogLocalDate(log)));
+                            totalFemaleAttendance += filteredLogs.length;
                         });
                         
                         const maleDailyAvg = schoolDays.length > 0 ? (totalMaleAttendance / schoolDays.length) : 0;

@@ -675,24 +675,36 @@
                     ? masterStudentDatabase.filter(s => s.section === section)
                     : masterStudentDatabase;
 
+                console.log('Suspended day submission:', {
+                    date,
+                    modality,
+                    section,
+                    reason,
+                    eligibleStudentCount: eligibleStudents.length,
+                    expectedLogCount: eligibleStudents.length * 2
+                });
+
                 let existingLogs = [];
                 let logsError = null;
                 const logsQuery = await window.supabaseClient
                     .from('attendance_logs')
-                    .select('student_lrn, session')
-                    .eq('local_date', date);
+                    .select('student_lrn, session, local_date, scanned_at')
+                    .eq('local_date', date)
+                    .range(0, 9999);
 
                 if (logsQuery.error) {
                     logsError = logsQuery.error;
+                    console.warn('Suspended day existing log lookup failed on local_date:', logsError);
                     if (logsError.message && logsError.message.includes('local_date')) {
                         const [year, month, day] = date.split('-').map(Number);
                         const startIso = new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
                         const endIso = new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
                         const fallbackQuery = await window.supabaseClient
                             .from('attendance_logs')
-                            .select('student_lrn, session')
+                            .select('student_lrn, session, local_date, scanned_at')
                             .gte('scanned_at', startIso)
-                            .lte('scanned_at', endIso);
+                            .lte('scanned_at', endIso)
+                            .range(0, 9999);
                         if (fallbackQuery.error) throw fallbackQuery.error;
                         existingLogs = fallbackQuery.data || [];
                     } else {
@@ -701,6 +713,13 @@
                 } else {
                     existingLogs = logsQuery.data || [];
                 }
+
+                const existingLogSummary = existingLogs.reduce((acc, log) => {
+                    const key = `${String(log.session)}-${String(log.local_date || log.scanned_at || '')}`;
+                    acc[key] = (acc[key] || 0) + 1;
+                    return acc;
+                }, {});
+                console.log('Suspended day existing logs summary:', existingLogSummary);
 
                 // Normalize student LRNs and create a map of existing logs to avoid duplicates
                 const normalizedEligibleStudents = eligibleStudents.map(s => ({ ...s, lrn: String(s.lrn) }));
@@ -711,7 +730,11 @@
 
                 const buildScanTimestamp = (targetDate, hour, minute = 0, second = 0) => {
                     const [y, m, d] = targetDate.split('-').map(Number);
-                    return new Date(y, m - 1, d, hour, minute, second).toISOString();
+                    const pad = (num) => String(num).padStart(2, '0');
+                    const hh = pad(hour);
+                    const mm = pad(minute);
+                    const ss = pad(second);
+                    return `${targetDate}T${hh}:${mm}:${ss}`;
                 };
 
                 for (const student of normalizedEligibleStudents) {
@@ -776,11 +799,38 @@
 
                 // Insert attendance logs
                 if (attendanceLogs.length > 0) {
-                    const { error: logError } = await window.supabaseClient
-                        .from('attendance_logs')
-                        .insert(attendanceLogs);
+                    console.log('Suspended day inserting attendance logs count:', attendanceLogs.length);
+                    console.log('Suspended day attendanceLogs sample:', attendanceLogs.slice(0, 5));
 
-                    if (logError) throw logError;
+                    const batchSize = 100;
+                    for (let index = 0; index < attendanceLogs.length; index += batchSize) {
+                        const batch = attendanceLogs.slice(index, index + batchSize);
+                        const { error: logError } = await window.supabaseClient
+                            .from('attendance_logs')
+                            .insert(batch);
+
+                        if (logError) throw logError;
+                    }
+
+                    const { data: verifiedRows, error: verifyError, count } = await window.supabaseClient
+                        .from('attendance_logs')
+                        .select('id, session, status, local_date', { count: 'exact' })
+                        .eq('local_date', date)
+                        .eq('status', 'PRESENT');
+
+                    if (verifyError) throw verifyError;
+
+                    const amCount = (verifiedRows || []).filter(row => row.session === 'AM').length;
+                    const pmCount = (verifiedRows || []).filter(row => row.session === 'PM').length;
+                    const verifiedCount = count ?? (verifiedRows || []).length;
+
+                    console.log(`Verified suspended-day logs after insert: ${verifiedCount} total (${amCount} AM, ${pmCount} PM)`);
+
+                    if (verifiedCount !== attendanceLogs.length) {
+                        throw new Error(`Expected ${attendanceLogs.length} suspended-day logs but verified ${verifiedCount}.`);
+                    }
+                } else {
+                    console.log('Suspended day no new attendance logs to insert.');
                 }
 
                 // Wait for notifications to send
