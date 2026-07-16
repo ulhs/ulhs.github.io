@@ -794,7 +794,7 @@ const SF4_MAPPINGS = {
             schoolYear: 'Y7',
             month: 'AJ7',
             schoolName: 'C7',
-            schoolHead: 'AC26'
+            schoolHead: 'AC27'
         },
         sections: {
                 startRow: 12, // B12
