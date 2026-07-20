@@ -79,7 +79,7 @@
                     stats: profile?.can_view_dashboard || ['admin', 'school_head'].includes(userRole),
                     sardo: profile?.can_view_sardo || ['admin', 'school_head', 'guidance_counselor'].includes(userRole),
                     grades: profile?.can_manage_grades || userRole === 'admin',
-                    suspended: profile?.can_manage_suspended_days || userRole === 'admin'
+                    suspended: profile?.can_manage_calendar_exceptions || profile?.can_manage_suspended_days || userRole === 'admin'
                 };
                 sessionStorage.setItem('userAccess', JSON.stringify(resolvedAccess));
                 sessionStorage.setItem('adminLoggedIn', 'true');
@@ -194,13 +194,13 @@
                                 </li>`;
                         }
 
-                        // SUSPENDED DAYS (Admin, School Head, or authorized personnel)
+                        // CALENDAR EXCEPTIONS (Admin, School Head, or authorized personnel)
                         if (role === 'admin' || role === 'school_head' || access.suspended) {
                             html += `
-                                <li class="list" data-page="suspended-days.html">
-                                    <a href="suspended-days.html">
+                                <li class="list" data-page="calendar-exceptions.html">
+                                    <a href="calendar-exceptions.html">
                                         <span class="icon"><i class="fa-solid fa-calendar-times"></i></span>
-                                        <span class="text">SUSPENDED</span>
+                                        <span class="text">CALENDAR EXCEPTIONS</span>
                                     </a>
                                 </li>`;
                         }

@@ -132,13 +132,13 @@
                                 </li>`;
                         }
 
-                        // SUSPENDED DAYS (Admin, School Head, or authorized personnel)
+                        // CALENDAR EXCEPTIONS (Admin, School Head, or authorized personnel)
                         if (role === 'admin' || role === 'school_head' || access.suspended) {
                             html += `
-                                <li class="list" data-page="suspended-days.html">
-                                    <a href="suspended-days.html">
+                                <li class="list" data-page="calendar-exceptions.html">
+                                    <a href="calendar-exceptions.html">
                                         <span class="icon"><i class="fa-solid fa-calendar-times"></i></span>
-                                        <span class="text">SUSPENDED</span>
+                                        <span class="text">CALENDAR EXCEPTIONS</span>
                                     </a>
                                 </li>`;
                         }

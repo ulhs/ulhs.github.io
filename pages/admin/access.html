@@ -99,10 +99,10 @@
                             <span class="text">GRADES</span>
                         </a>
                     </li>
-                    <li class="list" data-page="suspended-days.html">
-                        <a href="suspended-days.html">
+                    <li class="list" data-page="calendar-exceptions.html">
+                        <a href="calendar-exceptions.html">
                             <span class="icon"><i class="fa-solid fa-calendar-times"></i></span>
-                            <span class="text">SUSPENDED</span>
+                            <span class="text">CALENDAR EXCEPTIONS</span>
                         </a>
                     </li>
                     <li class="list" data-page="admin-dashboard.html">
@@ -147,7 +147,7 @@
                             <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">📊 Dashboard</th>
                             <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">🔒 SARDO</th>
                             <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">📚 Grades</th>
-                            <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">⛔ Suspended</th>
+                            <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">📅 Exceptions</th>
                             <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">Actions</th>
                         </tr>
                     </thead>
@@ -298,9 +298,9 @@
                         <div onclick="togglePermission('${item.email}', 'can_manage_grades')" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-amber-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
                     </td>
                     <td class="px-4 py-4 text-center">
-                        <input type="checkbox" id="suspended-${item.email}" class="perm-toggle sr-only peer" 
-                               data-email="${item.email}" data-col="can_manage_suspended_days" ${item.can_manage_suspended_days ? 'checked' : ''}>
-                        <div onclick="togglePermission('${item.email}', 'can_manage_suspended_days')" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-cyan-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                        <input type="checkbox" id="calendar-exceptions-${item.email}" class="perm-toggle sr-only peer" 
+                               data-email="${item.email}" data-col="can_manage_calendar_exceptions" ${(item.can_manage_calendar_exceptions || item.can_manage_suspended_days) ? 'checked' : ''}>
+                        <div onclick="togglePermission('${item.email}', 'can_manage_calendar_exceptions')" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-cyan-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
                     </td>
                     <td class="px-4 py-4 text-center">
                         <button onclick="removeFromWhitelist('${item.email}')" class="text-red-400 hover:text-red-600 transition-colors">
@@ -323,10 +323,10 @@
                 const [addWhitelist, addProfiles] = await Promise.all([
                     window.supabaseClient
                         .from('admin_whitelist')
-                        .insert([{ email, role, can_scan: false, can_manage_ids: false, can_view_dashboard: false, can_view_sardo: false, can_manage_grades: false, can_manage_suspended_days: false }]),
+                        .insert([{ email, role, can_scan: false, can_manage_ids: false, can_view_dashboard: false, can_view_sardo: false, can_manage_grades: false, can_manage_calendar_exceptions: false, can_manage_suspended_days: false }]),
                     window.supabaseClient
                         .from('profiles')
-                        .insert([{ email, role, full_name: email, can_scan: false, can_manage_ids: false, can_view_dashboard: false, can_view_sardo: false, can_manage_grades: false, can_manage_suspended_days: false }])
+                        .insert([{ email, role, full_name: email, can_scan: false, can_manage_ids: false, can_view_dashboard: false, can_view_sardo: false, can_manage_grades: false, can_manage_calendar_exceptions: false, can_manage_suspended_days: false }])
                 ]);
 
                 if (addWhitelist.error) throw addWhitelist.error;

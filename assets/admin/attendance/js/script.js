@@ -2465,7 +2465,7 @@ async function exportAllSF2(levelFilter = null) {
             window.supabaseClient.from('school_info').select('*'), // Fetch all to be safe
             window.supabaseClient.from('profiles').select('full_name').eq('role', 'school_head').maybeSingle(),
             window.supabaseClient.from('profiles').select('full_name, section_assigned'),
-            window.supabaseClient.from('suspended_days').select('date').gte('date', startOfMonth).lte('date', endOfMonth)
+            window.supabaseClient.from('suspended_days').select('date, reason, section').gte('date', startOfMonth).lte('date', endOfMonth)
         ]);
 
         logAttendanceLogsResponse('SF2 Export logs', logsRes, startOfMonth, endOfMonth);
@@ -2476,14 +2476,8 @@ async function exportAllSF2(levelFilter = null) {
             throw new Error("Could not fetch attendance logs.");
         }
         
-        // Build suspended dates set
-        const suspendedDates = new Set();
-        if (!suspendedRes.error && suspendedRes.data) {
-            suspendedRes.data.forEach(row => {
-                suspendedDates.add(String(row.date));
-            });
-        }
-        console.log("📛 Suspended dates for export:", Array.from(suspendedDates));
+        const suspendedDayRows = (!suspendedRes.error && Array.isArray(suspendedRes.data)) ? suspendedRes.data : [];
+        console.log("📛 Suspended day rows for export:", suspendedDayRows);
         const monthLogs = logsRes.data || [];
         const schoolInfo = (schoolRes.data && schoolRes.data.length > 0) ? schoolRes.data[0] : {};
         const schoolHead = headRes.data?.full_name || schoolInfo.school_head || schoolInfo.schoolHead || '';
@@ -2640,6 +2634,30 @@ async function exportAllSF2(levelFilter = null) {
                 ...studentsInSection.filter(s => s.gender === 'female').sort((a, b) => (a.parsedName || '').localeCompare(b.parsedName || ''))
             ];
 
+            const normalizedSectionName = String(sectionName || '').trim().toLowerCase();
+            const sectionSuspendedDates = new Set();
+            const sectionHolidayDates = new Set();
+
+            suspendedDayRows.forEach(row => {
+                const rowSection = String(row.section || '').trim().toLowerCase();
+                const matchesSection = !rowSection || rowSection === normalizedSectionName;
+                if (!matchesSection) return;
+
+                const dateKey = String(row.date);
+                if (!dateKey) return;
+
+                sectionSuspendedDates.add(dateKey);
+
+                const reasonText = String(row.reason || '').trim().toLowerCase();
+                const isHoliday = reasonText.includes('holiday') || reasonText.includes('non-working') || reasonText.includes('non working');
+                if (isHoliday) {
+                    sectionHolidayDates.add(dateKey);
+                }
+            });
+
+            console.log(`📛 Section ${sectionName} suspended dates:`, Array.from(sectionSuspendedDates));
+            console.log(`🎉 Section ${sectionName} holiday dates:`, Array.from(sectionHolidayDates));
+
             if (sortedStudents.length === 0) {
                 console.warn(`No students found for section ${sectionName} with valid gender.`, studentsInSection);
             }
@@ -2746,8 +2764,26 @@ async function exportAllSF2(levelFilter = null) {
                 schoolDays.forEach(day => {
                     const currentDayKey = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                     
-                    // 🛑 SKIP MARKING SUSPENDED DAYS - leave cell empty
-                    if (suspendedDates.has(currentDayKey)) {
+                    // 🛑 HOLIDAYS get marked as H; other suspended days remain empty
+                    if (sectionHolidayDates.has(currentDayKey)) {
+                        const date = new Date(targetYear, targetMonth, day);
+                        const firstWeekday = new Date(targetYear, targetMonth, 1).getDay();
+                        const daysSinceGridStart = (day - 1) + (firstWeekday === 0 ? 1 : (firstWeekday === 6 ? 2 : firstWeekday - 1));
+                        const fullWeeks = Math.floor(daysSinceGridStart / 7);
+                        const remainingDays = daysSinceGridStart % 7;
+                        const colOffset = (fullWeeks * 5) + remainingDays;
+
+                        if (colOffset >= 0 && colOffset < SF2_ATT_COLS.length) {
+                            const colIndex = SF2_ATT_COLS[colOffset];
+                            const cell = row.getCell(colIndex);
+                            cell.value = 'H';
+                            cell.alignment = { horizontal: 'center' };
+                            cell.font = { name: 'Arial', size: 9, bold: true };
+                        }
+                        return; // Skip rest of logic for this day
+                    }
+
+                    if (sectionSuspendedDates.has(currentDayKey)) {
                         // Calculate Column for this day
                         const date = new Date(targetYear, targetMonth, day);
                         const firstWeekday = new Date(targetYear, targetMonth, 1).getDay();

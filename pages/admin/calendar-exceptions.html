@@ -4,7 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="refresh" content="0; url=calendar-exceptions.html">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.gstatic.com https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.supabase.net wss://*.supabase.co wss://*.supabase.net https://cdn.jsdelivr.net;">
     <title>Calendar Exceptions | Upper Labay High School</title>
     <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
@@ -39,7 +38,7 @@
                 .single();
 
             if (!profile || (profile.role !== 'admin' && profile.role !== 'school_head' && !(profile.can_manage_calendar_exceptions || profile.can_manage_suspended_days))) {
-                alert("ACCESS DENIED: You do not have permission to manage suspended days.");
+                alert("ACCESS DENIED: You do not have permission to manage calendar exceptions.");
                 window.location.href = './admin-dashboard.html';
             }
         }
@@ -176,10 +175,10 @@
                 Manage Calendar Exceptions
             </h2>
 
-            <!-- Add New Suspended Day Form -->
+            <!-- Add New Calendar Exception Form -->
             <div class="mb-8 p-4 bg-blue-50 rounded-xl border border-blue-100">
                 <h3 class="text-lg font-bold text-blue-900 mb-4">Record New Calendar Exception</h3>
-                <form id="suspendedDayForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form id="calendarExceptionForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="suspendedDate" class="block text-sm font-bold text-gray-700 mb-2">Date</label>
                         <input type="date" id="suspendedDate" name="suspendedDate" required
@@ -228,11 +227,11 @@
                 </form>
             </div>
 
-            <!-- List of Suspended Days -->
+            <!-- List of Calendar Exceptions -->
             <div>
                 <h3 class="text-lg font-bold text-gray-900 mb-4">Recorded Calendar Exceptions</h3>
-                <div id="suspendedDaysList" class="space-y-3"></div>
-                <div id="noSuspendedDays" class="hidden text-center py-8 text-gray-500">
+                <div id="calendarExceptionsList" class="space-y-3"></div>
+                <div id="noCalendarExceptions" class="hidden text-center py-8 text-gray-500">
                     <i class="fa-solid fa-calendar-check text-4xl text-gray-300 mb-2"></i>
                     <p class="text-lg">No calendar exceptions recorded yet.</p>
                 </div>
@@ -264,11 +263,11 @@
         // Initialize app
         let masterStudentDatabase = [];
         let sections = [];
-        let suspendedDaysCache = [];
+        let calendarExceptionsCache = [];
 
         async function initApp() {
             await fetchStudents();
-            await fetchSuspendedDays();
+            await fetchCalendarExceptions();
             setupEventListeners();
         }
 
@@ -303,10 +302,10 @@
             }
         }
 
-        // Fetch all suspended days
-        async function fetchSuspendedDays() {
+        // Fetch all calendar exceptions
+        async function fetchCalendarExceptions() {
             if (!window.supabaseClient) {
-                setTimeout(fetchSuspendedDays, 100);
+                setTimeout(fetchCalendarExceptions, 100);
                 return;
             }
 
@@ -318,10 +317,10 @@
 
                 if (error) throw error;
 
-                suspendedDaysCache = suspendedDays;
-                renderSuspendedDays(suspendedDays);
+                calendarExceptionsCache = suspendedDays;
+                renderCalendarExceptions(suspendedDays);
             } catch (e) {
-                console.error("Error fetching suspended days:", e);
+                console.error("Error fetching calendar exceptions:", e);
             }
         }
 
@@ -376,10 +375,10 @@
             }
         }
 
-        // Render suspended days list
-        function renderSuspendedDays(days) {
-            const listDiv = document.getElementById('suspendedDaysList');
-            const noDaysDiv = document.getElementById('noSuspendedDays');
+        // Render calendar exceptions list
+        function renderCalendarExceptions(days) {
+            const listDiv = document.getElementById('calendarExceptionsList');
+            const noDaysDiv = document.getElementById('noCalendarExceptions');
 
             if (!days || days.length === 0) {
                 listDiv.innerHTML = '';
@@ -442,7 +441,7 @@
                 btn.addEventListener('click', async (e) => {
                     e.stopPropagation();
                     if (confirm('Are you sure you want to delete this calendar exception? This will not delete existing attendance logs.')) {
-                        await deleteSuspendedDay(btn.dataset.id);
+                        await deleteCalendarException(btn.dataset.id);
                     }
                 });
             });
@@ -461,8 +460,8 @@
                 
                 // Find the day object (we need to get the date)
                 const dayElement = document.querySelector(`[data-day-id="${dayId}"]`);
-                console.log("suspendedDaysCache:", suspendedDaysCache);
-                const day = suspendedDaysCache.find(d => d.id == dayId); // Use == to match number/string
+                console.log("calendarExceptionsCache:", calendarExceptionsCache);
+                const day = calendarExceptionsCache.find(d => d.id == dayId); // Use == to match number/string
                 console.log("Found day:", day);
                 if (day) {
                     const logs = await fetchNotificationLogsForDay(day);
@@ -632,12 +631,12 @@
 
         // Setup event listeners
         function setupEventListeners() {
-            const form = document.getElementById('suspendedDayForm');
-            form.addEventListener('submit', handleSuspendedDaySubmit);
+            const form = document.getElementById('calendarExceptionForm');
+            form.addEventListener('submit', handleCalendarExceptionSubmit);
         }
 
-        // Handle form submit to record new suspended day and log attendance
-        async function handleSuspendedDaySubmit(e) {
+        // Handle form submit to record a new calendar exception and log attendance for regular suspended-day entries
+        async function handleCalendarExceptionSubmit(e) {
             e.preventDefault();
 
             const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -689,12 +688,12 @@
 
                 if (insertError) throw insertError;
 
-                console.log('Inserted suspended day:', insertedDay);
+                console.log('Inserted calendar exception:', insertedDay);
 
                 if (isHoliday) {
                     alert('Successfully recorded calendar exception as Holiday. Attendance logs were not created for this date.');
-                    document.getElementById('suspendedDayForm').reset();
-                    await fetchSuspendedDays();
+                    document.getElementById('calendarExceptionForm').reset();
+                    await fetchCalendarExceptions();
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = originalText;
                     return;
@@ -705,7 +704,7 @@
                     ? masterStudentDatabase.filter(s => s.section === section)
                     : masterStudentDatabase;
 
-                console.log('Suspended day submission:', {
+                console.log('Calendar exception submission:', {
                     date,
                     modality,
                     section,
@@ -724,7 +723,7 @@
 
                 if (logsQuery.error) {
                     logsError = logsQuery.error;
-                    console.warn('Suspended day existing log lookup failed on local_date:', logsError);
+                    console.warn('Calendar exception existing log lookup failed on local_date:', logsError);
                     if (logsError.message && logsError.message.includes('local_date')) {
                         const [year, month, day] = date.split('-').map(Number);
                         const startIso = new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
@@ -749,7 +748,7 @@
                     acc[key] = (acc[key] || 0) + 1;
                     return acc;
                 }, {});
-                console.log('Suspended day existing logs summary:', existingLogSummary);
+                console.log('Calendar exception existing logs summary:', existingLogSummary);
 
                 // Normalize student LRNs and create a map of existing logs to avoid duplicates
                 const normalizedEligibleStudents = eligibleStudents.map(s => ({ ...s, lrn: String(s.lrn) }));
@@ -829,8 +828,8 @@
 
                 // Insert attendance logs
                 if (attendanceLogs.length > 0) {
-                    console.log('Suspended day inserting attendance logs count:', attendanceLogs.length);
-                    console.log('Suspended day attendanceLogs sample:', attendanceLogs.slice(0, 5));
+                    console.log('Calendar exception inserting attendance logs count:', attendanceLogs.length);
+                    console.log('Calendar exception attendanceLogs sample:', attendanceLogs.slice(0, 5));
 
                     const batchSize = 100;
                     for (let index = 0; index < attendanceLogs.length; index += batchSize) {
@@ -854,13 +853,13 @@
                     const pmCount = (verifiedRows || []).filter(row => row.session === 'PM').length;
                     const verifiedCount = count ?? (verifiedRows || []).length;
 
-                    console.log(`Verified suspended-day logs after insert: ${verifiedCount} total (${amCount} AM, ${pmCount} PM)`);
+                    console.log(`Verified calendar-exception logs after insert: ${verifiedCount} total (${amCount} AM, ${pmCount} PM)`);
 
                     if (verifiedCount !== attendanceLogs.length) {
                         throw new Error(`Expected ${attendanceLogs.length} suspended-day logs but verified ${verifiedCount}.`);
                     }
                 } else {
-                    console.log('Suspended day no new attendance logs to insert.');
+                    console.log('Calendar exception no new attendance logs to insert.');
                 }
 
                 // Wait for notifications to send
@@ -868,16 +867,16 @@
                     await Promise.allSettled(notificationPromises);
                 }
 
-                alert(`Successfully recorded suspended day and logged ${attendanceLogs.length} attendance entries!`);
+                alert(`Successfully recorded calendar exception and logged ${attendanceLogs.length} attendance entries!`);
 
                 // Reset form
-                document.getElementById('suspendedDayForm').reset();
+                document.getElementById('calendarExceptionForm').reset();
 
                 // Refresh list
-                await fetchSuspendedDays();
+                await fetchCalendarExceptions();
 
             } catch (e) {
-                console.error("Error recording suspended day:", e);
+                console.error("Error recording calendar exception:", e);
                 alert('Error: ' + e.message);
             } finally {
                 submitBtn.disabled = false;
@@ -886,7 +885,7 @@
         }
 
         // Delete suspended day
-        async function deleteSuspendedDay(id) {
+        async function deleteCalendarException(id) {
             try {
                 const { error } = await window.supabaseClient
                     .from('suspended_days')
@@ -895,10 +894,10 @@
 
                 if (error) throw error;
 
-                await fetchSuspendedDays();
-                alert('Suspended day deleted successfully!');
+                await fetchCalendarExceptions();
+                alert('Calendar exception deleted successfully!');
             } catch (e) {
-                console.error("Error deleting suspended day:", e);
+                console.error("Error deleting calendar exception:", e);
                 alert('Error: ' + e.message);
             }
         }

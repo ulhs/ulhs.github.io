@@ -29,7 +29,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         stats: profile.can_view_dashboard,
                         sardo: profile.can_view_sardo,
                         grades: profile.can_manage_grades,
-                        suspended: profile.can_manage_suspended_days
+                        calendarExceptions: Boolean(profile.can_manage_calendar_exceptions || profile.can_manage_suspended_days),
+                        suspended: Boolean(profile.can_manage_calendar_exceptions || profile.can_manage_suspended_days)
                     };
                     sessionStorage.setItem('userAccess', JSON.stringify(access));
                     
