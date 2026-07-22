@@ -4427,7 +4427,7 @@ async function initIDGenerator() {
     
     const sectionsByGrade = {
         '7': ['Salazar', 'HBalunto'],
-        '8': ['Cuachon', 'JBalunto'],
+        '8': ['Cuachon', 'Diama'],
         '9': ['Aguas', 'Laogan'],
         '10': ['Capili'],
         '11': ['Academics', 'TechPro'],

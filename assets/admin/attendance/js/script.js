@@ -3164,7 +3164,7 @@ async function exportAllSF4(levelFilter = null) {
                 const desiredJHSSectionOrder = [
                     "7-HBalunto",
                     "7-Salazar",
-                    "8-JBalunto",
+                    "8-Diama",
                     "8-Cuachon",
                     "9-Aguas",
                     "9-Laogan",
