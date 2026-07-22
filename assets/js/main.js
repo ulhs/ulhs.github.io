@@ -4426,7 +4426,7 @@ async function initIDGenerator() {
     const sectionGroup = document.getElementById('student-section-group');
     
     const sectionsByGrade = {
-        '7': ['Salazar', 'HBalunto'],
+        '7': ['Salazar', 'Balunto'],
         '8': ['Cuachon', 'Diama'],
         '9': ['Aguas', 'Laogan'],
         '10': ['Capili'],
