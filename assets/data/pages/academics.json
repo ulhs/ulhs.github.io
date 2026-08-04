@@ -27,5 +27,11 @@
     "vision": {
         "title": "Our Unified Vision",
         "description": "Whether in JHS or SHS, our students are immersed in Indigenous Knowledge Systems and Practices (IKSP). We bridge modern academic standards with Blaan ancestral wisdom to produce culturally-rooted leaders."
+    },
+    "enrollment_cta": {
+        "title": "Ready to join ULHS?",
+        "description": "Learn more about admission requirements and the enrollment process for our Junior and Senior High School programs.",
+        "link": "enrollment.html",
+        "btn_text": "Visit Enrollment Hub"
     }
 }

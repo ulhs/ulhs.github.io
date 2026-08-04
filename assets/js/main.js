@@ -25,6 +25,25 @@ function getRootPath() {
     return root;
 }
 
+function applyStoredTheme() {
+    try {
+        const savedTheme = localStorage.getItem('theme');
+        const isDark = savedTheme === 'dark';
+
+        document.documentElement.classList.toggle('dark-mode', isDark);
+        if (document.body) {
+            document.body.classList.toggle('dark-mode', isDark);
+        }
+
+        document.querySelectorAll('.theme-toggle').forEach(toggle => {
+            toggle.textContent = isDark ? '☀️' : '🌙';
+            toggle.setAttribute('data-tooltip', isDark ? 'Switch to Light' : 'Switch to Dark');
+        });
+    } catch (err) {
+        console.warn('Theme restore failed:', err);
+    }
+}
+
 /**
  * GLOBAL SECURITY: AUDIT LOGGING
  * Records sensitive administrative actions to the cloud database.
@@ -683,18 +702,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Sync theme toggle UI after header loads
+        applyStoredTheme();
+
         const themeBtn = document.getElementById('theme-toggle');
         if (themeBtn) {
             const isDark = document.body.classList.contains('dark-mode');
             themeBtn.textContent = isDark ? '☀️' : '🌙';
             themeBtn.setAttribute('data-tooltip', isDark ? 'Switch to Light' : 'Switch to Dark');
-
-            themeBtn.addEventListener('click', () => {
-                const isDark = document.body.classList.toggle('dark-mode');
-                localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                themeBtn.textContent = isDark ? '☀️' : '🌙';
-                themeBtn.setAttribute('data-tooltip', isDark ? 'Switch to Light' : 'Switch to Dark');
-            });
         }
     }
 
@@ -1158,6 +1172,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 `).join('');
             }
 
+            const publicServiceGrid = document.getElementById('public-service-grid');
+            if (publicServiceGrid && Array.isArray(data.public_service_commitments)) {
+                publicServiceGrid.innerHTML = data.public_service_commitments.map((item, i) => `
+                    <details class="policy-card reveal reveal-bottom delay-${(i % 6) + 3}" ${i === 0 ? 'open' : ''}>
+                        <summary class="policy-summary">
+                            <h3>${item.title}</h3>
+                            <span class="accordion-toggle" aria-hidden="true">+</span>
+                        </summary>
+                        <div class="policy-text">${item.text}</div>
+                    </details>
+                `).join('');
+            }
+
+            const hymnsGrid = document.getElementById('hymns-grid');
+            if (hymnsGrid && Array.isArray(data.hymns)) {
+                hymnsGrid.innerHTML = data.hymns.map((item, i) => `
+                    <details class="policy-card reveal reveal-bottom delay-${(i % 6) + 3}" ${i === 0 ? 'open' : ''}>
+                        <summary class="policy-summary">
+                            <h3>${item.title}</h3>
+                            <span class="accordion-toggle" aria-hidden="true">+</span>
+                        </summary>
+                        <div class="policy-text">${item.text}</div>
+                    </details>
+                `).join('');
+            }
+
             const noticeBox = document.querySelector('.transparency-notice');
             if (noticeBox) {
                 noticeBox.innerHTML = `
@@ -1236,6 +1276,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 visionIntro.innerHTML = `
                     <h2 class="accent-title">${data.vision.title}</h2>
                     <p>${data.vision.description}</p>
+                `;
+            }
+
+            const enrollmentCta = document.getElementById('academics-enrollment-cta');
+            if (enrollmentCta && data.enrollment_cta) {
+                enrollmentCta.innerHTML = `
+                    <div class="intro-text" style="text-align:center; max-width:760px; margin:0 auto;">
+                        <h2 class="accent-title">${data.enrollment_cta.title}</h2>
+                        <p>${data.enrollment_cta.description}</p>
+                        <a href="${data.enrollment_cta.link}" class="btn btn-primary" style="display:inline-block;">${data.enrollment_cta.btn_text}</a>
+                    </div>
                 `;
             }
 

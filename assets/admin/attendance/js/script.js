@@ -2684,7 +2684,7 @@ async function exportAllSF2(levelFilter = null) {
                 if (w === 0 || w === 6) continue; // Skip weekends
 
                 // Use the same formula as the logs to find the correct column
-                const daysSinceGridStart = (d - 1) + (firstWeekday === 0 ? 1 : (firstWeekday === 6 ? 2 : firstWeekday - 1));
+                const daysSinceGridStart = (d - 1) + (firstWeekday === 0 ? -1 : (firstWeekday === 6 ? -2 : firstWeekday - 1));
                 const fullWeeks = Math.floor(daysSinceGridStart / 7);
                 const remainingDays = daysSinceGridStart % 7;
                 const colOffset = (fullWeeks * 5) + remainingDays;
@@ -2768,7 +2768,7 @@ async function exportAllSF2(levelFilter = null) {
                     if (sectionHolidayDates.has(currentDayKey)) {
                         const date = new Date(targetYear, targetMonth, day);
                         const firstWeekday = new Date(targetYear, targetMonth, 1).getDay();
-                        const daysSinceGridStart = (day - 1) + (firstWeekday === 0 ? 1 : (firstWeekday === 6 ? 2 : firstWeekday - 1));
+                        const daysSinceGridStart = (day - 1) + (firstWeekday === 0 ? -1 : (firstWeekday === 6 ? -2 : firstWeekday - 1));
                         const fullWeeks = Math.floor(daysSinceGridStart / 7);
                         const remainingDays = daysSinceGridStart % 7;
                         const colOffset = (fullWeeks * 5) + remainingDays;
@@ -2787,7 +2787,7 @@ async function exportAllSF2(levelFilter = null) {
                         // Calculate Column for this day
                         const date = new Date(targetYear, targetMonth, day);
                         const firstWeekday = new Date(targetYear, targetMonth, 1).getDay();
-                        const daysSinceGridStart = (day - 1) + (firstWeekday === 0 ? 1 : (firstWeekday === 6 ? 2 : firstWeekday - 1));
+                        const daysSinceGridStart = (day - 1) + (firstWeekday === 0 ? -1 : (firstWeekday === 6 ? -2 : firstWeekday - 1));
                         const fullWeeks = Math.floor(daysSinceGridStart / 7);
                         const remainingDays = daysSinceGridStart % 7;
                         const colOffset = (fullWeeks * 5) + remainingDays;
@@ -2834,7 +2834,7 @@ async function exportAllSF2(levelFilter = null) {
                     // Calculate Column for this day
                     const date = new Date(targetYear, targetMonth, day);
                     const firstWeekday = new Date(targetYear, targetMonth, 1).getDay();
-                    const daysSinceGridStart = (day - 1) + (firstWeekday === 0 ? 1 : (firstWeekday === 6 ? 2 : firstWeekday - 1));
+                    const daysSinceGridStart = (day - 1) + (firstWeekday === 0 ? -1 : (firstWeekday === 6 ? -2 : firstWeekday - 1));
                     const fullWeeks = Math.floor(daysSinceGridStart / 7);
                     const remainingDays = daysSinceGridStart % 7;
                     const colOffset = (fullWeeks * 5) + remainingDays;
@@ -2874,7 +2874,7 @@ async function exportAllSF2(levelFilter = null) {
 
                 // Find the column for this day again
                 const firstWeekday = new Date(targetYear, targetMonth, 1).getDay();
-                const daysSinceGridStart = (day - 1) + (firstWeekday === 0 ? 1 : (firstWeekday === 6 ? 2 : firstWeekday - 1));
+                const daysSinceGridStart = (day - 1) + (firstWeekday === 0 ? -1 : (firstWeekday === 6 ? -2 : firstWeekday - 1));
                 const fullWeeks = Math.floor(daysSinceGridStart / 7);
                 const remainingDays = daysSinceGridStart % 7;
                 const colOffset = (fullWeeks * 5) + remainingDays;

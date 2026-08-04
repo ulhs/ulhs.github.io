@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Access | Upper Labay High School</title>
+    <link rel="icon" type="image/webp" href="../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
+    <script src="../assets/js/theme-manager.js"></script>
+    <link rel="stylesheet" href="../assets/css/typography.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../assets/js/supabase-config.js"></script>
+    <script src="../assets/js/main.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background-color: var(--abaca-cream, #f5f5dc);
+            color: var(--text-main, #2d2d2d);
+            font-family: 'Open Sans', sans-serif;
+        }
+
+        main {
+            background: var(--white, #ffffff);
+        }
+
+        .portal-card {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 2.2rem;
+            background: var(--soft-abaca, #fdfdf5);
+            border: 1px solid rgba(165, 42, 42, 0.14);
+            border-radius: 24px;
+            box-shadow: 0 16px 40px rgba(26, 26, 26, 0.08);
+            text-align: center;
+        }
+
+        .portal-brand {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .portal-brand img {
+            width: 76px;
+            height: 76px;
+        }
+
+        .portal-badge {
+            display: inline-block;
+            padding: 0.45rem 0.8rem;
+            border-radius: 999px;
+            background: rgba(165, 42, 42, 0.1);
+            color: var(--madder-red, #a52a2a);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        .portal-title {
+            margin: 0;
+            font-family: 'Montserrat', sans-serif;
+            font-size: clamp(1.6rem, 2.3vw, 2.15rem);
+            color: var(--madder-red, #a52a2a);
+        }
+
+        .portal-subtitle {
+            margin: 0;
+            max-width: 620px;
+            color: var(--text-gray, #4a4a4a);
+            font-size: 0.95rem;
+            font-weight: 600;
+            line-height: 1.7;
+        }
+
+        .portal-toggle {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin: 1.5rem auto 1rem;
+            max-width: 620px;
+        }
+
+        .portal-option-group {
+            position: relative;
+        }
+
+        .portal-option-group input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .portal-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+            width: 100%;
+            padding: 0.95rem 0.7rem;
+            border: 1px solid rgba(165, 42, 42, 0.16);
+            border-radius: 16px;
+            background: var(--white, #ffffff);
+            color: var(--text-gray, #4a4a4a);
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(26, 26, 26, 0.04);
+            transition: all 0.2s ease;
+        }
+
+        .portal-option:hover {
+            border-color: rgba(165, 42, 42, 0.32);
+            transform: translateY(-1px);
+        }
+
+        .portal-option-title {
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.78rem;
+        }
+
+        .portal-option-meta {
+            font-size: 0.76rem;
+            color: var(--text-main, #2d2d2d);
+            font-weight: 600;
+        }
+
+        .portal-option-group input[type="radio"]:checked + .portal-option {
+            background: var(--madder-red, #a52a2a);
+            color: var(--white, #ffffff);
+            border-color: var(--madder-red, #a52a2a);
+            box-shadow: 0 12px 24px rgba(165, 42, 42, 0.16);
+        }
+
+        .portal-option-group input[type="radio"]:checked + .portal-option .portal-option-meta {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .portal-help {
+            margin-top: 1rem;
+            padding: 1rem 1.1rem;
+            border: 1px solid rgba(165, 42, 42, 0.12);
+            border-radius: 16px;
+            background: var(--white, #ffffff);
+        }
+
+        .portal-help p {
+            margin: 0;
+            color: var(--text-main, #2d2d2d);
+            font-size: 0.92rem;
+            font-weight: 700;
+            line-height: 1.6;
+        }
+
+        .portal-continue {
+            width: 100%;
+            max-width: 320px;
+            margin-top: 1rem;
+            border: none;
+            border-radius: 999px;
+            padding: 0.95rem 1rem;
+            background: var(--madder-red, #a52a2a);
+            color: var(--white, #ffffff);
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            cursor: pointer;
+            box-shadow: 0 12px 24px rgba(165, 42, 42, 0.16);
+        }
+
+        .portal-continue:hover {
+            transform: translateY(-1px);
+        }
+
+        @media (max-width: 640px) {
+            .portal-card {
+                padding: 1.35rem;
+            }
+
+            .portal-toggle {
+                grid-template-columns: 1fr;
+            }
+
+            .portal-option {
+                padding: 0.85rem 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <!-- Loaded dynamically from header.html -->
+    </header>
+
+    <div class="beadwork-strip"></div>
+
+    <main>
+        <section class="page-banner">
+            <h1>Portal Access</h1>
+            <p>Choose the right entry point for staff, parents, or students.</p>
+        </section>
+
+        <section class="section-container reveal reveal-bottom">
+            <div class="portal-card" aria-labelledby="portal-login-title">
+                <div class="portal-brand">
+                    <img src="../assets/images/school-logo.webp" alt="Upper Labay High School logo">
+                    <span class="portal-badge">School Portal Access</span>
+                    <h2 class="portal-title" id="portal-login-title">Choose your access point</h2>
+                    <p class="portal-subtitle">Select the route that fits your role and continue to the right destination.</p>
+                </div>
+
+                <div class="portal-toggle" role="radiogroup" aria-label="Portal type selector">
+                    <div class="portal-option-group">
+                        <input type="radio" id="portal-personnel" name="portal-type" value="personnel" checked>
+                        <label class="portal-option" for="portal-personnel">
+                            <span class="portal-option-title">Personnel</span>
+                            <span class="portal-option-meta">School staff & admin</span>
+                        </label>
+                    </div>
+
+                    <div class="portal-option-group">
+                        <input type="radio" id="portal-parent" name="portal-type" value="parent">
+                        <label class="portal-option" for="portal-parent">
+                            <span class="portal-option-title">Parent</span>
+                            <span class="portal-option-meta">Family access</span>
+                        </label>
+                    </div>
+
+                    <div class="portal-option-group">
+                        <input type="radio" id="portal-student" name="portal-type" value="student">
+                        <label class="portal-option" for="portal-student">
+                            <span class="portal-option-title">Student</span>
+                            <span class="portal-option-meta">Learner access</span>
+                        </label>
+                    </div>
+                </div>
+
+                <button type="button" id="portal-continue" class="portal-continue">Continue to portal</button>
+
+                <div class="portal-help">
+                    <p id="portal-help-text">Personnel Portal — Access the staff and administrative sign-in page for official school services.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <!-- Loaded dynamically from footer.html -->
+    </footer>
+
+    <script src="../assets/js/main.js"></script>
+    <script>
+        const portalOptions = {
+            personnel: {
+                title: 'Personnel Portal',
+                path: 'admin/login.html',
+                description: 'Personnel Portal — Use the existing staff and admin sign-in page.'
+            },
+            parent: {
+                title: 'Parent Portal',
+                path: 'parent-portal/login.html',
+                description: 'Parent Portal — Continue to the current parent sign-in page.'
+            },
+            student: {
+                title: 'Student Portal',
+                path: 'student-portal/coming-soon.html',
+                description: 'Student Portal — This feature is temporarily redirected to the coming-soon page.'
+            }
+        };
+
+        const radios = Array.from(document.querySelectorAll('input[name="portal-type"]'));
+        const continueBtn = document.getElementById('portal-continue');
+        const helpText = document.getElementById('portal-help-text');
+
+        function updateSelection() {
+            const selectedValue = radios.find(r => r.checked)?.value || 'personnel';
+            const option = portalOptions[selectedValue];
+            if (option) {
+                helpText.textContent = option.description;
+            }
+        }
+
+        radios.forEach(radio => {
+            radio.addEventListener('change', updateSelection);
+        });
+
+        continueBtn.addEventListener('click', () => {
+            const selectedValue = radios.find(r => r.checked)?.value || 'personnel';
+            const targetPath = portalOptions[selectedValue]?.path || portalOptions.personnel.path;
+            window.location.href = targetPath;
+        });
+
+        updateSelection();
+    </script>
+</body>
+</html>

@@ -22,5 +22,37 @@
     "financial_notice": {
         "title": "Financial Accountability",
         "description": "We strictly adhere to DepEd's policies on the utilization of MOOE (Maintenance and Other Operating Expenses). Physical copies of our monthly reports are available at the School Administration Office in Upper Labay High School."
-    }
+    },
+    "public_service_commitments": [
+        {
+            "title": "Panunumpa ng Lingkod Bayan",
+            "text": "Ako ay isang lingkod bayan.\n\nPangangalagaan ko ang tiwalang ipinagkaloob ng mamamayan.\n\nMaglilingkod ako nang may malasakit, katapatan, at kahusayan na walang kinikilingan.\n\nMagiging mabuting halimbawa ako, at magbibigay ng pag-asa at inspirasyon sa aking kapwa lingkod bayan.\n\nLilinangin ko ang aking sariling kakayahan upang sa lahat ng panahon ay mapaglingkuran ko nang buong kahusayan ang sambayanan.\n\nHindi ako makikibahagi sa mga katiwalian sa pamahalaan.\n\nPipigilan at isisiwalat ko ito sa pamamagitan ng tama at angkop na pamamaraan.\n\nIsasabuhay ko ang isang lingkod bayang maka-Diyos, maka-tao, makakalikasan, at makabansa.\n\nTutugon ako sa mga hamon ng makabagong panahon tungo sa adhikain ng matatag, maginhawa, at panatag na buhay.\n\nSa mga tungkulin at hangaring ito, kasihan nawa ako ng Maykapal."
+        },
+        {
+            "title": "Panata sa Bagong Pilipinas",
+            "text": "Bilang Pilipino, buong pagmamalaki kong isasabuhay ang Bagong Pilipinas.\n\nBuhay sa aking dugo ang lahing dakila, magiting at may dangal.\n\nPalaging dadalhin sa puso, isip at diwa ang aking pagmamahal sa kultura at bayang sinilangan;\n\nKaisa ng bawat mamamayan, iaalay ko ang aking talino at kasanayan sa pagpapaunlad ng aking Bayan;\n\nTaglay ang galing na naaayon sa mga pandaigdigang pamantayan;\n\nMagiging instrumento ako sa pagsulong ng kagalingan, karunungan at kapayapaan.\n\nMakikiisa at makikilahok ako sa mga adhikain ng pamahalaan dahil ang kaunlaran ay hindi lamang responsibilidad ng iilan.\n\nIsusulong at pangangalagaan ko ang karangalan, kalayaan at interes ng aking bayang minamahal;\n\nBilang Pilipino na may pagmamahal, pakialam at malasakit; hindi makasarili kundi para sa mas nakakarami;\n\nTatahakin ko ang landas tungo sa isang Bagong Pilipinas!"
+        },
+        {
+            "title": "DepEd Quality Policy Statement (QPS)",
+            "text": "\"The Department of Education is committed to provide learners with quality basic education that is accessible, inclusive, liberating through:\n\nProactive leadership\n\nShared governance\n\nEvidence based policies, standards and programs\n\nResponsive and relevant curricula\n\nHighly competent and committed officials, and teaching and non-teaching personnel\n\nAn enabling learning environment\n\nThe Department upholds the highest standards of conduct and performance to fulfil stakeholders needs and expectations by adhering to constitutional mandates, statutory and regulatory requirements and sustains client satisfaction through continuous improvement of the Quality Management System.\""
+        }
+    ],
+    "hymns": [
+        {
+            "title": "Bagong Pilipinas Hymn",
+            "text": "Panahon na ng pagbabago\nDahil sa ito ay kinakailangan\n\nTayo na magtulong-tulong\nNa paunlarin ang mahal nating bayan\n\nPanahon na ng pagbabago\nDahil sa ito ay kinakailangan\nTayo na magtulong-tulong\nNa paunlarin ang mahal nating bayan\n\nPanahon na ng pagbabago\nAt iayos ang mga dapat ayusin\nDapat lang maging tungkulin\nNg bawat mamamayan dito sa atin\n\nGawin ang pagbabago\nPatungo sa pag-asenso\nMagsikap na mabuti\nAt nang guminhawa tayo\nIpagmalaki natin sa mundo at ipamalas\nAng Bagong Pilipino at Bagong Pilipinas\n\nPanahon na ng pagbabago\nTangkilikin natin ang sariling atin\nAt tama lang na ugaliin\nKaysa sa iba sa atin ang unahin\n\nPanahon na ng pagbabago\nAt manguna sa kahit anong larangan\nAng tagumpay ay karangalan\nIalay o ihandog natin sa bayan\n\nIlang ulit nang napatunayan ng Pilipino\nAng husay at lakas, kagandahan at talento\nHandang makipagpaligsahan\nKahit anong oras\nAng bagong Pilipino, ang Bagong Pilipinas\n\nPanahon na ng pagbabago\nBuhay natin ay gawing maaliwalas\nMarami ang magandang bukas\nAng ibubunga ng Bagong Pilipinas\nGawin ang pagbabago\nPatungo sa pag-asenso\nMagsikap na mabuti\nAt nang guminhawa tayo\nIpagmalaki natin sa mundo at ipamalas\nAng bagong Pilipino at Bagong Pilipinas.\n\nPanahon na!"
+        },
+        {
+            "title": "Rehiyon Dose Hymn",
+            "text": "Hinubog mo kami mula sa kawalan\nBinigyan mo ng buhay at karangalan\nDati ay sinakop ka ng iba't ibang dayuhan\nNgunit sa taglay mong lakas, Hindi patatalo kahit kanino man\nMga Muslim, mga Kristiyano, at mga iba pang tribu\nKami'y nagkakaisa sa pang-angat ng ngalan mo\nDugo't laman iiaalay, pumailanlang sa paggabay\nPatuloy kang bigyang puri, kami sa 'yo'y nawiwili\nMabuhay ka Rehiyon Dose\n\nMalawak, masagana ang iyong lupain\nPati buong bansa'y umaasa sa 'yong mahahain\nSa pagsikat ng araw kay ganda ng iyong tanawin\nPinagpala ng Maykapal, Mabuhay ka SOCCSKSARGEN\nAko, ikaw, tayo tungo sa kaunlaran\nTalino at lakas ihahandog sa bayan\nMga Muslim, mga Kristiyano, at mga iba pang tribu\nKami'y nagkakaisa sa pang-angat ng ngalan mo\nDugo't laman iiaalay, pumailanlang sa paggabay.\nPatuloy kang bigyang puri, kami sa 'yo'y nawiwili\nMabuhay ka o' Rehiyon Dose"
+        },
+        {
+            "title": "General Santos City Hymn",
+            "text": "Ating ipagdiwang ng buong galang\nSi Heneral Paulino Santos\nKanyang talino, lakas at buhay\nDito niya ibinuhos\nUpang lahat ay maninirahan\nPanauhin man ay masisiyahan\nSa ating lungsod na kung tawagin ay\nGeneral Santos City\n\nMag-aliw tayo sa liwasan at magsaya\nMaraming tao mula pa man sa umaga\nSa abot ng tingin mga bundok nakikita\nSa taas kay ganda\nMatutum siyang nangunguna\nDito sa Timog Cotabato\n\nNaku! kay inam ng mga tanawin\nKay lapad ng mga bukirin\nNakahilirang tanim na puno\nNg pinya at mga saging\nTayong lahat ay may unawaan\nKristiyano, Muslim, T’boli at B’laan\nSa ating lungsod na kung tawagin ay\nGeneral Santos City"
+        },
+        {
+            "title": "Upper Labay High School Hymn",
+            "text": "Composer: VICTORIANO C. PATILUNA, MA-ELT\n\nI\n\nThe school sprouts out on the plateau of Upper Labay it comes true\n\nThe donors share parcels of land the community becomes grand.\n\nThe great wisdom that we will gain serves as the bridge to ease the pain\n\nChange our status and well-being to a life we wanted to bring\n\nChorus:\n\nMaguan, Fernandez, Atienza, Santiago and Villagracia\n\nWe admire your benevolence you certainly fulfill our dreams\n\nOur dear Upper Labay High School We, alumni, proudly adore\n\nTo the knowledge we gain for sure thankful for life to our mentors.\n\nII\n\nOnce again thank you dear donors we will will reach our goals with pleasures\n\nThe struggles despite being poor bring success through hard endeavors\n\nWe promise you alma mater to be loyal throughout the year\n\nOur lives are molded forever, your majesty we’ll come back here.\n\nRepeat Chorus.\n\nCoda.... 2x\n\nUpper Labay High School we care, to the wisdom for us you share...."
+        }
+    ]
 }

@@ -14,7 +14,7 @@
     --bead-yellow: #f1c40f;     /* Vibrant bead yellow */
     --bead-blue: #2980b9;       /* Traditional bead blue */
     --bead-white: #dbf1fa;      /* Shell/Takmon sequins */
-    --bead-black: #1a1a1a;      /* Foundation black */
+    --bead-black: #242526;      /* Charcoal black */
 
     /* UI & Text Utility */
     --text-main: #2d2d2d;       /* Darker than --text-gray for better accessibility */
@@ -1585,6 +1585,70 @@ footer h4, footer h5 {
 .btn-gold:hover {
     background-color: var(--white);
     color: var(--madder-red);
+}
+
+/* --- PUBLIC SERVICE COMMITMENTS STYLES --- */
+
+.public-service-section .policy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+    margin-top: 1.25rem;
+}
+
+.policy-card {
+    background: var(--white, #ffffff);
+    border: 1px solid rgba(165, 42, 42, 0.14);
+    border-radius: 18px;
+    padding: 0;
+    box-shadow: 0 10px 24px rgba(26, 26, 26, 0.06);
+    overflow: hidden;
+}
+
+.policy-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    cursor: pointer;
+    list-style: none;
+    padding: 1.2rem;
+}
+
+.policy-summary::-webkit-details-marker {
+    display: none;
+}
+
+.policy-summary h3 {
+    margin: 0;
+    color: var(--madder-red, #a52a2a);
+    font-size: 1.02rem;
+    line-height: 1.5;
+}
+
+.accordion-toggle {
+    flex-shrink: 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--madder-red, #a52a2a);
+    transition: transform 0.25s ease;
+}
+
+.policy-card[open] .accordion-toggle {
+    transform: rotate(45deg);
+}
+
+.policy-text {
+    margin: 0;
+    padding: 0 1.2rem 1.2rem;
+    color: var(--text-main, #2d2d2d);
+    font-size: 0.95rem;
+    line-height: 1.8;
+    white-space: pre-line;
+}
+
+.policy-card[open] .policy-text {
+    border-top: 1px solid rgba(165, 42, 42, 0.12);
 }
 
 /* --- FOOTER QUICK LINKS REFINEMENT --- */
@@ -3219,11 +3283,20 @@ body.dark-mode .visitor-counter {
     color: var(--accent-gold);
 }
 
+html.dark-mode body,
 body.dark-mode {
     background-color: var(--midnight-black);
     color: var(--text-dark);
 }
 
+html.dark-mode .section-container,
+html.dark-mode main,
+html.dark-mode .bg-light,
+html.dark-mode .content-section,
+html.dark-mode .compliance-section,
+html.dark-mode .page-banner,
+html.dark-mode .vm-section,
+html.dark-mode .requirements-section,
 body.dark-mode .section-container,
 body.dark-mode main,
 body.dark-mode .bg-light,
@@ -3249,11 +3322,53 @@ body.dark-mode .flip-card-front,
 body.dark-mode .req-container,
 body.dark-mode .step-content,
 body.dark-mode .quote-card,
-body.dark-mode .transparency-notice {
+body.dark-mode .transparency-notice,
+body.dark-mode .portal-card,
+body.dark-mode .portal-help,
+body.dark-mode .portal-option,
+body.dark-mode .promo-section {
     background-color: var(--card-dark) !important;
     color: var(--text-dark) !important;
     border-color: #333;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+body.dark-mode .promo-container {
+    background: linear-gradient(rgba(15, 15, 15, 0.94), rgba(25, 25, 25, 0.98));
+    border-color: var(--accent-gold);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45);
+}
+
+body.dark-mode .promo-content h2,
+body.dark-mode .promo-content .badge {
+    color: var(--accent-gold) !important;
+}
+
+body.dark-mode .promo-content p,
+body.dark-mode .promo-content .btn-gold {
+    color: var(--text-dark) !important;
+}
+
+body.dark-mode .portal-subtitle,
+body.dark-mode .portal-help p,
+body.dark-mode .portal-option-meta,
+body.dark-mode .policy-text {
+    color: var(--text-dark) !important;
+}
+
+body.dark-mode .policy-card {
+    background-color: var(--card-dark) !important;
+    border-color: #333;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+body.dark-mode .policy-card h3 {
+    color: var(--accent-gold) !important;
+}
+
+body.dark-mode .portal-badge {
+    background: rgba(255, 207, 71, 0.16);
+    color: var(--accent-gold) !important;
 }
 
 body.dark-mode .section-title,
@@ -3344,6 +3459,24 @@ body.dark-mode .dictionary-empty-state {
 /* --- ADMIN DASHBOARD DARK MODE OVERRIDES --- */
 body.dark-mode .bg-white {
     background-color: var(--card-dark) !important;
+}
+
+body.dark-mode #sync-photos-btn {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: var(--text-gray-dark) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body.dark-mode #last-scanned-card .bg-blue-100 {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+body.dark-mode #live-clock,
+body.dark-mode #clock-time,
+body.dark-mode #clock-ampm,
+body.dark-mode #live-date {
+    color: var(--accent-gold) !important;
 }
 
 body.dark-mode .bg-gray-50,
@@ -3470,6 +3603,12 @@ body.dark-mode div[style*="background-color: var(--soft-abaca)"],
 body.dark-mode div[style*="background-color: var(--white)"] {
     background-color: var(--bg-dark) !important;
     border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+body.dark-mode .form-section {
+    background-color: var(--card-dark) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.35) !important;
 }
 
 body.dark-mode div[style*="background: var(--white)"] p,

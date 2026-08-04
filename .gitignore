@@ -73,3 +73,5 @@ pages/admin/qr-batch-generator.html
 
 # Ignore Windows thumbnail cache files
 *.db
+
+assets/documents/website-audit-report.md

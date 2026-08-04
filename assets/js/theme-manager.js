@@ -50,12 +50,12 @@ const ThemeManager = {
     },
 
     updateThemeUI(isDark) {
-        if (!document.body) return;
+        if (!document.documentElement) return;
 
-        if (isDark) {
-            document.body.classList.add('dark-mode');
-        } else {
-            document.body.classList.remove('dark-mode');
+        document.documentElement.classList.toggle('dark-mode', isDark);
+
+        if (document.body) {
+            document.body.classList.toggle('dark-mode', isDark);
         }
 
         // Update all toggle icons and tooltips
