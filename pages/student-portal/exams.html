@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Term Examination | Student Portal</title>
+    <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <style>
+        body {
+            margin: 0;
+            background: #f8fafc;
+            color: #1f2937;
+            font-family: 'Open Sans', sans-serif;
+        }
+        .page-shell {
+            min-height: 100vh;
+            padding: 28px 18px 48px;
+            max-width: 1080px;
+            margin: 0 auto;
+        }
+        .header-card, .panel-card, .exam-card, .question-card, .result-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 24px;
+            box-shadow: 0 24px 50px rgba(15, 23, 42, 0.08);
+        }
+        .header-card {
+            padding: 26px;
+            margin-bottom: 22px;
+        }
+        .section-title {
+            margin: 0 0 14px;
+            font-size: 1.15rem;
+            color: #0f172a;
+            letter-spacing: 0.06em;
+        }
+        .section-copy {
+            margin: 0;
+            color: #475569;
+            line-height: 1.7;
+            font-weight: 600;
+        }
+        .term-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+        .term-button {
+            border-radius: 16px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #1f2937;
+            font-weight: 800;
+            padding: 12px 18px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .term-button.active {
+            background: linear-gradient(135deg, #2563eb 0%, #0f766e 100%);
+            color: #ffffff;
+            border-color: transparent;
+        }
+        .exam-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+        .exam-card, .question-card, .result-card {
+            padding: 24px;
+        }
+        .exam-card:hover {
+            transform: translateY(-2px);
+        }
+        .exam-card .exam-label {
+            display: inline-block;
+            padding: 6px 10px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+        .exam-card h3 {
+            margin: 0 0 10px;
+            font-size: 1.1rem;
+        }
+        .exam-card p {
+            margin: 0 0 18px;
+            color: #475569;
+        }
+        .exam-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .button, .secondary-button {
+            border-radius: 14px;
+            padding: 12px 18px;
+            border: none;
+            cursor: pointer;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            transition: all 0.2s ease;
+        }
+        .button {
+            background: #0f766e;
+            color: white;
+        }
+        .secondary-button {
+            background: #f8fafc;
+            color: #0f172a;
+            border: 1px solid #cbd5e1;
+        }
+        .button:hover, .secondary-button:hover {
+            opacity: 0.95;
+        }
+        .question-counter {
+            margin: 0 0 16px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .question-card h3 {
+            margin: 0 0 14px;
+            font-size: 1rem;
+            color: #0f172a;
+        }
+        .choices {
+            display: grid;
+            gap: 12px;
+            margin-top: 18px;
+        }
+        .choice-option {
+            border: 1px solid #cbd5e1;
+            border-radius: 18px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #ffffff;
+        }
+        .choice-option.selected {
+            background: #eff6ff;
+            border-color: #2563eb;
+        }
+        .choice-option:hover {
+            background: #f8fafc;
+        }
+        .choice-input {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            padding: 14px 16px;
+            font-size: 0.95rem;
+            color: #0f172a;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+        .choice-input:focus {
+            border-color: #2563eb;
+        }
+        .status-pill {
+            display: inline-flex;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #e0f2fe;
+            color: #0369a1;
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .no-content {
+            padding: 32px;
+            text-align: center;
+            color: #475569;
+        }
+        .loader {
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(15, 23, 42, 0.15);
+            border-top-color: #0f766e;
+            border-radius: 999px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        @media (max-width: 900px) {
+            .exam-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-shell">
+        <div class="header-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+                <div>
+                    <p class="section-title">Term Examination Assessment</p>
+                    <p class="section-copy">Take your term assessment tests, review your performance, and complete official term exams for Term 1, Term 2, and Term 3.</p>
+                </div>
+                <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+                    <button class="secondary-button" onclick="window.location.href='dashboard.html'">Back to Dashboard</button>
+                    <span id="student-name" class="status-pill">Loading...</span>
+                </div>
+            </div>
+            <div class="term-nav" id="term-nav"></div>
+        </div>
+
+        <div id="content-area"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
+    <script>
+        const apiUrl = `${window.supabaseClient.supabaseUrl}/functions/v1/student-exams`;
+        let currentTerm = 1;
+        let studentProfile = null;
+        let exams = [];
+        let activeExam = null;
+        let examQuestions = [];
+        let currentQuestionIndex = 0;
+        let answerMap = {};
+        let examResult = null;
+
+        async function initPage() {
+            if (!window.supabaseClient) {
+                setTimeout(initPage, 100);
+                return;
+            }
+
+            const { data: { session }, error } = await window.supabaseClient.auth.getSession();
+            if (error || !session) {
+                return window.location.replace('./login.html');
+            }
+
+            const { data: profile, error: profileError } = await window.supabaseClient
+                .from('profiles')
+                .select('full_name, role')
+                .eq('id', session.user.id)
+                .single();
+
+            if (profileError || !profile || String(profile.role).toLowerCase() !== 'student') {
+                document.getElementById('content-area').innerHTML = '<div class="no-content">Student access is required to use term examinations. Please sign in with a student account.</div>';
+                return;
+            }
+
+            studentProfile = profile;
+            document.getElementById('student-name').textContent = profile.full_name || 'Student';
+            renderTermButtons();
+            await fetchExamList();
+        }
+
+        function renderTermButtons() {
+            const container = document.getElementById('term-nav');
+            container.innerHTML = [1, 2, 3].map((term) => {
+                const activeClass = term === currentTerm ? 'active' : '';
+                return `<button class="term-button ${activeClass}" data-term="${term}">Term ${term}</button>`;
+            }).join('');
+
+            container.querySelectorAll('.term-button').forEach((button) => {
+                button.addEventListener('click', async () => {
+                    currentTerm = Number(button.dataset.term);
+                    renderTermButtons();
+                    await fetchExamList();
+                });
+            });
+        }
+
+        async function callExamFunction(body) {
+            const { data: { session }, error: sessionError } = await window.supabaseClient.auth.getSession();
+            if (sessionError || !session) {
+                throw new Error('Unable to validate your session. Please sign in again.');
+            }
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': window.supabaseClient.supabaseKey,
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify(body)
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error || 'Unable to contact exam service.');
+            }
+            return result;
+        }
+
+        async function fetchExamList() {
+            setContent(`<div class="no-content"><span class="loader"></span> Loading exams for Term ${currentTerm}...</div>`);
+
+            try {
+                const result = await callExamFunction({ type: 'list-exams', term: currentTerm });
+                exams = result.exams || [];
+                renderExamList();
+            } catch (err) {
+                setContent(`<div class="no-content">Unable to load exams. ${err.message}</div>`);
+            }
+        }
+
+        function renderExamList() {
+            if (!exams.length) {
+                setContent(`<div class="no-content">No term examinations are available for Term ${currentTerm} yet. Please check back with your instructor.</div>`);
+                return;
+            }
+
+            const content = document.createElement('div');
+            content.className = 'exam-grid';
+
+            exams.forEach((exam) => {
+                const card = document.createElement('article');
+                card.className = 'exam-card';
+                const attempt = exam.latestAttempt || null;
+                const hasQuestions = !!exam.has_questions;
+                const btnClass = hasQuestions ? 'button start-exam-btn' : 'secondary-button start-exam-btn';
+                const btnDisabled = hasQuestions ? '' : 'disabled style="opacity:0.6; cursor:not-allowed;"';
+                const btnLabel = !hasQuestions ? 'Not Ready Yet' : (attempt ? 'Review Exam' : 'Start Exam');
+                const notReadyBadge = !hasQuestions ? `<span class="status-pill" style="background:#fef3c7; color:#92400e;">Preparing Questions</span>` : '';
+                card.innerHTML = `
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+                        <div class="exam-label">${exam.subject}</div>
+                        ${notReadyBadge}
+                    </div>
+                    <h3>${exam.title}</h3>
+                    <p>${exam.description || 'Complete the official term examination for this subject.'}</p>
+                    <div class="exam-actions">
+                        <span class="status-pill">Term ${exam.term}</span>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                            ${attempt ? `<span class="status-pill" style="background:#dcfce7; color:#166534;">${attempt.status === 'completed' ? 'Completed' : 'Taken'}</span>` : ''}
+                            <button class="${btnClass}" data-exam-id="${exam.id}" ${btnDisabled}>${btnLabel}</button>
+                        </div>
+                    </div>
+                    ${attempt ? `<p style="margin:10px 0 0; font-size:0.84rem; color:#475569;">Latest score: ${attempt.score ?? 0}/${getExamMaxPoints(exam)} • ${attempt.submitted_at ? new Date(attempt.submitted_at).toLocaleDateString() : 'No submission date'}</p>` : ''}
+                    ${!hasQuestions ? `<p style="margin:10px 0 0; font-size:0.80rem; color:#92400e;">The examination questions are still being prepared. Please check again later.</p>` : ''}
+                `;
+                content.appendChild(card);
+            });
+
+            setContent(content.outerHTML);
+            document.querySelectorAll('.start-exam-btn').forEach((button) => {
+                if (button.hasAttribute('disabled')) return;
+                button.addEventListener('click', () => startExam(button.dataset.examId));
+            });
+        }
+
+        async function startExam(examId) {
+            setContent(`<div class="no-content"><span class="loader"></span> Preparing exam...</div>`);
+            try {
+                const result = await callExamFunction({ type: 'exam-detail', examId });
+                activeExam = result.exam;
+                examQuestions = result.questions || [];
+                currentQuestionIndex = 0;
+                answerMap = {};
+                examResult = null;
+                renderQuestionCard();
+            } catch (err) {
+                setContent(`<div class="no-content">Unable to load this exam. ${err.message}</div>`);
+            }
+        }
+
+        function getExamMaxPoints(exam) {
+            if (!examQuestions?.length) return exam.duration_minutes ? exam.duration_minutes : 0;
+            return examQuestions.reduce((sum, q) => sum + Number(q.points || 0), 0);
+        }
+
+        function renderQuestionCard() {
+            if (!activeExam) {
+                renderExamList();
+                return;
+            }
+
+            const question = examQuestions[currentQuestionIndex];
+            if (!question) {
+                setContent('<div class="no-content">Question not found.</div>');
+                return;
+            }
+
+            const selectedValue = answerMap[question.id] || '';
+            const totalQuestions = examQuestions.length;
+            const questionNumber = currentQuestionIndex + 1;
+            const questionHtml = `
+                <div class="question-card">
+                    <p class="question-counter">Question ${questionNumber} of ${totalQuestions}</p>
+                    <h3>${question.question_text}</h3>
+                    ${question.question_type === 'multiple_choice' ? renderMultipleChoice(question, selectedValue) : renderShortAnswer(question, selectedValue)}
+                    <div class="exam-actions" style="margin-top:24px;">
+                        <button class="secondary-button" id="back-to-list">Back to Exams</button>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+                            ${questionNumber > 1 ? '<button class="secondary-button" id="previous-question">Previous</button>' : ''}
+                            ${questionNumber < totalQuestions ? '<button class="button" id="next-question">Next</button>' : '<button class="button" id="submit-exam">Submit Exam</button>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            setContent(questionHtml);
+
+            function captureShortAnswer() {
+                if (question.question_type === 'short_answer') {
+                    const input = document.getElementById('short-answer-input');
+                    if (input) answerMap[question.id] = input.value;
+                }
+            }
+
+            document.getElementById('back-to-list').addEventListener('click', () => {
+                captureShortAnswer();
+                renderExamList();
+            });
+            if (questionNumber > 1) {
+                document.getElementById('previous-question').addEventListener('click', () => {
+                    captureShortAnswer();
+                    currentQuestionIndex -= 1;
+                    renderQuestionCard();
+                });
+            }
+            if (questionNumber < totalQuestions) {
+                document.getElementById('next-question').addEventListener('click', () => {
+                    captureShortAnswer();
+                    currentQuestionIndex += 1;
+                    renderQuestionCard();
+                });
+            } else {
+                document.getElementById('submit-exam').addEventListener('click', submitExam);
+            }
+
+            document.querySelectorAll('.choice-option').forEach((option) => {
+                option.addEventListener('click', () => {
+                    const value = option.dataset.value || '';
+                    answerMap[question.id] = value;
+                    renderQuestionCard();
+                });
+            });
+
+            if (question.question_type === 'short_answer') {
+                const input = document.getElementById('short-answer-input');
+                if (input) {
+                    input.addEventListener('input', () => {
+                        answerMap[question.id] = input.value;
+                    });
+                }
+            }
+        }
+
+        function renderMultipleChoice(question, selectedValue) {
+            const choices = Array.isArray(question.choices) ? question.choices : [];
+            return `
+                <div class="choices">
+                    ${choices.map(choice => {
+                        const isSelected = selectedValue === choice ? 'selected' : '';
+                        return `<div class="choice-option ${isSelected}" data-value="${choice}">${choice}</div>`;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        function renderShortAnswer(question, selectedValue) {
+            return `
+                <input id="short-answer-input" class="choice-input" type="text" placeholder="Type your answer here" value="${escapeHtml(selectedValue)}" />
+            `;
+        }
+
+        async function submitExam() {
+            const question = examQuestions[currentQuestionIndex];
+            if (question?.question_type === 'short_answer') {
+                const input = document.getElementById('short-answer-input');
+                if (input) answerMap[question.id] = input.value.trim();
+            }
+
+            setContent(`<div class="no-content"><span class="loader"></span> Submitting exam...</div>`);
+            try {
+                const result = await callExamFunction({
+                    type: 'submit-attempt',
+                    examId: activeExam.id,
+                    term: currentTerm,
+                    answers: answerMap
+                });
+                examResult = result;
+                renderExamSummary();
+            } catch (err) {
+                setContent(`<div class="no-content">Failed to submit exam. ${err.message}</div>`);
+            }
+        }
+
+        function renderExamSummary() {
+            if (!examResult) {
+                renderExamList();
+                return;
+            }
+
+            const score = examResult.score || 0;
+            const maxPoints = examResult.totalPoints || 0;
+            const summaryHtml = `
+                <div class="result-card">
+                    <p class="question-counter">Exam Completed</p>
+                    <h3>${activeExam.title}</h3>
+                    <p>Your term exam was submitted successfully.</p>
+                    <div style="margin: 18px 0; padding: 18px; border-radius: 18px; background: #f0fdf4; border: 1px solid #bbf7d0;">
+                        <p class="section-copy" style="margin:0; font-weight:800; color:#166534;">Score: ${score} / ${maxPoints}</p>
+                    </div>
+                    <div style="display:grid; gap:14px;">
+                        ${examResult.results.map(result => `
+                            <div style="border:1px solid #e2e8f0; border-radius:18px; padding:18px; background:#ffffff;">
+                                <p style="margin:0 0 6px; font-weight:800; color:#0f172a;">${result.questionText}</p>
+                                <p style="margin:0; color:#475569;">Your answer: <strong>${result.selectedAnswer || 'No answer'}</strong></p>
+                                <p style="margin:6px 0 0; color:${result.isCorrect ? '#166534' : '#b91c1c'}; font-weight:800;">${result.isCorrect ? 'Correct' : 'Incorrect'} • ${result.pointsAwarded} / ${result.maxPoints}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="exam-actions" style="margin-top:24px; justify-content:flex-end;">
+                        <button class="button" id="back-to-list-after-submit">Back to Exam List</button>
+                    </div>
+                </div>
+            `;
+
+            setContent(summaryHtml);
+            document.getElementById('back-to-list-after-submit').addEventListener('click', fetchExamList);
+        }
+
+        function setContent(html) {
+            document.getElementById('content-area').innerHTML = typeof html === 'string' ? html : html;
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        initPage();
+    </script>
+</body>
+</html>

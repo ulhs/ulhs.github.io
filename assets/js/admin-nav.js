@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         stats: profile.can_view_dashboard,
                         sardo: profile.can_view_sardo,
                         grades: profile.can_manage_grades,
+                        exams: profile.can_manage_exams || profile.can_manage_grades,
                         calendarExceptions: Boolean(profile.can_manage_calendar_exceptions || profile.can_manage_suspended_days),
                         suspended: Boolean(profile.can_manage_calendar_exceptions || profile.can_manage_suspended_days)
                     };
@@ -76,9 +77,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- SECURITY: SESSION HARDENING (Inactivity Timer) ---
     let inactivityTimer;
     const INACTIVITY_LIMIT = 15 * 60 * 1000; // Tightened to 15 minutes
+    const excludedInactivityPages = ['/attendance.html', '/admin-dashboard.html'];
+    const isExcludedInactivityPage = excludedInactivityPages.some(page =>
+        window.location.pathname.toLowerCase().endsWith(page)
+    );
 
     function resetInactivityTimer() {
         clearTimeout(inactivityTimer);
+
+        if (isExcludedInactivityPage) {
+            return; // Selected admin pages remain active without inactivity logout.
+        }
+
         inactivityTimer = setTimeout(async () => {
             console.warn("🕒 Security: Session timed out due to 15 minutes of inactivity.");
             alert("Your session has timed out for security purposes. You will be logged out.");
@@ -88,10 +98,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Attach inactivity listeners to track user presence
     if (window.location.pathname.includes('/admin/')) {
-        ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
-            document.addEventListener(evt, resetInactivityTimer, true);
-        });
-        resetInactivityTimer(); // Start timer on load
+        if (!isExcludedInactivityPage) {
+            ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
+                document.addEventListener(evt, resetInactivityTimer, true);
+            });
+            resetInactivityTimer(); // Start timer on load for all other admin pages
+        }
     }
 
     const navLinks = document.querySelector('.nav-links');

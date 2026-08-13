@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.gstatic.com https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.supabase.net wss://*.supabase.co wss://*.supabase.net https://cdn.jsdelivr.net;">
+    <title>Exam Manager | Upper Labay High School</title>
+    <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../assets/vendor/font-awesome/css/all.min.css">
+    <script src="../../assets/lib/tailwind.min.js"></script>
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
+    <script src="../../assets/js/theme-manager.js"></script>
+    <script src="../../assets/js/admin-nav.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+    <script>
+        async function checkExamManagerAccess() {
+            if (!window.supabaseClient) {
+                setTimeout(checkExamManagerAccess, 100);
+                return;
+            }
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = './login.html';
+                return;
+            }
+
+            const { data: profile } = await window.supabaseClient
+                .from('profiles')
+                .select('role, can_manage_grades, can_manage_exams')
+                .eq('id', session.user.id)
+                .single();
+
+            if (!profile || (profile.role !== 'admin' && profile.role !== 'school_head' && !(profile.can_manage_exams || profile.can_manage_grades))) {
+                alert("ACCESS DENIED: You do not have permission to manage exams.");
+                window.location.href = './attendance.html';
+            }
+        }
+        checkExamManagerAccess();
+    </script>
+
+    <header>
+        <div class="branding">
+            <a href="../../index.html" class="logo-link">
+                <img src="../../assets/images/school-logo.webp" alt="Logo" id="main-logo">
+                <div class="name-container">
+                    <span class="school-name">UPPER LABAY</span>
+                    <span class="school-sub">HIGH SCHOOL</span>
+                </div>
+            </a>
+        </div>
+
+        <div class="user-greeting">
+            <script>
+                const userName = sessionStorage.getItem('userName');
+                if (userName) document.write('<span class="user-name">' + userName + '</span>');
+            </script>
+        </div>
+        <input type="checkbox" id="nav-toggle" class="nav-toggle">
+        <label for="nav-toggle" class="nav-toggle-label" aria-label="Toggle Navigation">
+            <span></span>
+        </label>
+        <nav class="nav-links magic-nav">
+            <ul id="dynamic-nav-list">
+                <script>
+                    const role = sessionStorage.getItem('userRole');
+                    const access = JSON.parse(sessionStorage.getItem('userAccess') || '{}');
+                    let html = '';
+                    if (role === 'admin') {
+                        html += `<li class="list" data-page="access.html"><a href="access.html"><span class="icon"><i class="fa-solid fa-users-gear"></i></span><span class="text">ACCESS</span></a></li>`;
+                    }
+                    if (role === 'admin' || access.idGen) {
+                        html += `<li class="list" data-page="id-gen.html"><a href="id-gen.html"><span class="icon"><i class="fa-solid fa-id-card"></i></span><span class="text">ID GENERATOR</span></a></li>`;
+                    }
+                    if (role === 'admin' || access.attendance) {
+                        html += `<li class="list" data-page="attendance.html"><a href="attendance.html"><span class="icon"><i class="fa-solid fa-clipboard-user"></i></span><span class="text">ATTENDANCE</span></a></li>`;
+                    }
+                    if (role === 'admin' || role === 'school_head' || role === 'guidance_counselor' || access.sardo || false) {
+                        html += `<li class="list" data-page="sardo-dashboard.html"><a href="sardo-dashboard.html"><span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span><span class="text">SARDO</span></a></li>`;
+                    }
+                    if (role === 'admin' || access.grades || false) {
+                        html += `<li class="list" data-page="grade-encoding.html"><a href="grade-encoding.html"><span class="icon"><i class="fa-solid fa-book-open-reader"></i></span><span class="text">GRADES</span></a></li>`;
+                    }
+                    if (role === 'admin' || role === 'school_head' || access.exams || access.grades || false) {
+                        html += `<li class="list" data-page="exam-manager.html"><a href="exam-manager.html"><span class="icon"><i class="fa-solid fa-file-circle-check"></i></span><span class="text">EXAMS</span></a></li>`;
+                    }
+                    if (role === 'admin' || role === 'school_head' || access.suspended) {
+                        html += `<li class="list" data-page="calendar-exceptions.html"><a href="calendar-exceptions.html"><span class="icon"><i class="fa-solid fa-calendar-times"></i></span><span class="text">CALENDAR EXCEPTIONS</span></a></li>`;
+                    }
+                    if (role === 'admin' || role === 'school_head' || access.stats) {
+                        html += `<li class="list" data-page="admin-dashboard.html"><a href="admin-dashboard.html"><span class="icon"><i class="fa-solid fa-chart-line"></i></span><span class="text">DASHBOARD</span></a></li>`;
+                    }
+                    html += `<li class="list"><a href="./login.html" onclick="handleLogout(event)"><span class="icon"><i class="fa-solid fa-right-from-bracket"></i></span><span class="text">LOGOUT</span></a></li>`;
+                    html += '<div class="indicator"></div>';
+                    html += '<div id="theme-toggle" class="theme-toggle" data-tooltip="Switch to Dark">🌙</div>';
+                    document.write(html);
+                </script>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 pb-12 max-w-6xl mt-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-12 space-y-6">
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                    <div class="p-1 bg-deped-red"></div>
+                    <div class="p-6">
+                        <h2 class="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-file-circle-check text-deped-red text-2xl"></i>
+                            Term Examination Manager
+                        </h2>
+                        <p class="text-sm text-gray-500 font-semibold mb-6">
+                            Bucket-first workflow — upload a questions JSON file and link it to an exam row.
+                            Edits to the JSON take effect instantly the next time a student loads the exam
+                            (no seed script reruns required).
+                        </p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <label for="filter-term" class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Filter by Term</label>
+                                <select id="filter-term" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                                    <option value="ALL">All Terms</option>
+                                    <option value="1">Term 1</option>
+                                    <option value="2">Term 2</option>
+                                    <option value="3">Term 3</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Quick Actions</label>
+                                <div class="flex gap-2 flex-wrap">
+                                    <button id="btn-new-exam" class="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl px-4 py-3 text-[11px] font-black uppercase tracking-widest transition-all active:scale-95">
+                                        <i class="fa-solid fa-plus mr-1"></i> New Exam
+                                    </button>
+                                    <button id="btn-refresh" class="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-white rounded-xl px-4 py-3 text-[11px] font-black uppercase tracking-widest transition-all active:scale-95">
+                                        <i class="fa-solid fa-rotate mr-1"></i> Refresh
+                                    </button>
+                                    <button id="btn-view-results" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-3 text-[11px] font-black uppercase tracking-widest transition-all active:scale-95">
+                                        <i class="fa-solid fa-chart-line mr-1"></i> View Results
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="exams-list" class="space-y-3">
+                            <div class="text-center py-10 text-gray-400 font-semibold text-sm">
+                                <i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading exams...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="results-panel" class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hidden">
+                    <div class="p-1 bg-indigo-600"></div>
+                    <div class="p-6">
+                        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-800 mb-1">Exam Submission Results</h2>
+                                <p class="text-sm text-gray-500 font-semibold">Filter submitted attempts by grade, term, status, or student/exam name.</p>
+                            </div>
+                            <button id="btn-close-results" class="bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl px-4 py-3 text-[11px] font-black uppercase tracking-widest transition-all active:scale-95">Close Results</button>
+                        </div>
+
+                        <div class="grid grid-cols-1 xl:grid-cols-5 gap-3 mb-4 items-end">
+                            <div>
+                                <label for="filter-grade" class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Grade</label>
+                                <select id="filter-grade" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                                    <option value="ALL">All Grades</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="filter-results-term" class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Term</label>
+                                <select id="filter-results-term" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                                    <option value="ALL">All Terms</option>
+                                    <option value="1">Term 1</option>
+                                    <option value="2">Term 2</option>
+                                    <option value="3">Term 3</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="filter-results-status" class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Status</label>
+                                <select id="filter-results-status" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                                    <option value="ALL">All Status</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="submitted">Submitted</option>
+                                    <option value="in_progress">In Progress</option>
+                                </select>
+                            </div>
+                            <div class="xl:col-span-2">
+                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Search</label>
+                                <input id="filter-search" type="search" placeholder="Student or exam" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+                            </div>
+                        </div>
+
+                        <div id="results-loading" class="text-center py-10 text-gray-400 font-semibold text-sm"></div>
+                        <div id="results-table" class="overflow-x-auto"></div>
+                    </div>
+                </div>
+
+                <div id="editor-card" class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hidden">
+                    <div class="p-1 bg-blue-600"></div>
+                    <div class="p-6">
+                        <h3 id="editor-title" class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-pen-to-square text-blue-600"></i>
+                            Exam Details
+                        </h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Exam Title *</label>
+                                <input id="fld-title" type="text" class="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-blue-500 focus:outline-none font-bold text-gray-900 transition-all text-sm" placeholder="Grade 7 Values Education - Term 1">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Subject *</label>
+                                <input id="fld-subject" type="text" class="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-blue-500 focus:outline-none font-bold text-gray-900 transition-all text-sm" placeholder="Values Education">
+                            </div>
+                            <div>
+                                <label for="fld-term" class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Term *</label>
+                                <select id="fld-term" class="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-blue-500 focus:outline-none font-bold text-gray-900 transition-all text-sm">
+                                    <option value="1">Term 1</option>
+                                    <option value="2">Term 2</option>
+                                    <option value="3">Term 3</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="fld-duration" class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Duration (minutes) *</label>
+                                <input id="fld-duration" type="number" min="5" max="300" value="30" class="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-blue-500 focus:outline-none font-bold text-gray-900 transition-all text-sm">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Description</label>
+                                <input id="fld-description" type="text" class="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-blue-500 focus:outline-none font-bold text-gray-900 transition-all text-sm" placeholder="Short description shown to students">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Exam Status</label>
+                                <div class="flex items-center gap-3 mt-2">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="fld-active" value="true" checked>
+                                        <span class="text-xs font-bold text-green-700">Active (visible to students)</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="fld-active" value="false">
+                                        <span class="text-xs font-bold text-gray-500">Hidden</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-gray-100 pt-5 mt-3 mb-4">
+                            <h4 class="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                <i class="fa-solid fa-cloud-arrow-up text-blue-600"></i>
+                                Upload / Link Questions JSON
+                            </h4>
+
+                            <div class="bg-blue-50 rounded-2xl p-4 border border-blue-100 mb-4">
+                                <p class="text-[11px] text-blue-800 font-bold mb-2">Step 1 — Prepare your file:</p>
+                                <ul class="text-[11px] text-blue-700 font-semibold space-y-1 list-disc list-inside">
+                                    <li>JSON array of questions: <code class="bg-white px-1 rounded">position, question_text, question_type (multiple_choice|short_answer), choices[], correct_answer, points</code></li>
+                                    <li>For multiple choice, <code class="bg-white px-1 rounded">correct_answer</code> can be a letter (A/B/C/D) or the matching full choice text.</li>
+                                    <li>Template example: <code class="bg-white px-1 rounded">data/exam-source/_EXAMPLE-QUESTIONS-TEMPLATE.json</code></li>
+                                </ul>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                                <div class="md:col-span-2">
+                                    <label for="fld-file" class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">JSON File *</label>
+                                    <input id="fld-file" type="file" accept="application/json" class="w-full text-xs font-semibold text-gray-700 bg-white border-2 border-gray-100 rounded-xl px-3 py-2.5 focus:border-blue-500 focus:outline-none transition-all file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-black file:uppercase file:tracking-widest file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:cursor-pointer">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Bucket Path (auto-suggested)</label>
+                                    <input id="fld-bucket-path" type="text" class="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-blue-500 focus:outline-none font-mono text-[11px] text-gray-900 transition-all" placeholder="e.g. g7/term1/ve-questions.json">
+                                </div>
+                                <div>
+                                    <button id="btn-validate" class="w-full bg-amber-500 hover:bg-amber-600 text-white rounded-xl px-4 py-3 text-[11px] font-black uppercase tracking-widest transition-all active:scale-95">
+                                        <i class="fa-solid fa-list-check mr-1"></i> Validate JSON
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="validation-area" class="mt-4 hidden">
+                                <div id="validation-status" class="rounded-xl p-4 text-xs font-bold"></div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3 flex-wrap justify-end">
+                            <button id="btn-cancel" class="bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl px-6 py-3 text-xs font-black uppercase tracking-widest transition-all active:scale-95">
+                                Cancel
+                            </button>
+                            <button id="btn-save" class="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-8 py-3 text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg">
+                                <i class="fa-solid fa-floppy-disk mr-1"></i> Save Exam &amp; Upload
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const BUCKET_NAME = 'exam-source';
+        let editingId = null;
+        let currentFile = null;
+        let examsCache = [];
+        let examResultsCache = [];
+        let examMap = {};
+        let profileMap = {};
+        let gradeOptions = [];
+
+        function initManager() {
+            document.getElementById('filter-term').addEventListener('change', renderExamList);
+            document.getElementById('btn-new-exam').addEventListener('click', newExamForm);
+            document.getElementById('btn-refresh').addEventListener('click', loadExams);
+            document.getElementById('btn-view-results').addEventListener('click', showResultsPanel);
+            document.getElementById('btn-cancel').addEventListener('click', hideEditor);
+            document.getElementById('btn-save').addEventListener('click', saveExam);
+            document.getElementById('btn-validate').addEventListener('click', validateSelectedFile);
+            document.getElementById('fld-file').addEventListener('change', onFileSelected);
+            document.getElementById('btn-close-results').addEventListener('click', hideResultsPanel);
+            document.getElementById('filter-grade').addEventListener('change', renderResultsTable);
+            document.getElementById('filter-results-term').addEventListener('change', renderResultsTable);
+            document.getElementById('filter-results-status').addEventListener('change', renderResultsTable);
+            document.getElementById('filter-search').addEventListener('input', renderResultsTable);
+            ['fld-title','fld-subject','fld-term'].forEach(id =>
+                document.getElementById(id).addEventListener('input', suggestBucketPath)
+            );
+            loadExams();
+        }
+
+        function slug(s) {
+            return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        }
+
+        function suggestBucketPath() {
+            const title = document.getElementById('fld-title').value;
+            const subject = document.getElementById('fld-subject').value;
+            const term = document.getElementById('fld-term').value;
+            const gradeMatch = title.match(/grade\s*(\d+)|g\s*(\d+)/i);
+            const grade = gradeMatch ? (gradeMatch[1] || gradeMatch[2]) : null;
+            const parts = [];
+            if (grade) parts.push(`g${grade}`);
+            if (term) parts.push(`term${term}`);
+            const subj = slug(subject);
+            if (parts.length) {
+                document.getElementById('fld-bucket-path').placeholder =
+                    parts.join('/') + '/' + (subj || 'questions') + '.json';
+            }
+        }
+
+        async function loadExams() {
+            const list = document.getElementById('exams-list');
+            list.innerHTML = '<div class="text-center py-10 text-gray-400 font-semibold text-sm"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading exams...</div>';
+            try {
+                const { data, error } = await window.supabaseClient
+                    .from('exams')
+                    .select('*')
+                    .order('term', { ascending: true })
+                    .order('subject', { ascending: true });
+                if (error) throw error;
+                examsCache = data || [];
+                renderExamList();
+            } catch (err) {
+                list.innerHTML = `<div class="bg-red-50 text-red-700 text-sm font-bold p-4 rounded-xl">Failed to load exams. ${err.message}</div>`;
+            }
+        }
+
+        function renderExamList() {
+            const list = document.getElementById('exams-list');
+            const term = document.getElementById('filter-term').value;
+            let data = examsCache;
+            if (term !== 'ALL') data = examsCache.filter(e => String(e.term) === String(term));
+
+            if (!data.length) {
+                list.innerHTML = `<div class="text-center py-10 text-gray-400 font-semibold text-sm"><i class="fa-solid fa-circle-info mr-2"></i> No exams found. Click "New Exam" to create one.</div>`;
+                return;
+            }
+
+            list.innerHTML = '';
+            data.forEach(exam => {
+                const linked = !!exam.questions_bucket_path;
+                const activeColor = exam.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500';
+                const activeLabel = exam.is_active ? 'Active' : 'Hidden';
+                const card = document.createElement('article');
+                card.className = 'border border-gray-100 rounded-2xl p-4 bg-gradient-to-b from-white to-gray-50 hover:shadow-md transition-all';
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-4 flex-wrap">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-wrap gap-2 mb-2">
+                                <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-50 text-blue-700">
+                                    Term ${exam.term}
+                                </span>
+                                <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-700">
+                                    ${escapeHtml(exam.subject)}
+                                </span>
+                                <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${activeColor}">
+                                    ${activeLabel}
+                                </span>
+                                ${linked
+                                    ? '<span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-700"><i class="fa-solid fa-link mr-1"></i> Questions Linked</span>'
+                                    : '<span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-50 text-amber-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i> No Questions Linked</span>'}
+                            </div>
+                            <h4 class="text-base font-bold text-gray-800 mb-1">${escapeHtml(exam.title)}</h4>
+                            ${exam.description ? `<p class="text-xs text-gray-500 font-semibold mb-2">${escapeHtml(exam.description)}</p>` : ''}
+                            <p class="text-[11px] font-mono text-gray-400 truncate max-w-full">
+                                ${linked ? 'Bucket: ' + BUCKET_NAME + '/' + exam.questions_bucket_path : 'No questions file linked yet — click Edit to upload JSON'}
+                            </p>
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                            <button class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 edit-btn" data-id="${exam.id}">
+                                <i class="fa-solid fa-pen mr-1"></i> Edit / Upload
+                            </button>
+                            ${linked ? `<button class="bg-gray-50 hover:bg-gray-100 text-gray-700 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 unlink-btn" data-id="${exam.id}"><i class="fa-solid fa-link-slash mr-1"></i> Unlink</button>` : ''}
+                            <button class="bg-red-50 hover:bg-red-100 text-red-700 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 del-btn" data-id="${exam.id}">
+                                <i class="fa-solid fa-trash mr-1"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+
+            list.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', () => editExam(b.dataset.id)));
+            list.querySelectorAll('.del-btn').forEach(b => b.addEventListener('click', () => deleteExam(b.dataset.id)));
+            list.querySelectorAll('.unlink-btn').forEach(b => b.addEventListener('click', () => unlinkExam(b.dataset.id)));
+        }
+
+        function inferGradeFromExam(exam) {
+            const path = String(exam.questions_bucket_path || exam.bucket_path || '');
+            const title = String(exam.title || '');
+            const pathMatch = path.match(/g(\d+)[\/]/i);
+            if (pathMatch && pathMatch[1]) return Number(pathMatch[1]);
+            const titleMatch = title.match(/grade\s*(\d+)|g\s*(\d+)/i);
+            if (titleMatch) return Number(titleMatch[1] || titleMatch[2]);
+            return null;
+        }
+
+        async function showResultsPanel() {
+            document.getElementById('results-panel').classList.remove('hidden');
+            document.getElementById('filter-grade').value = 'ALL';
+            document.getElementById('filter-results-term').value = 'ALL';
+            document.getElementById('filter-results-status').value = 'ALL';
+            document.getElementById('filter-search').value = '';
+            examResultsCache = [];
+            await loadExamResults();
+            document.getElementById('results-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function loadExamResults() {
+            const loading = document.getElementById('results-loading');
+            const table = document.getElementById('results-table');
+            loading.innerHTML = '<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading exam results...</div>';
+            table.innerHTML = '';
+
+            const { data: { session }, error: sessionError } = await window.supabaseClient.auth.getSession();
+            if (sessionError || !session) {
+                table.innerHTML = '<div class="text-center py-10 text-red-700 font-semibold">Unable to load exam results: no active session.</div>';
+                loading.innerHTML = '';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${window.supabaseClient.supabaseUrl}/functions/v1/student-exams`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': window.supabaseClient.supabaseKey,
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify({ type: 'admin-exam-results' })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Unable to load admin exam results.');
+                }
+
+                examResultsCache = result.attempts || [];
+
+                if (!examResultsCache.length) {
+                    table.innerHTML = '<div class="text-center py-10 text-gray-500 font-semibold">No exam submissions found yet.</div>';
+                    return;
+                }
+
+                examMap = examResultsCache.reduce((acc, attempt) => {
+                    if (attempt.exam && attempt.exam.id) acc[attempt.exam.id] = attempt.exam;
+                    return acc;
+                }, {});
+                profileMap = examResultsCache.reduce((acc, attempt) => {
+                    if (attempt.profile && attempt.profile.id) acc[attempt.profile.id] = attempt.profile;
+                    return acc;
+                }, {});
+
+                let examIds = Array.from(new Set(examResultsCache.map((attempt) => attempt.exam_id).filter(Boolean)));
+                let profileIds = Array.from(new Set(examResultsCache.map((attempt) => attempt.profile_id).filter(Boolean)));
+
+                const needsExamLookup = examIds.length && Object.keys(examMap).length !== examIds.length;
+                const needsProfileLookup = profileIds.length && Object.keys(profileMap).length !== profileIds.length;
+
+                if (needsExamLookup || needsProfileLookup) {
+                    const [examResponse, profileResponse] = await Promise.allSettled([
+                        needsExamLookup
+                            ? window.supabaseClient
+                                .from('exams')
+                                .select('id, title, subject, term, questions_bucket_path')
+                                .in('id', examIds)
+                            : Promise.resolve({ data: [], error: null }),
+                        needsProfileLookup
+                            ? window.supabaseClient
+                                .from('profiles')
+                                .select('id, full_name, email')
+                                .in('id', profileIds)
+                            : Promise.resolve({ data: [], error: null })
+                    ]);
+
+                    if (needsExamLookup) {
+                        if (examResponse.status === 'fulfilled' && !examResponse.value.error) {
+                            examMap = (examResponse.value.data || []).reduce((acc, exam) => ({ ...acc, [exam.id]: exam }), { ...examMap });
+                        } else {
+                            const message = examResponse.status === 'rejected'
+                                ? examResponse.reason?.message || String(examResponse.reason)
+                                : examResponse.value?.error?.message || 'Unknown error';
+                            console.warn('Exam metadata lookup failed:', message);
+                        }
+                    }
+
+                    if (needsProfileLookup) {
+                        if (profileResponse.status === 'fulfilled' && !profileResponse.value.error) {
+                            profileMap = (profileResponse.value.data || []).reduce((acc, profile) => ({ ...acc, [profile.id]: profile }), { ...profileMap });
+                        } else {
+                            const message = profileResponse.status === 'rejected'
+                                ? profileResponse.reason?.message || String(profileResponse.reason)
+                                : profileResponse.value?.error?.message || 'Unknown error';
+                            console.warn('Profile lookup failed:', message);
+                        }
+                    }
+                }
+
+                gradeOptions = Array.from(new Set(Object.values(examMap).map(inferGradeFromExam).filter(Boolean))).sort((a, b) => Number(a) - Number(b));
+                const gradeSelect = document.getElementById('filter-grade');
+                gradeSelect.innerHTML = '<option value="ALL">All Grades</option>' + gradeOptions.map((grade) => `<option value="${grade}">Grade ${grade}</option>`).join('');
+                renderResultsTable();
+            } catch (err) {
+                table.innerHTML = `<div class="text-center py-10 text-red-700">Failed to load exam results. ${escapeHtml(err?.message || String(err))}</div>`;
+            } finally {
+                loading.innerHTML = '';
+            }
+        }
+
+        function renderResultsTable() {
+            const gradeValue = document.getElementById('filter-grade').value;
+            const termValue = document.getElementById('filter-results-term').value;
+            const statusValue = document.getElementById('filter-results-status').value;
+            const searchTerm = document.getElementById('filter-search').value.trim().toLowerCase();
+            const filtered = examResultsCache.filter((attempt) => {
+                const exam = examMap[attempt.exam_id] || {};
+                const student = profileMap[attempt.profile_id] || {};
+                const examGrade = inferGradeFromExam(exam);
+                if (gradeValue !== 'ALL' && String(examGrade) !== gradeValue) return false;
+                if (termValue !== 'ALL' && String(attempt.term) !== termValue) return false;
+                if (statusValue !== 'ALL' && String(attempt.status) !== statusValue) return false;
+                if (!searchTerm) return true;
+                return String(exam.title || '').toLowerCase().includes(searchTerm)
+                    || String(exam.subject || '').toLowerCase().includes(searchTerm)
+                    || String(student.full_name || '').toLowerCase().includes(searchTerm)
+                    || String(student.email || '').toLowerCase().includes(searchTerm);
+            });
+
+            const table = document.getElementById('results-table');
+            if (!filtered.length) {
+                table.innerHTML = '<div class="text-center py-10 text-gray-500 font-semibold">No exam submissions found for the selected filters.</div>';
+                return;
+            }
+
+            const rows = filtered.map((attempt) => {
+                const exam = examMap[attempt.exam_id] || {};
+                const student = profileMap[attempt.profile_id] || {};
+                const grade = inferGradeFromExam(exam);
+                const submitted = attempt.submitted_at ? new Date(attempt.submitted_at).toLocaleString() : 'N/A';
+                return `
+                    <tr>
+                        <td class="px-4 py-3 text-sm text-gray-700">${escapeHtml(student.full_name || 'Unknown')}</td>
+                        <td class="px-4 py-3 text-sm text-gray-500">${escapeHtml(student.email || '')}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700">${escapeHtml(exam.title || 'Unknown Exam')}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700">${grade ? 'Grade ' + grade : 'Unknown'}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700">Term ${escapeHtml(String(attempt.term))}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700">${submitted}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700">${escapeHtml(String(attempt.score ?? '-'))}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 uppercase">${escapeHtml(attempt.status)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            table.innerHTML = `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100 text-xs uppercase tracking-wider text-gray-600">
+                                <th class="px-4 py-3">Student</th>
+                                <th class="px-4 py-3">Email</th>
+                                <th class="px-4 py-3">Exam</th>
+                                <th class="px-4 py-3">Grade</th>
+                                <th class="px-4 py-3">Term</th>
+                                <th class="px-4 py-3">Submitted</th>
+                                <th class="px-4 py-3">Score</th>
+                                <th class="px-4 py-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function hideResultsPanel() {
+            document.getElementById('results-panel').classList.add('hidden');
+        }
+
+        function resetEditor() {
+            editingId = null;
+            currentFile = null;
+            document.getElementById('editor-title').innerHTML = '<i class="fa-solid fa-file-circle-plus text-green-600"></i> New Term Examination';
+            document.getElementById('fld-title').value = '';
+            document.getElementById('fld-subject').value = '';
+            document.getElementById('fld-term').value = '1';
+            document.getElementById('fld-duration').value = '30';
+            document.getElementById('fld-description').value = '';
+            document.querySelector('input[name="fld-active"][value="true"]').checked = true;
+            document.getElementById('fld-file').value = '';
+            document.getElementById('fld-bucket-path').value = '';
+            hideValidation();
+        }
+
+        function newExamForm() {
+            resetEditor();
+            showEditor();
+        }
+
+        function showEditor() {
+            document.getElementById('editor-card').classList.remove('hidden');
+            document.getElementById('editor-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function hideEditor() {
+            document.getElementById('editor-card').classList.add('hidden');
+        }
+
+        async function editExam(id) {
+            const exam = examsCache.find(e => e.id === id);
+            if (!exam) return;
+            resetEditor();
+            editingId = id;
+            document.getElementById('editor-title').innerHTML = '<i class="fa-solid fa-pen-to-square text-blue-600"></i> Edit Term Examination';
+            document.getElementById('fld-title').value = exam.title || '';
+            document.getElementById('fld-subject').value = exam.subject || '';
+            document.getElementById('fld-term').value = String(exam.term || '1');
+            document.getElementById('fld-duration').value = String(exam.duration_minutes || 30);
+            document.getElementById('fld-description').value = exam.description || '';
+            document.querySelector(`input[name="fld-active"][value="${exam.is_active ? 'true' : 'false'}"]`).checked = true;
+            document.getElementById('fld-bucket-path').value = exam.questions_bucket_path || '';
+            suggestBucketPath();
+            showEditor();
+        }
+
+        async function unlinkExam(id) {
+            if (!confirm('Unlink questions file from this exam? Students will see "Preparing Questions" until a new JSON is linked.')) return;
+            try {
+                const { error } = await window.supabaseClient
+                    .from('exams')
+                    .update({ questions_bucket_path: null })
+                    .eq('id', id);
+                if (error) throw error;
+                await loadExams();
+                alert('Questions file unlinked.');
+            } catch (err) {
+                alert('Unlink failed: ' + err.message);
+            }
+        }
+
+        async function deleteExam(id) {
+            if (!confirm('Delete this exam metadata row? The questions JSON file in storage will NOT be deleted.')) return;
+            try {
+                const { error } = await window.supabaseClient
+                    .from('exams')
+                    .delete()
+                    .eq('id', id);
+                if (error) throw error;
+                if (editingId === id) hideEditor();
+                await loadExams();
+                alert('Exam deleted.');
+            } catch (err) {
+                alert('Delete failed: ' + err.message);
+            }
+        }
+
+        function onFileSelected() {
+            const input = document.getElementById('fld-file');
+            currentFile = input.files && input.files[0] ? input.files[0] : null;
+            if (!currentFile) return;
+            const name = currentFile.name.toLowerCase();
+            if (!name.endsWith('.json')) {
+                alert('Please select a .json file.');
+                input.value = '';
+                currentFile = null;
+                return;
+            }
+            if (!document.getElementById('fld-bucket-path').value) {
+                const title = document.getElementById('fld-title').value;
+                const term = document.getElementById('fld-term').value;
+                const gradeMatch = title.match(/grade\s*(\d+)|g\s*(\d+)/i);
+                const grade = gradeMatch ? (gradeMatch[1] || gradeMatch[2]) : null;
+                const prefix = grade ? `g${grade}/term${term}/` : '';
+                document.getElementById('fld-bucket-path').value = prefix + slug(currentFile.name.replace(/\.json$/i, '')) + '.json';
+            }
+        }
+
+        function parseChoicesFallback(raw) {
+            if (!raw) return [];
+            if (typeof raw === 'string') { try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch { return []; } }
+            return [];
+        }
+
+        async function validateSelectedFile() {
+            if (!currentFile) {
+                setValidation('error', 'Select a JSON file first.');
+                return;
+            }
+            try {
+                const text = await currentFile.text();
+                let arr;
+                try { arr = JSON.parse(text); } catch (e) { throw new Error('Invalid JSON syntax: ' + e.message); }
+                if (!Array.isArray(arr)) throw new Error('JSON must be an array of question objects.');
+                if (!arr.length) throw new Error('Question array is empty.');
+
+                const warnings = [];
+                const LETTER_IDX = { A: 0, B: 1, C: 2, D: 3, E: 4, F: 5 };
+                let totalPoints = 0;
+                let mcq = 0, sa = 0;
+                const positions = [];
+
+                arr.forEach((q, i) => {
+                    const idx = `Q${i + 1}${q.position ? ' (pos ' + q.position + ')' : ''}`;
+                    if (q.position !== undefined) positions.push(Number(q.position));
+                    if (!String(q.question_text || '').trim()) warnings.push(idx + ': blank question_text');
+                    const qt = String(q.question_type || '');
+                    if (!['multiple_choice', 'short_answer'].includes(qt)) warnings.push(idx + ': unknown question_type "' + qt + '"');
+                    const choices = Array.isArray(q.choices) ? q.choices : parseChoicesFallback(q.choices);
+                    if (qt === 'multiple_choice') {
+                        mcq++;
+                        if (choices.length < 2) warnings.push(idx + ': multiple_choice with fewer than 2 choices');
+                    } else { sa++; }
+                    const ca = String(q.correct_answer || '').trim();
+                    if (!ca) { warnings.push(idx + ': missing correct_answer'); }
+                    else if (qt === 'multiple_choice') {
+                        let resolved = ca;
+                        const up = ca.toUpperCase();
+                        if (LETTER_IDX[up] !== undefined && typeof choices[LETTER_IDX[up]] === 'string') {
+                            resolved = String(choices[LETTER_IDX[up]]).trim();
+                        }
+                        if (!choices.map(c => String(c).trim()).includes(String(resolved).trim())) {
+                            warnings.push(idx + ': correct_answer "' + ca + '" not found in choices');
+                        }
+                    }
+                    const pts = Number(q.points);
+                    if (isNaN(pts) || pts <= 0) warnings.push(idx + ': invalid points (' + q.points + ')');
+                    else totalPoints += pts;
+                });
+
+                const uniq = new Set(positions);
+                if (positions.length && uniq.size !== positions.length) warnings.push('Duplicate position values — fix before upload.');
+
+                let html = `<p class="font-black mb-2"><i class="fa-solid fa-circle-check mr-1"></i> ${arr.length} questions parsed successfully.</p>`;
+                html += `<p class="text-[11px] font-semibold opacity-80 mb-1">Total Points: ${totalPoints} • Multiple Choice: ${mcq} • Short Answer: ${sa}</p>`;
+                if (warnings.length) {
+                    html += `<p class="font-black mt-3 mb-1 text-amber-800"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Warnings (${warnings.length}) — fix before upload to avoid scoring issues:</p><ul class="list-disc list-inside space-y-1">`;
+                    warnings.slice(0, 30).forEach(w => html += `<li>${escapeHtml(w)}</li>`);
+                    if (warnings.length > 30) html += `<li>...and ${warnings.length - 30} more</li>`;
+                    html += '</ul>';
+                    setValidation('warn', html);
+                } else {
+                    html += `<p class="font-black mt-2 text-green-800"><i class="fa-solid fa-check-double mr-1"></i> All checks passed — file is ready to upload.</p>`;
+                    setValidation('ok', html);
+                }
+            } catch (err) {
+                setValidation('error', 'Validation failed: ' + err.message);
+            }
+        }
+
+        function hideValidation() { document.getElementById('validation-area').classList.add('hidden'); }
+        function setValidation(kind, html) {
+            const area = document.getElementById('validation-area');
+            const el = document.getElementById('validation-status');
+            area.classList.remove('hidden');
+            if (kind === 'ok') { el.className = 'rounded-xl p-4 text-xs font-bold bg-green-50 text-green-800 border border-green-200'; }
+            else if (kind === 'warn') { el.className = 'rounded-xl p-4 text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200'; }
+            else { el.className = 'rounded-xl p-4 text-xs font-bold bg-red-50 text-red-800 border border-red-200'; }
+            el.innerHTML = html;
+        }
+
+        async function saveExam() {
+            const title = document.getElementById('fld-title').value.trim();
+            const subject = document.getElementById('fld-subject').value.trim();
+            const term = Number(document.getElementById('fld-term').value);
+            const duration = Number(document.getElementById('fld-duration').value);
+            const description = document.getElementById('fld-description').value.trim();
+            const is_active = document.querySelector('input[name="fld-active"]:checked').value === 'true';
+            const bucketPathRaw = document.getElementById('fld-bucket-path').value.trim();
+            const fileInput = document.getElementById('fld-file');
+            const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+
+            if (!title || !subject || !term) { alert('Please fill Title, Subject, and Term.'); return; }
+            if (isNaN(duration) || duration <= 0) { alert('Duration must be a positive number.'); return; }
+
+            let finalBucketPath = bucketPathRaw;
+
+            try {
+                if (file) {
+                    if (!finalBucketPath) throw new Error('Bucket path is required when uploading a file.');
+                    const buf = await file.arrayBuffer();
+                    const { data: upData, error: upErr } = await window.supabaseClient
+                        .storage
+                        .from(BUCKET_NAME)
+                        .upload(finalBucketPath, buf, {
+                            contentType: 'application/json',
+                            upsert: true,
+                            cacheControl: 'no-store'
+                        });
+                    if (upErr) throw new Error('Bucket upload failed: ' + (upErr.message || upErr.error || JSON.stringify(upErr)));
+                }
+
+                const payload = { title, subject, term, duration_minutes: duration, description, is_active };
+                if (finalBucketPath) payload.questions_bucket_path = finalBucketPath;
+                else if (editingId && !file) { /* keep existing path if already set and no file/clear */ }
+
+                if (editingId) {
+                    const { error: up } = await window.supabaseClient
+                        .from('exams')
+                        .update(payload)
+                        .eq('id', editingId);
+                    if (up) throw up;
+                } else {
+                    const { error: ins } = await window.supabaseClient
+                        .from('exams')
+                        .insert([payload]);
+                    if (ins) throw ins;
+                }
+
+                await loadExams();
+                hideEditor();
+                alert('✓ Exam saved successfully!' + (file ? '\nQuestions file uploaded to ' + BUCKET_NAME + '/' + finalBucketPath : ''));
+            } catch (err) {
+                alert('Save failed: ' + err.message);
+            }
+        }
+
+        function escapeHtml(s) {
+            return String(s ?? '')
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        if (window.supabaseClient) initManager(); else window.addEventListener('load', initManager);
+    </script>
+</body>
+</html>

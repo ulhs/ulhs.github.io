@@ -3467,6 +3467,15 @@ body.dark-mode #sync-photos-btn {
     border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
+body.dark-mode #btn-close-results {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: var(--text-dark) !important;
+}
+
+body.dark-mode #btn-close-results:hover {
+    background-color: rgba(255, 255, 255, 0.12) !important;
+}
+
 body.dark-mode #last-scanned-card .bg-blue-100 {
     background-color: rgba(255, 255, 255, 0.04) !important;
     border-color: rgba(255, 255, 255, 0.14) !important;
@@ -3488,6 +3497,27 @@ body.dark-mode .bg-amber-50,
 body.dark-mode .bg-orange-50,
 body.dark-mode .bg-red-50 {
     background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+body.dark-mode .bg-emerald-50 {
+    background-color: rgba(72, 187, 120, 0.12) !important;
+}
+
+body.dark-mode .bg-amber-50 {
+    background-color: rgba(245, 158, 11, 0.12) !important;
+}
+
+body.dark-mode .text-emerald-700 {
+    color: #b7f0bb !important;
+}
+
+body.dark-mode .text-amber-700 {
+    color: #ffe4a1 !important;
+}
+
+body.dark-mode .bg-gradient-to-b.from-white.to-gray-50 {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%) !important;
+    border-color: rgba(255,255,255,0.1) !important;
 }
 
 body.dark-mode .text-gray-900,
@@ -3590,7 +3620,8 @@ body.dark-mode .text-blue-500 {
 
 body.dark-mode select,
 body.dark-mode input[type="text"],
-body.dark-mode input[type="search"] {
+body.dark-mode input[type="search"],
+body.dark-mode input[type="date"] {
     background-color: var(--bg-dark) !important;
     color: var(--text-dark) !important;
     border-color: rgba(255, 255, 255, 0.2) !important;

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.gstatic.com https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.supabase.net wss://*.supabase.co wss://*.supabase.net https://cdn.jsdelivr.net https://api.counterapi.dev;">
+    <title>Student Digital Hub | Upper Labay High School</title>
+    <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
+    <script src="../../assets/js/main.js"></script>
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <style>
+        body {
+            margin: 0;
+            background: linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%);
+            color: #1f2937;
+            font-family: 'Open Sans', sans-serif;
+        }
+
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 460px;
+            padding: 32px 28px;
+            border-radius: 24px;
+            background: #ffffff;
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
+            border: 1px solid rgba(37, 99, 235, 0.12);
+            text-align: center;
+        }
+
+        .login-logo {
+            width: 78px;
+            height: 78px;
+            margin-bottom: 12px;
+        }
+
+        .login-title {
+            margin: 0;
+            font-family: 'Acme', sans-serif;
+            font-size: 2rem;
+            color: #0f766e;
+        }
+
+        .login-subtitle {
+            margin: 8px 0 24px;
+            font-size: 0.8rem;
+            color: #6b7280;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .login-btn {
+            width: 100%;
+            margin-top: 16px;
+            padding: 14px;
+            background: #ffffff;
+            color: #374151;
+            border: 2px solid #dbeafe;
+            border-radius: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(15, 118, 110, 0.08);
+        }
+
+        .login-btn:hover {
+            background: #f8fafc;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.12);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .login-status {
+            margin-top: 16px;
+            font-size: 0.72rem;
+            color: #0f766e;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .login-note {
+            margin-top: 18px;
+            font-size: 0.72rem;
+            color: #9ca3af;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .error-msg {
+            display: none;
+            margin-top: 18px;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #fecaca;
+            background: #fff5f5;
+            color: #b91c1c;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 18px;
+            color: #64748b;
+            font-size: 0.85rem;
+            text-decoration: none;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card text-center">
+            <img src="../../assets/images/school-logo.webp" alt="School logo" class="login-logo">
+            <h2 class="login-title">Student Digital Hub</h2>
+            <p class="login-subtitle">Learning • Quizzes • Progress</p>
+
+            <div id="auth-container">
+                <button id="google-login-btn" class="login-btn flex items-center justify-center gap-3" style="display: flex; align-items: center; justify-content: center; gap: 12px; background: white; color: #1f2937; border-color: #bfdbfe;">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="Google">
+                    <span id="login-text" style="font-weight: 800;">Sign in with Google</span>
+                </button>
+
+                <div id="auth-status" style="display: none; margin-top: 16px;">
+                    <div class="inline-block animate-spin rounded-full h-4 w-4 border-2 border-teal-600 border-t-transparent"></div>
+                    <p id="status-text" class="login-status">Preparing your portal...</p>
+                </div>
+
+                <p id="auth-footer-text" class="login-note">
+                    Use your school Google account to access your student hub.
+                </p>
+            </div>
+
+            <div id="login-error-msg" class="error-msg"></div>
+            <a href="../../index.html" class="back-link">← Back to Homepage</a>
+        </div>
+    </div>
+
+    <script>
+        const googleLoginBtn = document.getElementById('google-login-btn');
+        const loginText = document.getElementById('login-text');
+        const authStatus = document.getElementById('auth-status');
+        const statusText = document.getElementById('status-text');
+        const authFooter = document.getElementById('auth-footer-text');
+        const errorMsg = document.getElementById('login-error-msg');
+
+        let isProcessing = false;
+
+        async function processSession(session) {
+            if (!session || isProcessing) return;
+            isProcessing = true;
+
+            try {
+                googleLoginBtn.style.display = 'none';
+                authFooter.style.display = 'none';
+                authStatus.style.display = 'block';
+                errorMsg.style.display = 'none';
+
+                const { data: profile, error: profileError } = await window.supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (profileError || !profile) {
+                    statusText.textContent = 'Creating your student profile...';
+                    const profileData = {
+                        id: session.user.id,
+                        email: session.user.email.toLowerCase().trim(),
+                        full_name: session.user.user_metadata.full_name || session.user.email,
+                        avatar_url: session.user.user_metadata.avatar_url || null,
+                        role: 'student'
+                    };
+
+                    const { error: insertError } = await window.supabaseClient
+                        .from('profiles')
+                        .insert([profileData]);
+
+                    if (insertError) throw new Error('Profile setup failed: ' + insertError.message);
+                } else {
+                    statusText.textContent = 'Welcome back, ' + (profile.full_name || 'Student');
+                }
+
+                sessionStorage.setItem('studentLoggedIn', 'true');
+                sessionStorage.setItem('userEmail', session.user.email);
+                sessionStorage.setItem('userRole', 'student');
+                sessionStorage.setItem('userName', session.user.user_metadata.full_name || session.user.email);
+
+                setTimeout(() => {
+                    window.location.replace('./dashboard.html');
+                }, 800);
+            } catch (err) {
+                console.error('Student login error:', err);
+                isProcessing = false;
+                googleLoginBtn.style.display = 'flex';
+                authFooter.style.display = 'block';
+                authStatus.style.display = 'none';
+                errorMsg.textContent = err.message || 'Unable to sign in right now.';
+                errorMsg.style.display = 'block';
+            }
+        }
+
+        async function initAuth() {
+            if (!window.supabaseClient) {
+                setTimeout(initAuth, 100);
+                return;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const selectAccount = urlParams.get('select_account');
+
+            if (urlParams.has('error_description')) {
+                errorMsg.textContent = 'Auth Error: ' + urlParams.get('error_description');
+                errorMsg.style.display = 'block';
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            if (selectAccount === '1' || selectAccount === 'true') {
+                await window.supabaseClient.auth.signOut();
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (session) processSession(session);
+
+            window.supabaseClient.auth.onAuthStateChange((event, session) => {
+                if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+                    processSession(session);
+                }
+            });
+        }
+
+        googleLoginBtn.addEventListener('click', async () => {
+            errorMsg.style.display = 'none';
+            const { error } = await window.supabaseClient.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin + window.location.pathname,
+                    queryParams: { prompt: 'select_account' }
+                }
+            });
+            if (error) {
+                errorMsg.textContent = 'OAuth Error: ' + error.message;
+                errorMsg.style.display = 'block';
+            }
+        });
+
+        initAuth();
+    </script>
+</body>
+</html>

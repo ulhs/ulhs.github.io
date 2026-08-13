@@ -99,6 +99,12 @@
                             <span class="text">GRADES</span>
                         </a>
                     </li>
+                    <li class="list" data-page="exam-manager.html">
+                        <a href="exam-manager.html">
+                            <span class="icon"><i class="fa-solid fa-file-circle-check"></i></span>
+                            <span class="text">EXAMS</span>
+                        </a>
+                    </li>
                     <li class="list" data-page="calendar-exceptions.html">
                         <a href="calendar-exceptions.html">
                             <span class="icon"><i class="fa-solid fa-calendar-times"></i></span>
@@ -147,7 +153,8 @@
                             <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">📊 Dashboard</th>
                             <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">🔒 SARDO</th>
                             <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">📚 Grades</th>
-                            <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">📅 Exceptions</th>
+                            <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">� Exams</th>
+                            <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">� Exceptions</th>
                             <th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest">Actions</th>
                         </tr>
                     </thead>
@@ -258,7 +265,7 @@
                 renderWhitelist(whitelist);
             } catch (err) {
                 console.error("Fetch Error:", err);
-                matrixBody.innerHTML = `<tr><td colspan="7" class="px-6 py-4 text-center text-red-500 font-bold uppercase text-[10px]">Error loading whitelist</td></tr>`;
+                matrixBody.innerHTML = `<tr><td colspan="9" class="px-6 py-4 text-center text-red-500 font-bold uppercase text-[10px]">Error loading whitelist</td></tr>`;
             }
         }
 
@@ -298,6 +305,11 @@
                         <div onclick="togglePermission('${item.email}', 'can_manage_grades')" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-amber-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
                     </td>
                     <td class="px-4 py-4 text-center">
+                        <input type="checkbox" id="exams-${item.email}" class="perm-toggle sr-only peer" 
+                               data-email="${item.email}" data-col="can_manage_exams" ${(item.can_manage_exams || item.can_manage_grades) ? 'checked' : ''}>
+                        <div onclick="togglePermission('${item.email}', 'can_manage_exams')" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-pink-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                    </td>
+                    <td class="px-4 py-4 text-center">
                         <input type="checkbox" id="calendar-exceptions-${item.email}" class="perm-toggle sr-only peer" 
                                data-email="${item.email}" data-col="can_manage_calendar_exceptions" ${(item.can_manage_calendar_exceptions || item.can_manage_suspended_days) ? 'checked' : ''}>
                         <div onclick="togglePermission('${item.email}', 'can_manage_calendar_exceptions')" class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-cyan-500 relative cursor-pointer mx-auto transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
@@ -323,10 +335,10 @@
                 const [addWhitelist, addProfiles] = await Promise.all([
                     window.supabaseClient
                         .from('admin_whitelist')
-                        .insert([{ email, role, can_scan: false, can_manage_ids: false, can_view_dashboard: false, can_view_sardo: false, can_manage_grades: false, can_manage_calendar_exceptions: false, can_manage_suspended_days: false }]),
+                        .insert([{ email, role, can_scan: false, can_manage_ids: false, can_view_dashboard: false, can_view_sardo: false, can_manage_grades: false, can_manage_exams: false, can_manage_calendar_exceptions: false, can_manage_suspended_days: false }]),
                     window.supabaseClient
                         .from('profiles')
-                        .insert([{ email, role, full_name: email, can_scan: false, can_manage_ids: false, can_view_dashboard: false, can_view_sardo: false, can_manage_grades: false, can_manage_calendar_exceptions: false, can_manage_suspended_days: false }])
+                        .insert([{ email, role, full_name: email, can_scan: false, can_manage_ids: false, can_view_dashboard: false, can_view_sardo: false, can_manage_grades: false, can_manage_exams: false, can_manage_calendar_exceptions: false, can_manage_suspended_days: false }])
                 ]);
 
                 if (addWhitelist.error) throw addWhitelist.error;

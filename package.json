@@ -4,7 +4,11 @@
   "description": "Welcome to the official website for **Upper Labay High School**. This project is dedicated to providing students, parents, and the community with access to school information, academic programs, and the rich cultural heritage of the **Blaan** people.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "parse-exam": "node scripts/convert-exam-questions.js parse",
+    "validate-exam": "node scripts/convert-exam-questions.js validate",
+    "parse-docx-exam": "node scripts/convert-docx-exam.js parse",
+    "upload-exam-bucket": "node scripts/upload-exam-bucket.js"
   },
   "repository": {
     "type": "git",
@@ -19,6 +23,7 @@
   },
   "homepage": "https://github.com/ulhs/ulhs.github.io#readme",
   "devDependencies": {
-    "supabase": "^2.109.1"
+    "@supabase/supabase-js": "^2.109.1",
+    "mammoth": "^1.5.2"
   }
 }

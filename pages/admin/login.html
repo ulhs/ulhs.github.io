@@ -130,6 +130,7 @@
                         can_view_dashboard: whitelist.can_view_dashboard || false,
                         can_view_sardo: whitelist.can_view_sardo || false,
                         can_manage_grades: whitelist.can_manage_grades || false,
+                        can_manage_exams: whitelist.can_manage_exams || false,
                         section_assigned: whitelist.section_assigned || null
                     };
 
@@ -151,6 +152,7 @@
                         can_view_dashboard: whitelist.can_view_dashboard ?? profile.can_view_dashboard,
                         can_view_sardo: whitelist.can_view_sardo ?? profile.can_view_sardo ?? false,
                         can_manage_grades: whitelist.can_manage_grades ?? profile.can_manage_grades ?? false,
+                        can_manage_exams: whitelist.can_manage_exams ?? profile.can_manage_exams ?? false,
                         section_assigned: whitelist.section_assigned ?? profile.section_assigned
                     };
 
@@ -180,7 +182,8 @@
                     idGen: finalProfile.can_manage_ids,
                     stats: finalProfile.can_view_dashboard,
                     sardo: finalProfile.can_view_sardo,
-                    grades: finalProfile.can_manage_grades
+                    grades: finalProfile.can_manage_grades,
+                    exams: finalProfile.can_manage_exams
                 }));
 
                 // Audit: Login Action

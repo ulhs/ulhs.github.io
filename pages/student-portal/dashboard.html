@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Digital Hub | Upper Labay High School</title>
+    <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <style>
+        body {
+            margin: 0;
+            background: linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%);
+            color: #1f2937;
+            font-family: 'Open Sans', sans-serif;
+        }
+
+        .dashboard-shell {
+            min-height: 100vh;
+            padding: 32px 18px 48px;
+        }
+
+        .dashboard-card {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 30px;
+            border-radius: 24px;
+            background: #ffffff;
+            box-shadow: 0 22px 48px rgba(15, 23, 42, 0.12);
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-title {
+            margin: 0 0 6px;
+            font-family: 'Acme', sans-serif;
+            color: #0f766e;
+            font-size: 1.95rem;
+        }
+
+        .dashboard-subtitle {
+            margin: 0;
+            color: #64748b;
+            font-weight: 700;
+        }
+
+        .role-pill {
+            display: inline-block;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: #ecfeff;
+            color: #0f766e;
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1.4fr 0.9fr;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .hero-card, .info-card, .app-card, .quiz-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            background: #f8fafc;
+        }
+
+        .hero-card {
+            padding: 22px;
+            background: linear-gradient(135deg, #ecfeff 0%, #eff6ff 100%);
+        }
+
+        .hero-card h2 {
+            margin: 0 0 8px;
+            color: #0f766e;
+            font-size: 1.2rem;
+        }
+
+        .hero-card p {
+            margin: 0 0 14px;
+            color: #475569;
+            font-weight: 600;
+            line-height: 1.6;
+        }
+
+        .hero-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .hero-badge {
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #0f766e;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+
+        .info-card {
+            padding: 18px;
+        }
+
+        .info-card h3 {
+            margin: 0 0 8px;
+            font-size: 1rem;
+            color: #0f766e;
+        }
+
+        .info-card p, .info-card li {
+            margin: 0;
+            color: #475569;
+            font-weight: 600;
+            line-height: 1.6;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            background: #dbeafe;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 76%;
+            background: linear-gradient(90deg, #14b8a6, #2563eb);
+        }
+
+        .section-title {
+            margin: 24px 0 12px;
+            font-size: 1.08rem;
+            color: #0f172a;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .quiz-card, .app-card {
+            padding: 16px;
+        }
+
+        .quiz-card h3, .app-card h3 {
+            margin: 0 0 8px;
+            font-size: 1rem;
+            color: #0f766e;
+        }
+
+        .quiz-card p, .app-card p {
+            margin: 0 0 12px;
+            color: #475569;
+            font-weight: 600;
+            line-height: 1.6;
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 6px 8px;
+            border-radius: 999px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-size: 0.74rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .action-link {
+            display: inline-block;
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: #0f766e;
+            color: #ffffff;
+            font-weight: 700;
+            text-decoration: none;
+            font-size: 0.86rem;
+        }
+
+        .action-link.secondary {
+            background: #2563eb;
+        }
+
+        .status-text {
+            margin-top: 10px;
+            color: #dc2626;
+            font-weight: 700;
+        }
+
+        @media (max-width: 900px) {
+            .hero-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-shell">
+        <div class="dashboard-card">
+            <div class="topbar">
+                <div>
+                    <h1 class="dashboard-title">Student Digital Hub</h1>
+                    <p class="dashboard-subtitle">A focused learning space for quizzes, progress, and school-linked apps.</p>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <span class="role-pill" id="role-pill">Student Access</span>
+                    <button id="logout-btn" class="action-link secondary" style="background:#dc2626; border-color:#dc2626;">Logout</button>
+                </div>
+            </div>
+
+            <div class="hero-grid">
+                <div class="hero-card">
+                    <h2 id="welcome-heading">Welcome back!</h2>
+                    <p id="welcome-copy">Your student dashboard is ready. Review your learning progress and jump into your next quiz activity.</p>
+                    <div class="hero-badges">
+                        <span class="hero-badge">Google Sign-In</span>
+                        <span class="hero-badge">Role-Based Access</span>
+                        <span class="hero-badge">Quiz Ready</span>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3>Progress Summary</h3>
+                    <p id="progress-label">Weekly goal: 76% complete</p>
+                    <div class="progress-bar"><div class="progress-fill"></div></div>
+                    <ul style="margin: 12px 0 0 18px; padding: 0;">
+                        <li>3 quizzes completed</li>
+                        <li>2 learning goals active</li>
+                        <li>1 new challenge unlocked</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3 class="section-title">Examination</h3>
+            <div class="card-grid" style="margin-bottom: 24px;">
+                <div class="quiz-card">
+                    <span class="pill">Exam</span>
+                    <h3>Term Assessment</h3>
+                    <p>Take your official term assessment and review your exam results.</p>
+                    <a class="action-link secondary" href="./exams.html">Open Exam Hub</a>
+                </div>
+            </div>
+
+            <h3 class="section-title">Quiz Dashboard</h3>
+            <div class="card-grid">
+                <div class="quiz-card">
+                    <span class="pill">Today</span>
+                    <h3>Science Review Quiz</h3>
+                    <p>Practice key concepts before your class session.</p>
+                    <a class="action-link" href="./apps/quizizz.html">Open Quiz Activity</a>
+                </div>
+                <div class="quiz-card">
+                    <span class="pill">In Progress</span>
+                    <h3>Reading Challenge</h3>
+                    <p>Track your pace and review your previous answers.</p>
+                    <a class="action-link secondary" href="./apps/kahoot.html">View Learning App</a>
+                </div>
+                <div class="quiz-card">
+                    <span class="pill">Upcoming</span>
+                    <h3>Math Warm-Up</h3>
+                    <p>Prepare for the next assessment with a short challenge.</p>
+                    <a class="action-link" href="./apps/classroom.html">Open Study Link</a>
+                </div>
+            </div>
+
+            <h3 class="section-title">Linked Learning Apps</h3>
+            <div class="card-grid">
+                <div class="app-card">
+                    <h3>Quizizz</h3>
+                    <p>Launch interactive quiz sessions and review points in one place.</p>
+                    <a class="action-link" href="./apps/quizizz.html">View App Hub</a>
+                </div>
+                <div class="app-card">
+                    <h3>Kahoot!</h3>
+                    <p>Join gamified challenge rooms and improve your learning streak.</p>
+                    <a class="action-link secondary" href="./apps/kahoot.html">View App Hub</a>
+                </div>
+                <div class="app-card">
+                    <h3>Google Classroom</h3>
+                    <p>Keep up with assignments, class announcements, and submissions.</p>
+                    <a class="action-link" href="./apps/classroom.html">View App Hub</a>
+                </div>
+            </div>
+
+            <p id="access-status" class="status-text"></p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
+    <script>
+        const welcomeHeading = document.getElementById('welcome-heading');
+        const welcomeCopy = document.getElementById('welcome-copy');
+        const rolePill = document.getElementById('role-pill');
+        const accessStatus = document.getElementById('access-status');
+        const progressLabel = document.getElementById('progress-label');
+
+        async function loadStudentProfile() {
+            const studentLoggedIn = sessionStorage.getItem('studentLoggedIn');
+            if (!studentLoggedIn) {
+                window.location.replace('./login.html');
+                return;
+            }
+
+            const { data: { session }, error: sessionError } = await window.supabaseClient.auth.getSession();
+            if (sessionError || !session) {
+                window.location.replace('./login.html');
+                return;
+            }
+
+            let studentName = sessionStorage.getItem('userName') || session.user.user_metadata?.full_name || session.user.email || 'Student';
+
+            const email = (session.user.email || '').toLowerCase();
+            let { data: profile, error: profileError } = await window.supabaseClient
+                .from('profiles')
+                .select('full_name, role, email')
+                .eq('email', email)
+                .maybeSingle();
+
+            if (!profile) {
+                console.warn('Profile lookup by email returned empty, trying lookup by id', profileError);
+                const byId = await window.supabaseClient
+                    .from('profiles')
+                    .select('full_name, role, email')
+                    .eq('id', session.user.id)
+                    .maybeSingle();
+                if (byId && byId.data) {
+                    profile = byId.data;
+                    profileError = null;
+                } else {
+                    profileError = byId.error || profileError;
+                }
+            }
+
+            console.debug('Session user:', session.user);
+
+            // If profile row missing, try to use user metadata or sessionStorage as fallback
+            if (!profile) {
+                console.warn('No profile row found for user; falling back to session metadata or storage.');
+                studentName = session.user.user_metadata?.full_name || sessionStorage.getItem('userName') || session.user.email || 'Student';
+            } else {
+                studentName = profile.full_name || studentName;
+            }
+
+            const effectiveRole = (profile && profile.role) ? String(profile.role).toLowerCase() : (session.user.user_metadata?.role || 'student');
+            if (effectiveRole !== 'student') {
+                accessStatus.textContent = 'This portal is reserved for student accounts.';
+                rolePill.textContent = 'Restricted Access';
+                return;
+            }
+
+            welcomeHeading.textContent = 'Welcome back, ' + studentName + '!';
+            const welcomeNameEl = document.getElementById('welcome-name');
+            if (welcomeNameEl) welcomeNameEl.textContent = studentName;
+            welcomeCopy.textContent = 'Your digital learning hub is ready. Review your progress, visit your quiz activities, and open your linked learning apps.';
+            progressLabel.textContent = 'Weekly goal: 76% complete';
+            rolePill.textContent = 'Student Access Verified';
+            sessionStorage.setItem('userRole', 'student');
+            sessionStorage.setItem('userName', studentName);
+        }
+
+        async function handleStudentLogout() {
+            try {
+                await window.supabaseClient.auth.signOut();
+            } catch (err) {
+                console.error('Logout error:', err);
+            }
+            sessionStorage.removeItem('studentLoggedIn');
+            sessionStorage.removeItem('userEmail');
+            sessionStorage.removeItem('userRole');
+            sessionStorage.removeItem('userName');
+            window.location.replace('./login.html?select_account=1');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', handleStudentLogout);
+            }
+        });
+
+        loadStudentProfile();
+    </script>
+</body>
+</html>

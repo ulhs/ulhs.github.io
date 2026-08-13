@@ -126,6 +126,17 @@
                             </li>`;
                     }
 
+                    // EXAMS Manager (Admin, School Head, or with Exams permission)
+                    if (role === 'admin' || role === 'school_head' || access.exams || access.grades || false) {
+                        html += `
+                            <li class="list" data-page="exam-manager.html">
+                                <a href="exam-manager.html">
+                                    <span class="icon"><i class="fa-solid fa-file-circle-check"></i></span>
+                                    <span class="text">EXAMS</span>
+                                </a>
+                            </li>`;
+                    }
+
                     // CALENDAR EXCEPTIONS (Admin, School Head, or authorized personnel)
                     if (role === 'admin' || role === 'school_head' || access.suspended) {
                         html += `

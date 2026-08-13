@@ -75,3 +75,4 @@ pages/admin/qr-batch-generator.html
 *.db
 
 assets/documents/website-audit-report.md
+docs/exam-question-update-guide.md
