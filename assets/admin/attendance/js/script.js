@@ -2046,6 +2046,22 @@ async function onScanSuccess(decodedText, decodedResult) {
         const timeData = getAttendanceStatus(student.lrn);
         const existing = attendanceSession.get(student.lrn);
 
+        if (timeData.session === 'BREAK') {
+            const breakMessage = 'PM attendance opens at 12:00 PM. Please return then to log attendance.';
+            lastScannedLrn = student.lrn;
+            lastScanTimestamp = nowTimestamp;
+            showScanFeedback(student, breakMessage, "yellow");
+            showScanOverlay(student.parsedName, student, 'break', student.section, {
+                ...timeData,
+                message: breakMessage
+            });
+            if (scanStatusEl) {
+                scanStatusEl.textContent = breakMessage;
+                scanStatusEl.className = 'bg-white rounded-lg p-2 text-xs font-bold border border-yellow-200 min-h-[32px] text-yellow-700';
+            }
+            return;
+        }
+
         // 1. Check for Duplicate Session Scans
         if (existing) {
             let duplicateMsg = null;
@@ -2267,7 +2283,7 @@ function showScanOverlay(name, student, type, section, timeData) {
     // Use the secure loader for the overlay photo
     loadStudentPhotoSecurely(lrnStr, overlayPhoto, overlayPhotoPlaceholder);
 
-    overlayTimeStatus.textContent = `${timeData.session} Session: ${timeData.status}`;
+    overlayTimeStatus.textContent = timeData.message || `${timeData.session} Session: ${timeData.status}`;
     overlayTimeStatus.className = "mt-4 inline-block px-6 py-2 rounded-full font-black text-xl uppercase tracking-widest shadow-lg ";
     
     // Reset overlay classes
@@ -2279,6 +2295,12 @@ function showScanOverlay(name, student, type, section, timeData) {
         overlayStatus.textContent = "Access Granted";
         overlayIconContainer.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>';
         overlayTimeStatus.classList.add('bg-white', 'text-green-600');
+    } else if (type === 'break') {
+        scanOverlay.classList.add('bg-yellow-500/90');
+        overlayIconContainer.classList.add('text-yellow-600');
+        overlayStatus.textContent = "PM Session Not Open";
+        overlayIconContainer.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+        overlayTimeStatus.classList.add('bg-gray-800', 'text-white');
     } else if (type === 'warning') {
         scanOverlay.classList.add('bg-yellow-500/90');
         overlayIconContainer.classList.add('text-yellow-600');
