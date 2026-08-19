@@ -726,6 +726,38 @@ let isSwitchingCamera = false;  // Prevent scanning during camera switches
 let lastScannedLrn = null;      // To prevent rapid double scans
 let lastScanTimestamp = 0;      // Timestamp of the last successful scan
 
+function getCameraErrorMessage(error) {
+    const errorName = error?.name || '';
+    const errorMessage = String(error?.message || error || '');
+
+    if (errorName === 'NotAllowedError' || /permission denied|permission dismissed|not allowed/i.test(errorMessage)) {
+        return 'Camera access is blocked. Allow camera permission for this site, then select Launch Scanner again.';
+    }
+
+    if (errorName === 'NotFoundError' || /no camera|camera.*not found/i.test(errorMessage)) {
+        return 'No camera was found. Connect a camera and select Launch Scanner again.';
+    }
+
+    return 'The camera could not be started. Check the camera connection and try again.';
+}
+
+function showCameraLaunchError(error) {
+    const message = getCameraErrorMessage(error);
+    console.error('Camera launch failed:', error);
+
+    isScannerActive = false;
+    isSwitchingCamera = false;
+    startBtn.classList.remove('hidden');
+    stopBtn.classList.add('hidden');
+    scannerPlaceholder.classList.remove('hidden');
+    scanStatus.textContent = 'CAMERA ACCESS NEEDED';
+    scanStatus.className = 'px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-[10px] font-black uppercase tracking-widest';
+
+    const placeholderMessage = scannerPlaceholder.querySelector('p');
+    if (placeholderMessage) placeholderMessage.textContent = message;
+    alert(message);
+}
+
 // SF2 Mapping Configuration per Level (Indices converted for ExcelJS - 1-based)
 const SF2_MAPPINGS = {
     'JHS': {
@@ -3577,7 +3609,7 @@ const switchCamera = async (cameraIdOrFacingMode) => {
         console.error("Camera switch failed:", err);
         isScannerActive = false;
         await releaseCameraStream();
-        alert("Camera switch failed: " + err.message);
+        showCameraLaunchError(err);
     } finally {
         // Always clear the switching flag
         isSwitchingCamera = false;
@@ -3681,7 +3713,7 @@ startBtn.addEventListener('click', async () => {
             }
             
             if (!cameraStarted) {
-                alert("Camera Error: Could not start any camera device.\n\n" + lastError);
+                showCameraLaunchError(lastError);
             }
         } else {
             // Fallback for devices that don't support camera enumeration
@@ -3692,8 +3724,7 @@ startBtn.addEventListener('click', async () => {
             }
         }
     } catch (err) {
-        console.error("Camera initialization error:", err);
-        alert("Camera Error: " + err);
+        showCameraLaunchError(err);
     }
 });
 
