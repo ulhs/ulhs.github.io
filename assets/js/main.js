@@ -3726,19 +3726,50 @@ async function initIDGenerator() {
     async function processImage(sourceCanvas) {
         if (processingOverlay) processingOverlay.style.display = 'flex';
 
-        if (removeBgToggle && removeBgToggle.checked && selfieSegmentation) {
-            selfieSegmentation.onResults((results) => {
+        if (removeBgToggle && removeBgToggle.checked) {
+            let segmentationResult = null;
+            let segmentationSuccess = false;
+
+            if (selfieSegmentation) {
+                try {
+                    const segmentationPromise = new Promise((resolve) => {
+                        selfieSegmentation.onResults((results) => {
+                            segmentationResult = results;
+                            const maskCanvas = document.createElement('canvas');
+                            maskCanvas.width = results.segmentationMask.width;
+                            maskCanvas.height = results.segmentationMask.height;
+                            const maskCtx = maskCanvas.getContext('2d');
+                            maskCtx.drawImage(results.segmentationMask, 0, 0);
+                            const maskData = maskCtx.getContext('2d').getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
+                            let nonTransparent = 0;
+                            for (let i = 3; i < maskData.length; i += 4) {
+                                if (maskData[i] > 128) nonTransparent++;
+                            }
+                            const coveragePercent = (nonTransparent / (maskData.length / 4)) * 100;
+                            segmentationSuccess = coveragePercent > 2.5;
+                            resolve();
+                        });
+                    });
+                    await selfieSegmentation.send({ image: sourceCanvas });
+                    await segmentationPromise;
+                } catch (e) {
+                    console.warn('Selfie segmentation failed, falling back to color-based removal:', e);
+                    segmentationSuccess = false;
+                }
+            }
+
+            if (segmentationSuccess && segmentationResult) {
                 const canvas = document.createElement('canvas');
-                canvas.width = results.image.width;
-                canvas.height = results.image.height;
+                canvas.width = segmentationResult.image.width;
+                canvas.height = segmentationResult.image.height;
                 const ctx = canvas.getContext('2d');
                 ctx.save();
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.filter = 'none';
-                ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+                ctx.drawImage(segmentationResult.image, 0, 0, canvas.width, canvas.height);
                 ctx.globalCompositeOperation = 'destination-in';
                 ctx.filter = 'blur(2px)';
-                ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
+                ctx.drawImage(segmentationResult.segmentationMask, 0, 0, canvas.width, canvas.height);
                 ctx.globalCompositeOperation = 'source-over';
                 ctx.filter = 'none';
                 ctx.restore();
@@ -3752,12 +3783,35 @@ async function initIDGenerator() {
 
                 const enhancedCanvas = enhanceImage(shadowCanvas, true);
                 capturedPhoto.src = enhancedCanvas.toDataURL('image/png');
-                finishCapture();
-            });
-            await selfieSegmentation.send({ image: sourceCanvas });
+            } else {
+                console.log('Using color-based background removal for photo');
+                const removedBgDataUrl = await removeBackgroundFromImage(sourceCanvas.toDataURL('image/png'), false);
+                const cleanedImg = new Image();
+                cleanedImg.onload = () => {
+                    const cleanedCanvas = document.createElement('canvas');
+                    cleanedCanvas.width = cleanedImg.width;
+                    cleanedCanvas.height = cleanedImg.height;
+                    const cleanedCtx = cleanedCanvas.getContext('2d');
+                    cleanedCtx.drawImage(cleanedImg, 0, 0);
+
+                    const shadowCanvas = document.createElement('canvas');
+                    shadowCanvas.width = cleanedCanvas.width;
+                    shadowCanvas.height = cleanedCanvas.height;
+                    const shadowCtx = shadowCanvas.getContext('2d');
+                    shadowCtx.filter = 'drop-shadow(0 0 5px rgba(0,0,0,0.2))';
+                    shadowCtx.drawImage(cleanedCanvas, 0, 0);
+
+                    const enhancedCanvas = enhanceImage(shadowCanvas, true);
+                    capturedPhoto.src = enhancedCanvas.toDataURL('image/png');
+                    finishCapture();
+                };
+                cleanedImg.src = removedBgDataUrl;
+                return;
+            }
+            finishCapture();
         } else {
-            const enhancedCanvas = enhanceImage(sourceCanvas);
-            capturedPhoto.src = enhancedCanvas.toDataURL('image/webp', 0.9);
+            const enhancedCanvas = enhanceImage(sourceCanvas, true);
+            capturedPhoto.src = enhancedCanvas.toDataURL('image/png');
             finishCapture();
         }
     }
@@ -3804,7 +3858,10 @@ async function initIDGenerator() {
                         }
                     }
                 }
-                outputData[dstOff] = r; outputData[dstOff+1] = g; outputData[dstOff+2] = b; outputData[dstOff+3] = data[dstOff+3];
+                outputData[dstOff] = Math.max(0, Math.min(255, Math.round(r))); 
+                outputData[dstOff+1] = Math.max(0, Math.min(255, Math.round(g))); 
+                outputData[dstOff+2] = Math.max(0, Math.min(255, Math.round(b))); 
+                outputData[dstOff+3] = data[dstOff+3];
             }
         }
         ctx.putImageData(output, 0, 0);
@@ -4127,7 +4184,7 @@ async function initIDGenerator() {
         });
     }
 
-    async function removeBackgroundFromImage(dataUrl) {
+    async function removeBackgroundFromImage(dataUrl, isSignature = true) {
         return new Promise((resolve) => {
             const img = new Image();
             img.onload = () => {
@@ -4140,20 +4197,33 @@ async function initIDGenerator() {
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const data = imageData.data;
                 
-                // Enhanced color-based background removal
-                // We use a lower threshold to be more aggressive with off-white backgrounds
-                // common in JPG photos of signatures.
+                let threshold;
+                if (isSignature) {
+                    threshold = 160;
+                } else {
+                    threshold = 222;
+                }
+                
                 for (let i = 0; i < data.length; i += 4) {
                     const r = data[i], g = data[i+1], b = data[i+2];
-                    // If pixel is relatively bright (near white/light gray), make it transparent
-                    // Using 160 as threshold to catch grayish backgrounds in photos
-                    if (r > 160 && g > 160 && b > 160) {
-                        data[i+3] = 0;
+                    const maxCh = Math.max(r, g, b);
+                    const minCh = Math.min(r, g, b);
+                    const saturation = maxCh - minCh;
+                    const brightness = (r + g + b) / 3;
+                    
+                    if (isSignature) {
+                        if (r > threshold && g > threshold && b > threshold) {
+                            data[i+3] = 0;
+                        }
+                    } else {
+                        if (brightness > threshold && saturation < 45) {
+                            data[i+3] = 0;
+                        }
                     }
                 }
                 
                 ctx.putImageData(imageData, 0, 0);
-                resolve(canvas.toDataURL());
+                resolve(canvas.toDataURL('image/png'));
             };
             img.src = dataUrl;
         });
