@@ -89,6 +89,7 @@ serve(async (req) => {
     let fbSuccess: boolean = false;
     let fbErrorMessage: string | null = null;
     let logId: number | null = null;
+    let responseStatus = 200;
 
     if (studentLrn) {
       console.log("Attempting to insert into notification_logs with data:", {
@@ -133,7 +134,7 @@ serve(async (req) => {
       // Now make Facebook API call
       try {
         console.log("Making Facebook API call with message:", message)
-        const res = await fetch(`https://graph.facebook.com/v12.0/me/messages?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
+        const res = await fetch(`https://graph.facebook.com/v21.0/me/messages?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -143,8 +144,9 @@ serve(async (req) => {
         })
 
         fbResult = await res.json()
-        fbSuccess = !fbResult.error
+        fbSuccess = res.ok && !fbResult.error
         fbErrorMessage = fbResult.error ? JSON.stringify(fbResult.error) : null
+        responseStatus = fbSuccess ? 200 : 502
         console.log("Facebook API call result:", { fbSuccess, fbResult })
 
         // Now update the notification_log with the actual result
@@ -167,6 +169,7 @@ serve(async (req) => {
       } catch (fbError) {
         console.error("Facebook API call threw an error:", fbError)
         fbErrorMessage = JSON.stringify(fbError)
+        responseStatus = 502
         // Update log with error
         if (logId) {
           const { error: updateError } = await supabase
@@ -187,7 +190,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify(fbResult || { success: fbSuccess, error: fbErrorMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
+      status: responseStatus,
     })
 
   } catch (error) {

@@ -267,6 +267,29 @@
                                     <p id="departure-count" class="text-xl sm:text-2xl font-black text-red-800">0</p>
                                 </div>
                             </div>
+
+                            <section id="early-birds-section" class="early-birds-panel" aria-labelledby="early-birds-title">
+                                <div class="early-birds-heading">
+                                    <div>
+                                        <p class="early-birds-kicker"><i class="fa-solid fa-bolt"></i> Punctuality leaderboard</p>
+                                        <h3 id="early-birds-title">Early Birds</h3>
+                                        <p id="early-birds-period" class="early-birds-period">Fastest AM arrivals across all sections</p>
+                                    </div>
+                                    <div class="early-birds-badge"><i class="fa-solid fa-ranking-star"></i><span>TOP 10</span></div>
+                                </div>
+                                <div class="early-birds-tabs" role="tablist" aria-label="Early Birds period">
+                                    <button class="early-birds-tab is-active" type="button" role="tab" aria-selected="true" data-early-birds-period="daily">Daily</button>
+                                    <button class="early-birds-tab" type="button" role="tab" aria-selected="false" data-early-birds-period="weekly">Weekly</button>
+                                    <button class="early-birds-tab" type="button" role="tab" aria-selected="false" data-early-birds-period="monthly">Monthly</button>
+                                </div>
+                                <div class="early-birds-date-filter">
+                                    <label for="early-birds-date"><i class="fa-regular fa-calendar"></i> Daily date</label>
+                                    <input id="early-birds-date" type="date" aria-label="Select Early Birds daily date">
+                                </div>
+                                <div id="early-birds-list" class="early-birds-list" aria-live="polite">
+                                    <p class="early-birds-empty">Loading early birds...</p>
+                                </div>
+                            </section>
                         </div>
                     </div>
                 </div>
@@ -355,8 +378,169 @@
             lastScanned: null,
             availableSections: [],
             selectedSection: 'ALL',
-            isLogsExpanded: false
+            isLogsExpanded: false,
+            earlyBirdPeriod: 'daily',
+            earlyBirdDate: getLocalDateKey(),
+            earlyBirdLogs: []
         };
+
+        function getLocalDateKey(date = new Date()) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function getPeriodStart(period) {
+            const start = new Date();
+            start.setHours(0, 0, 0, 0);
+            if (period === 'daily') return dashboardData.earlyBirdDate;
+            if (period === 'weekly') {
+                const day = start.getDay() || 7;
+                start.setDate(start.getDate() - day + 1);
+            } else if (period === 'monthly') {
+                start.setDate(1);
+            }
+            return getLocalDateKey(start);
+        }
+
+        function getPeriodEnd(period) {
+            if (period === 'daily') return dashboardData.earlyBirdDate;
+            const end = new Date(`${getPeriodStart(period)}T00:00:00`);
+            if (period === 'weekly') {
+                end.setDate(end.getDate() + 6);
+            } else if (period === 'monthly') {
+                end.setMonth(end.getMonth() + 1, 0);
+            }
+            return getLocalDateKey(end);
+        }
+
+        function getArrivalMinutes(log) {
+            const date = new Date(log.scanned_at);
+            return date.getHours() * 60 + date.getMinutes() + date.getSeconds() / 60;
+        }
+
+        function getFirstAMLogs(logs) {
+            const firstLogs = new Map();
+            logs.filter(log => log.session === 'AM').forEach(log => {
+                const localDate = log.local_date || getLocalDateKey(new Date(log.scanned_at));
+                const key = `${log.student_lrn}:${localDate}`;
+                const current = firstLogs.get(key);
+                if (!current || new Date(log.scanned_at) < new Date(current.scanned_at)) firstLogs.set(key, log);
+            });
+            return [...firstLogs.values()];
+        }
+
+        function getEarlyBirdStudent(log) {
+            const rosterStudent = dashboardData.students.find(student =>
+                String(student.lrn) === String(log.student_lrn)
+            ) || {};
+            const joinedStudent = log.students || {};
+            return {
+                ...rosterStudent,
+                ...joinedStudent,
+                section: joinedStudent.section || log.section || rosterStudent.section,
+                full_name: joinedStudent.full_name || rosterStudent.full_name,
+                photo_url: joinedStudent.photo_url || rosterStudent.photo_url
+            };
+        }
+
+        function getEarlyBirdRankings(period) {
+            const periodStart = getPeriodStart(period);
+            const periodEnd = getPeriodEnd(period);
+            const firstLogs = getFirstAMLogs(dashboardData.earlyBirdLogs)
+                .filter(log => {
+                    const localDate = log.local_date || getLocalDateKey(new Date(log.scanned_at));
+                    return period === 'daily'
+                        ? localDate === periodStart
+                        : localDate >= periodStart && localDate <= periodEnd;
+                })
+                .filter(log => dashboardData.selectedSection === 'ALL' ||
+                    normalizeSectionName(getEarlyBirdStudent(log).section) === dashboardData.selectedSection);
+            const grouped = new Map();
+
+            firstLogs.forEach(log => {
+                const key = String(log.student_lrn);
+                const student = getEarlyBirdStudent(log);
+                const entry = grouped.get(key) || { student, studentLrn: log.student_lrn, arrivalTimes: [] };
+                entry.arrivalTimes.push(getArrivalMinutes(log));
+                grouped.set(key, entry);
+            });
+
+            return [...grouped.values()]
+                .map(entry => ({
+                    ...entry,
+                    averageTime: entry.arrivalTimes.reduce((sum, time) => sum + time, 0) / entry.arrivalTimes.length
+                }))
+                .sort((a, b) => a.averageTime - b.averageTime || b.arrivalTimes.length - a.arrivalTimes.length)
+                .slice(0, 10);
+        }
+
+        function renderEarlyBirds() {
+            const list = document.getElementById('early-birds-list');
+            const periodLabel = document.getElementById('early-birds-period');
+            if (!list) return;
+
+            const rankings = getEarlyBirdRankings(dashboardData.earlyBirdPeriod);
+            const labels = {
+                daily: `Fastest AM arrivals on ${new Date(`${dashboardData.earlyBirdDate}T00:00:00`).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`,
+                weekly: 'Best average AM arrival time this week',
+                monthly: 'Best average AM arrival time this month'
+            };
+            const sectionLabel = dashboardData.selectedSection === 'ALL'
+                ? 'all sections'
+                : dashboardData.selectedSection;
+            if (periodLabel) periodLabel.textContent = `${labels[dashboardData.earlyBirdPeriod]} · ${sectionLabel}`;
+
+            if (!rankings.length) {
+                list.innerHTML = '<p class="early-birds-empty">No AM attendance records for this period yet.</p>';
+                return;
+            }
+
+            list.innerHTML = rankings.map((entry, index) => {
+                const student = entry.student;
+                const name = student.full_name || 'Unknown learner';
+                const hours = Math.floor(entry.averageTime / 60) % 24;
+                const minutes = Math.round(entry.averageTime % 60);
+                const averageTime = new Date(2000, 0, 1, hours, minutes).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
+                return `<div class="early-bird-row">
+                    <div class="early-bird-rank">${index + 1}</div>
+                    <div class="early-bird-photo-frame">
+                        <img class="early-bird-photo early-bird-photo-loading" data-early-bird-lrn="${entry.studentLrn}" data-early-bird-photo="${student.photo_url || ''}" alt="">
+                        <div class="early-bird-photo-placeholder" aria-hidden="true"><i class="fa-solid fa-user"></i></div>
+                    </div>
+                    <div class="early-bird-info"><div class="early-bird-name">${name}</div><div class="early-bird-meta">${student.section || 'N/A'} · ${entry.arrivalTimes.length} qualifying day${entry.arrivalTimes.length === 1 ? '' : 's'}</div></div>
+                    <div class="early-bird-time">${averageTime}</div>
+                </div>`;
+            }).join('');
+
+            list.querySelectorAll('img[data-early-bird-lrn]').forEach(image => {
+                const lrn = image.dataset.earlyBirdLrn;
+                const photoUrl = image.dataset.earlyBirdPhoto;
+                const placeholder = image.nextElementSibling;
+                loadStudentPhotoSecurely(lrn, photoUrl, image, placeholder);
+            });
+        }
+
+        async function fetchEarlyBirdLogs() {
+            const queryDateKey = dashboardData.earlyBirdPeriod === 'daily'
+                ? dashboardData.earlyBirdDate
+                : getLocalDateKey();
+            const selectedDate = new Date(`${queryDateKey}T00:00:00`);
+            const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0, 0, 0, 0);
+            const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+            const { data, error } = await window.supabaseClient
+                .from('attendance_logs')
+                .select('student_lrn, scanned_at, local_date, session, section, students (full_name, section, photo_url)')
+                .eq('session', 'AM')
+                .gte('local_date', getLocalDateKey(startOfMonth))
+                .lte('local_date', getLocalDateKey(endOfMonth))
+                .order('scanned_at', { ascending: true });
+            if (!error) dashboardData.earlyBirdLogs = data || [];
+            renderEarlyBirds();
+        }
 
         function normalizeSectionName(section) {
             return (section || 'N/A').trim();
@@ -470,6 +654,7 @@
                     if (logs.length > 0) dashboardData.lastScanned = logs[0];
                 }
 
+                await fetchEarlyBirdLogs();
                 refreshUI();
 
                 // 3. Set up Real-time Subscription
@@ -501,6 +686,7 @@
                                 }
 
                                 refreshUI();
+                                if (newLog.session === 'AM') fetchEarlyBirdLogs();
                             }
                         }
                     })
@@ -547,20 +733,25 @@
         async function loadStudentPhotoSecurely(lrn, photoUrl, imgElement, placeholderElement) {
             if (!imgElement) return;
 
-            // Determine if it's a private storage path (doesn't have full URL and not a data URL)
-            // Or if it's the legacy public URL that is now private
-            const isLegacyPublic = photoUrl && photoUrl.includes('/storage/v1/object/public/student-photos/');
-            const isPrivatePath = photoUrl && !photoUrl.startsWith('http') && !photoUrl.startsWith('data:');
-            
-            // Extract the relative path if it's legacy public
-            let cleanPath = photoUrl;
-            if (isLegacyPublic) {
-                cleanPath = photoUrl.split('/public/student-photos/')[1];
-            } else if (!isPrivatePath && !photoUrl.startsWith('data:')) {
-                // If it's another type of URL, just use it
-            } else if (isPrivatePath) {
-                cleanPath = photoUrl;
-            }
+            const source = String(photoUrl || `profiles/${lrn}.webp`);
+            const storageMarker = '/storage/v1/object/';
+            const storageUrlIndex = source.indexOf(storageMarker);
+            const storageUrlPath = storageUrlIndex === -1 ? '' : source.slice(storageUrlIndex + storageMarker.length);
+            const storageMatch = storageUrlPath.match(/(?:public|sign|authenticated)\/student-photos\/(.+?)(?:\?.*)?$/);
+            const cleanPath = storageMatch ? decodeURIComponent(storageMatch[1]) : source;
+            const isDataUrl = source.startsWith('data:');
+            const isPrivatePath = !isDataUrl && (storageMatch || !source.startsWith('http'));
+
+            const showPlaceholder = () => {
+                imgElement.style.display = 'none';
+                imgElement.classList.add('hidden');
+                if (placeholderElement) {
+                    placeholderElement.style.display = 'flex';
+                    placeholderElement.classList.remove('hidden');
+                }
+            };
+
+            imgElement.onerror = showPlaceholder;
 
             // Reset state
             imgElement.style.display = 'block';
@@ -571,23 +762,18 @@
             }
 
             try {
-                if ((isLegacyPublic || isPrivatePath) && window.supabaseClient) {
+                if (isPrivatePath && window.supabaseClient) {
                     const { data, error } = await window.supabaseClient.storage.from('student-photos').download(cleanPath);
                     if (error) throw error;
                     const url = URL.createObjectURL(data);
                     imgElement.src = url;
                     imgElement.onload = () => URL.revokeObjectURL(url);
                 } else {
-                    imgElement.src = photoUrl || `profiles/${lrn}.webp`;
+                    imgElement.src = source;
                 }
             } catch (err) {
                 console.error("Secure photo fetch failed:", err.message);
-                imgElement.style.display = 'none';
-                imgElement.classList.add('hidden');
-                if (placeholderElement) {
-                    placeholderElement.style.display = 'flex';
-                    placeholderElement.classList.remove('hidden');
-                }
+                showPlaceholder();
             }
         }
 
@@ -736,6 +922,7 @@
                     dashboardData.selectedSection = event.target.value;
                     await fetchLifetimeCount();
                     refreshUI();
+                    renderEarlyBirds();
                 });
             }
 
@@ -750,6 +937,33 @@
                     refreshUI();
                 });
             }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const dateFilter = document.getElementById('early-birds-date');
+            if (dateFilter) {
+                dateFilter.value = dashboardData.earlyBirdDate;
+                dateFilter.addEventListener('change', async (event) => {
+                    if (!event.target.value) return;
+                    dashboardData.earlyBirdDate = event.target.value;
+                    if (dashboardData.earlyBirdPeriod === 'daily') {
+                        await fetchEarlyBirdLogs();
+                    }
+                });
+            }
+
+            document.querySelectorAll('[data-early-birds-period]').forEach(tab => {
+                tab.addEventListener('click', async () => {
+                    dashboardData.earlyBirdPeriod = tab.dataset.earlyBirdsPeriod;
+                    if (dateFilter) dateFilter.disabled = dashboardData.earlyBirdPeriod !== 'daily';
+                    document.querySelectorAll('[data-early-birds-period]').forEach(otherTab => {
+                        const isActive = otherTab === tab;
+                        otherTab.classList.toggle('is-active', isActive);
+                        otherTab.setAttribute('aria-selected', String(isActive));
+                    });
+                    await fetchEarlyBirdLogs();
+                });
+            });
         });
 
         // Update Real-time Clock

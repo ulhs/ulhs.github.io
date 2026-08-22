@@ -1952,6 +1952,7 @@ async function triggerParentNotification(student, timeData, scanTime, forceType 
                         body: {
                             psid: psid,
                             studentName: student.parsedName,
+                            studentLrn: student.lrn,
                             session: timeData.session,
                             status: timeData.status,
                             time: scanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),

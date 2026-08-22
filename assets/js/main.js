@@ -3734,11 +3734,13 @@ async function initIDGenerator() {
                 const ctx = canvas.getContext('2d');
                 ctx.save();
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.filter = 'blur(2px)';
-                ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
-                ctx.globalCompositeOperation = 'source-in';
                 ctx.filter = 'none';
                 ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+                ctx.globalCompositeOperation = 'destination-in';
+                ctx.filter = 'blur(2px)';
+                ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.filter = 'none';
                 ctx.restore();
 
                 const shadowCanvas = document.createElement('canvas');
@@ -3748,8 +3750,8 @@ async function initIDGenerator() {
                 shadowCtx.filter = 'drop-shadow(0 0 5px rgba(0,0,0,0.2))';
                 shadowCtx.drawImage(canvas, 0, 0);
 
-                const enhancedCanvas = enhanceImage(shadowCanvas);
-                capturedPhoto.src = enhancedCanvas.toDataURL('image/webp', 0.9);
+                const enhancedCanvas = enhanceImage(shadowCanvas, true);
+                capturedPhoto.src = enhancedCanvas.toDataURL('image/png');
                 finishCapture();
             });
             await selfieSegmentation.send({ image: sourceCanvas });
@@ -3769,15 +3771,17 @@ async function initIDGenerator() {
         if (processingOverlay) processingOverlay.style.display = 'none';
     }
 
-    function enhanceImage(sourceCanvas) {
+    function enhanceImage(sourceCanvas, preserveTransparency = false) {
         const width = sourceCanvas.width;
         const height = sourceCanvas.height;
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = "white";
-        ctx.fillRect(0, 0, width, height);
+        if (!preserveTransparency) {
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, width, height);
+        }
         ctx.filter = 'contrast(1.08) saturate(1.05) brightness(1.02)';
         ctx.drawImage(sourceCanvas, 0, 0);
         const imageData = ctx.getImageData(0, 0, width, height);
@@ -4898,7 +4902,7 @@ async function initIDGenerator() {
         ctxFront.drawImage(frontTemplate, 0, 0, canvasFront.width, canvasFront.height);
         
         // Photo: Upper-left (343, 680) to Lower-right (636, 1014)
-        const photoX = 343, photoY = 680, photoW = 636 - 343, photoH = 1014 - 680;
+        const photoX = 343, photoY = 660, photoW = 636 - 343, photoH = 1014 - 660;
         const photoImg = new Image();
         
         photoImg.onload = () => {
