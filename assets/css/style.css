@@ -3669,6 +3669,106 @@ body.dark-mode .btn-small:hover {
     color: var(--midnight-black);
 }
 
+/* --- EARLY BIRDS SECTION DARK MODE --- */
+body.dark-mode .early-birds-panel {
+    --early-ink: var(--text-dark);
+    --early-muted: var(--text-gray-dark);
+    --early-coral: #ff8a7a;
+    background: linear-gradient(135deg, #1e293b 0%, var(--card-dark) 45%, #172554 100%);
+    border-color: rgba(197, 160, 89, 0.35);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-mode .early-birds-kicker {
+    color: var(--accent-gold);
+}
+
+body.dark-mode .early-birds-heading h3 {
+    color: var(--text-dark);
+}
+
+body.dark-mode .early-birds-badge {
+    background: var(--accent-gold);
+    color: var(--midnight-black);
+}
+
+body.dark-mode .early-birds-tab {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-gray-dark);
+}
+
+body.dark-mode .early-birds-tab:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-dark);
+}
+
+body.dark-mode .early-birds-tab.is-active {
+    background: var(--accent-gold);
+    border-color: var(--accent-gold);
+    color: var(--midnight-black);
+}
+
+body.dark-mode .early-birds-date-filter label {
+    color: var(--text-gray-dark);
+}
+
+body.dark-mode .early-birds-date-filter input {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: var(--text-dark);
+}
+
+body.dark-mode .early-bird-row {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-mode .early-bird-row:nth-child(1) {
+    background: linear-gradient(100deg, rgba(197, 160, 89, 0.35), rgba(255, 255, 255, 0.04));
+    border-color: rgba(197, 160, 89, 0.6);
+}
+
+body.dark-mode .early-bird-row:nth-child(2) {
+    background: linear-gradient(100deg, rgba(148, 163, 184, 0.25), rgba(255, 255, 255, 0.04));
+    border-color: rgba(148, 163, 184, 0.45);
+}
+
+body.dark-mode .early-bird-row:nth-child(3) {
+    background: linear-gradient(100deg, rgba(217, 119, 6, 0.22), rgba(255, 255, 255, 0.04));
+    border-color: rgba(217, 119, 6, 0.45);
+}
+
+body.dark-mode .early-bird-rank {
+    color: var(--accent-gold);
+}
+
+body.dark-mode .early-bird-photo-frame {
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .early-bird-photo-placeholder {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-gray-dark);
+}
+
+body.dark-mode .early-bird-name {
+    color: var(--text-dark);
+}
+
+body.dark-mode .early-bird-meta {
+    color: var(--text-gray-dark);
+}
+
+body.dark-mode .early-bird-time {
+    color: #5eead4;
+}
+
+body.dark-mode .early-birds-empty {
+    color: var(--text-gray-dark);
+}
+
 .theme-toggle {
     display: flex;
     align-items: center;
