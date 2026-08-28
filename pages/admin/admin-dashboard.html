@@ -283,8 +283,12 @@
                                     <button class="early-birds-tab" type="button" role="tab" aria-selected="false" data-early-birds-period="monthly">Monthly</button>
                                 </div>
                                 <div class="early-birds-date-filter">
-                                    <label for="early-birds-date"><i class="fa-regular fa-calendar"></i> Daily date</label>
+                                    <label id="early-birds-date-label" for="early-birds-date"><i class="fa-regular fa-calendar"></i> Daily date</label>
                                     <input id="early-birds-date" type="date" aria-label="Select Early Birds daily date">
+                                    <label id="early-birds-week-label" for="early-birds-week" class="hidden"><i class="fa-regular fa-calendar"></i> Week containing</label>
+                                    <input id="early-birds-week" type="date" aria-label="Select a date in the Early Birds week" class="hidden">
+                                    <label id="early-birds-month-label" for="early-birds-month" class="hidden"><i class="fa-regular fa-calendar"></i> Month containing</label>
+                                    <input id="early-birds-month" type="date" aria-label="Select a date in the Early Birds month" class="hidden">
                                 </div>
                                 <div id="early-birds-list" class="early-birds-list" aria-live="polite">
                                     <p class="early-birds-empty">Loading early birds...</p>
@@ -381,49 +385,100 @@
             isLogsExpanded: false,
             earlyBirdPeriod: 'daily',
             earlyBirdDate: getLocalDateKey(),
-            earlyBirdLogs: []
+            earlyBirdWeekStart: getWeekStartDateKey(),
+            earlyBirdMonthStart: getMonthStartDateKey(),
+            earlyBirdLogs: [],
+            earlyBirdStatus: 'loading',
+            earlyBirdRequestId: 0
         };
 
         function getLocalDateKey(date = new Date()) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+            return new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Asia/Manila',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).format(date);
+        }
+
+        function parseDateKey(dateKey) {
+            const [year, month, day] = dateKey.split('-').map(Number);
+            return new Date(Date.UTC(year, month - 1, day));
+        }
+
+        function addDays(dateKey, days) {
+            const date = parseDateKey(dateKey);
+            date.setUTCDate(date.getUTCDate() + days);
+            return getUtcDateKey(date);
+        }
+
+        function getUtcDateKey(date) {
+            return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
         }
 
         function getPeriodStart(period) {
-            const start = new Date();
-            start.setHours(0, 0, 0, 0);
             if (period === 'daily') return dashboardData.earlyBirdDate;
-            if (period === 'weekly') {
-                const day = start.getDay() || 7;
-                start.setDate(start.getDate() - day + 1);
-            } else if (period === 'monthly') {
-                start.setDate(1);
-            }
-            return getLocalDateKey(start);
+            if (period === 'weekly') return dashboardData.earlyBirdWeekStart;
+            return dashboardData.earlyBirdMonthStart;
+        }
+
+        function getWeekStartDateKey(date = new Date()) {
+            const dateKey = typeof date === 'string' ? date : getLocalDateKey(date);
+            const start = parseDateKey(dateKey);
+            const day = start.getUTCDay() || 7;
+            start.setUTCDate(start.getUTCDate() - day + 1);
+            return getUtcDateKey(start);
+        }
+
+        function getMonthStartDateKey(date = new Date()) {
+            const dateKey = typeof date === 'string' ? date : getLocalDateKey(date);
+            return `${dateKey.slice(0, 7)}-01`;
+        }
+
+        function getManilaDayStart(dateKey) {
+            const [year, month, day] = dateKey.split('-').map(Number);
+            return new Date(Date.UTC(year, month - 1, day) - 8 * 60 * 60 * 1000);
         }
 
         function getPeriodEnd(period) {
             if (period === 'daily') return dashboardData.earlyBirdDate;
-            const end = new Date(`${getPeriodStart(period)}T00:00:00`);
-            if (period === 'weekly') {
-                end.setDate(end.getDate() + 6);
-            } else if (period === 'monthly') {
-                end.setMonth(end.getMonth() + 1, 0);
-            }
-            return getLocalDateKey(end);
+            if (period === 'weekly') return addDays(getPeriodStart(period), 6);
+            const monthStart = parseDateKey(getPeriodStart(period));
+            const lastDay = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 0));
+            return getUtcDateKey(lastDay);
         }
 
         function getArrivalMinutes(log) {
-            const date = new Date(log.scanned_at);
-            return date.getHours() * 60 + date.getMinutes() + date.getSeconds() / 60;
+            const timeParts = new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Asia/Manila',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hourCycle: 'h23'
+            }).formatToParts(new Date(log.scanned_at));
+            const values = Object.fromEntries(timeParts.map(part => [part.type, part.value]));
+            return Number(values.hour) * 60 + Number(values.minute) + Number(values.second) / 60;
+        }
+
+        function getLogLocalDate(log) {
+            if (log.local_date) return String(log.local_date);
+            return getLocalDateKey(new Date(log.scanned_at));
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, character => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            })[character]);
         }
 
         function getFirstAMLogs(logs) {
             const firstLogs = new Map();
             logs.filter(log => log.session === 'AM').forEach(log => {
-                const localDate = log.local_date || getLocalDateKey(new Date(log.scanned_at));
+                const localDate = getLogLocalDate(log);
                 const key = `${log.student_lrn}:${localDate}`;
                 const current = firstLogs.get(key);
                 if (!current || new Date(log.scanned_at) < new Date(current.scanned_at)) firstLogs.set(key, log);
@@ -435,7 +490,7 @@
             const rosterStudent = dashboardData.students.find(student =>
                 String(student.lrn) === String(log.student_lrn)
             ) || {};
-            const joinedStudent = log.students || {};
+            const joinedStudent = Array.isArray(log.students) ? (log.students[0] || {}) : (log.students || {});
             return {
                 ...rosterStudent,
                 ...joinedStudent,
@@ -450,7 +505,7 @@
             const periodEnd = getPeriodEnd(period);
             const firstLogs = getFirstAMLogs(dashboardData.earlyBirdLogs)
                 .filter(log => {
-                    const localDate = log.local_date || getLocalDateKey(new Date(log.scanned_at));
+                    const localDate = getLogLocalDate(log);
                     return period === 'daily'
                         ? localDate === periodStart
                         : localDate >= periodStart && localDate <= periodEnd;
@@ -481,11 +536,20 @@
             const periodLabel = document.getElementById('early-birds-period');
             if (!list) return;
 
+            if (dashboardData.earlyBirdStatus === 'loading') {
+                list.innerHTML = '<p class="early-birds-empty">Loading early birds...</p>';
+                return;
+            }
+            if (dashboardData.earlyBirdStatus === 'error') {
+                list.innerHTML = '<p class="early-birds-empty">Unable to load early birds. Please try again.</p>';
+                return;
+            }
+
             const rankings = getEarlyBirdRankings(dashboardData.earlyBirdPeriod);
             const labels = {
-                daily: `Fastest AM arrivals on ${new Date(`${dashboardData.earlyBirdDate}T00:00:00`).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`,
-                weekly: 'Best average AM arrival time this week',
-                monthly: 'Best average AM arrival time this month'
+                daily: `Fastest AM arrivals on ${parseDateKey(dashboardData.earlyBirdDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' })}`,
+                weekly: `Best average AM arrival time: ${getPeriodStart('weekly')} to ${getPeriodEnd('weekly')}`,
+                monthly: `Best average AM arrival time: ${parseDateKey(getPeriodStart('monthly')).toLocaleDateString('en-PH', { month: 'long', year: 'numeric', timeZone: 'Asia/Manila' })}`
             };
             const sectionLabel = dashboardData.selectedSection === 'ALL'
                 ? 'all sections'
@@ -499,17 +563,20 @@
 
             list.innerHTML = rankings.map((entry, index) => {
                 const student = entry.student;
-                const name = student.full_name || 'Unknown learner';
-                const hours = Math.floor(entry.averageTime / 60) % 24;
-                const minutes = Math.round(entry.averageTime % 60);
-                const averageTime = new Date(2000, 0, 1, hours, minutes).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
+                const name = escapeHtml(student.full_name || 'Unknown learner');
+                const section = escapeHtml(student.section || 'N/A');
+                const photoUrl = escapeHtml(student.photo_url || '');
+                const totalMinutes = Math.round(entry.averageTime);
+                const hours = Math.floor(totalMinutes / 60) % 24;
+                const minutes = totalMinutes % 60;
+                const averageTime = new Date(2000, 0, 1, hours, minutes).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' });
                 return `<div class="early-bird-row">
                     <div class="early-bird-rank">${index + 1}</div>
                     <div class="early-bird-photo-frame">
-                        <img class="early-bird-photo early-bird-photo-loading" data-early-bird-lrn="${entry.studentLrn}" data-early-bird-photo="${student.photo_url || ''}" alt="">
+                        <img class="early-bird-photo early-bird-photo-loading" data-early-bird-lrn="${escapeHtml(entry.studentLrn)}" data-early-bird-photo="${photoUrl}" alt="">
                         <div class="early-bird-photo-placeholder" aria-hidden="true"><i class="fa-solid fa-user"></i></div>
                     </div>
-                    <div class="early-bird-info"><div class="early-bird-name">${name}</div><div class="early-bird-meta">${student.section || 'N/A'} · ${entry.arrivalTimes.length} qualifying day${entry.arrivalTimes.length === 1 ? '' : 's'}</div></div>
+                    <div class="early-bird-info"><div class="early-bird-name">${name}</div><div class="early-bird-meta">${section} · ${entry.arrivalTimes.length} qualifying day${entry.arrivalTimes.length === 1 ? '' : 's'}</div></div>
                     <div class="early-bird-time">${averageTime}</div>
                 </div>`;
             }).join('');
@@ -523,22 +590,44 @@
         }
 
         async function fetchEarlyBirdLogs() {
+            const requestId = ++dashboardData.earlyBirdRequestId;
+            dashboardData.earlyBirdStatus = 'loading';
+            renderEarlyBirds();
+
             const queryDateKey = dashboardData.earlyBirdPeriod === 'daily'
                 ? dashboardData.earlyBirdDate
-                : getLocalDateKey();
-            const selectedDate = new Date(`${queryDateKey}T00:00:00`);
-            const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-            startOfMonth.setDate(1);
-            startOfMonth.setHours(0, 0, 0, 0);
-            const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
-            const { data, error } = await window.supabaseClient
-                .from('attendance_logs')
-                .select('student_lrn, scanned_at, local_date, session, section, students (full_name, section, photo_url)')
-                .eq('session', 'AM')
-                .gte('local_date', getLocalDateKey(startOfMonth))
-                .lte('local_date', getLocalDateKey(endOfMonth))
-                .order('scanned_at', { ascending: true });
-            if (!error) dashboardData.earlyBirdLogs = data || [];
+                : getPeriodStart(dashboardData.earlyBirdPeriod);
+
+            if (dashboardData.earlyBirdPeriod === 'daily' && queryDateKey === getLocalDateKey()) {
+                dashboardData.earlyBirdLogs = dashboardData.presentToday.filter(log => log.session === 'AM');
+                dashboardData.earlyBirdStatus = 'ready';
+                renderEarlyBirds();
+                return;
+            }
+
+            try {
+                const selectFields = 'student_lrn, scanned_at, local_date, session, section, students (full_name, section, photo_url)';
+                const periodStart = getManilaDayStart(getPeriodStart(dashboardData.earlyBirdPeriod));
+                const periodEnd = getManilaDayStart(getPeriodEnd(dashboardData.earlyBirdPeriod));
+                const startOfNextPeriod = new Date(periodEnd.getTime() + 24 * 60 * 60 * 1000);
+                const { data, error } = await window.supabaseClient
+                    .from('attendance_logs')
+                    .select(selectFields)
+                    .eq('session', 'AM')
+                    .gte('scanned_at', periodStart.toISOString())
+                    .lt('scanned_at', startOfNextPeriod.toISOString())
+                    .order('scanned_at', { ascending: true });
+
+                if (requestId !== dashboardData.earlyBirdRequestId) return;
+                if (error) throw error;
+                dashboardData.earlyBirdLogs = data || [];
+                dashboardData.earlyBirdStatus = 'ready';
+            } catch (error) {
+                if (requestId !== dashboardData.earlyBirdRequestId) return;
+                console.error('Early Birds Fetch Error:', error.message);
+                dashboardData.earlyBirdLogs = [];
+                dashboardData.earlyBirdStatus = 'error';
+            }
             renderEarlyBirds();
         }
 
@@ -707,6 +796,7 @@
                             if (updatedLog) {
                                 dashboardData.presentToday[index] = updatedLog;
                                 refreshUI();
+                                if (updatedLog.session === 'AM' || payload.old?.session === 'AM') fetchEarlyBirdLogs();
                             }
                         }
                     })
@@ -722,6 +812,7 @@
                         }
                         
                         refreshUI();
+                        if (payload.old?.session === 'AM') fetchEarlyBirdLogs();
                     })
                     .subscribe();
 
@@ -941,6 +1032,11 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const dateFilter = document.getElementById('early-birds-date');
+            const dateLabel = document.getElementById('early-birds-date-label');
+            const weekFilter = document.getElementById('early-birds-week');
+            const weekLabel = document.getElementById('early-birds-week-label');
+            const monthFilter = document.getElementById('early-birds-month');
+            const monthLabel = document.getElementById('early-birds-month-label');
             if (dateFilter) {
                 dateFilter.value = dashboardData.earlyBirdDate;
                 dateFilter.addEventListener('change', async (event) => {
@@ -951,11 +1047,35 @@
                     }
                 });
             }
+            if (weekFilter) {
+                weekFilter.value = dashboardData.earlyBirdWeekStart;
+                weekFilter.addEventListener('change', async (event) => {
+                    if (!event.target.value) return;
+                    dashboardData.earlyBirdWeekStart = getWeekStartDateKey(new Date(`${event.target.value}T00:00:00`));
+                    if (dashboardData.earlyBirdPeriod === 'weekly') await fetchEarlyBirdLogs();
+                });
+            }
+            if (monthFilter) {
+                monthFilter.value = dashboardData.earlyBirdMonthStart;
+                monthFilter.addEventListener('change', async (event) => {
+                    if (!event.target.value) return;
+                    dashboardData.earlyBirdMonthStart = getMonthStartDateKey(event.target.value);
+                    if (dashboardData.earlyBirdPeriod === 'monthly') await fetchEarlyBirdLogs();
+                });
+            }
 
             document.querySelectorAll('[data-early-birds-period]').forEach(tab => {
                 tab.addEventListener('click', async () => {
                     dashboardData.earlyBirdPeriod = tab.dataset.earlyBirdsPeriod;
-                    if (dateFilter) dateFilter.disabled = dashboardData.earlyBirdPeriod !== 'daily';
+                    const isDaily = dashboardData.earlyBirdPeriod === 'daily';
+                    const isWeekly = dashboardData.earlyBirdPeriod === 'weekly';
+                    const isMonthly = dashboardData.earlyBirdPeriod === 'monthly';
+                    if (dateFilter) dateFilter.classList.toggle('hidden', !isDaily);
+                    if (dateLabel) dateLabel.classList.toggle('hidden', !isDaily);
+                    if (weekFilter) weekFilter.classList.toggle('hidden', !isWeekly);
+                    if (weekLabel) weekLabel.classList.toggle('hidden', !isWeekly);
+                    if (monthFilter) monthFilter.classList.toggle('hidden', !isMonthly);
+                    if (monthLabel) monthLabel.classList.toggle('hidden', !isMonthly);
                     document.querySelectorAll('[data-early-birds-period]').forEach(otherTab => {
                         const isActive = otherTab === tab;
                         otherTab.classList.toggle('is-active', isActive);
