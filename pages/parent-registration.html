@@ -109,20 +109,14 @@
                         </div>
                     </div>
 
-                    <p id="step-instruction" class="text-xs text-blue-600 font-black mb-4 uppercase tracking-widest animate-bounce">
-                        Final Step: Tap "Get Started" in Messenger, then send the secure code below
-                    </p>
+                    <div id="step-instruction" class="text-left text-xs text-blue-600 font-black mb-4 uppercase tracking-widest animate-bounce leading-relaxed">
+                        <div>1. Copy the secure confirmation code.</div>
+                        <div>2. Tap Connect Messenger.</div>
+                        <div>3. Once the chat opens, paste and send the code.</div>
+                    </div>
                     
                     <div id="action-area" class="flex flex-col items-center gap-4">
-                        <!-- The actual Messenger Opt-in Button -->
-                        <div id="messenger-button-container"></div>
-                        
-                        <!-- Manual Check Button (Fallback for Mobile) -->
-                        <button id="manual-check-btn" class="text-[10px] font-black text-blue-600 uppercase border-2 border-blue-100 px-6 py-2 rounded-xl hover:bg-blue-50 transition-all hidden">
-                            I've clicked Connect, Check Status Now
-                        </button>
-                        
-                        <div id="alternative-method" class="w-full border-t border-gray-100 my-4 pt-4">
+                        <div id="alternative-method" class="w-full border-t border-gray-100 pt-4">
                             <p class="text-[9px] text-gray-400 font-bold uppercase mb-2">Secure confirmation code</p>
                             <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100">
                                 <code id="copy-code-text" class="flex-1 text-[10px] font-mono font-bold text-gray-600"></code>
@@ -130,8 +124,18 @@
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
                                 </button>
                             </div>
-                            <p class="text-[8px] text-gray-500 font-bold uppercase mt-2">After tapping Connect Messenger, reply with this exact code to finish the link.</p>
+                            <p class="text-[8px] text-gray-500 font-bold uppercase mt-2">Copy the code first, then open Messenger and send it once the chat appears.</p>
                         </div>
+
+                        <!-- The actual Messenger Opt-in Button -->
+                        <div id="messenger-button-container"></div>
+                        
+                        <!-- Manual Check Button (Fallback for Mobile) -->
+                        <button id="manual-check-btn" class="text-[10px] font-black text-blue-600 uppercase border-2 border-blue-100 px-6 py-2 rounded-xl hover:bg-blue-50 transition-all hidden">
+                            I've clicked Connect, Check Status Now
+                        </button>
+
+                        <p class="text-[8px] text-gray-500 font-bold uppercase text-center">After the DepEd RXII Upper Labay High School chat opens, paste the copied code and send it to finish the link.</p>
                     </div>
 
                     <button onclick="location.reload()" class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-8 hover:text-gray-600">
