@@ -26,10 +26,23 @@
                     <img src="../assets/images/school-logo.webp" alt="ULHS" class="w-20 h-20">
                 </div>
                 
-                <h2 class="text-2xl font-black text-center text-gray-900 uppercase tracking-tight mb-2">Parent Portal</h2>
-                <p class="text-center text-gray-500 text-sm mb-8">Link your Messenger account to receive real-time attendance alerts for your child.</p>
+                <h2 class="text-2xl font-black text-center text-gray-900 uppercase tracking-tight mb-2">Parent Registration</h2>
+                <p class="text-center text-gray-500 text-sm mb-8">Complete the secure registration steps below to verify your Messenger account and receive attendance alerts for your child.</p>
 
                 <div id="registration-form" class="space-y-6">
+                    <div class="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                        <h4 class="text-xs font-black text-blue-800 uppercase mb-2 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z"></path></svg>
+                            Registration Steps
+                        </h4>
+                        <ol class="text-[10px] text-blue-700 space-y-2 font-semibold">
+                            <li>1. Enter your child's <b>12-digit LRN</b>.</li>
+                            <li>2. Create your <b>4-digit parent PIN</b> and confirm it.</li>
+                            <li>3. Read and accept the <b>Data Privacy Consent</b>.</li>
+                            <li>4. Tap <b>Start Registration</b> and complete the secure Messenger confirmation.</li>
+                        </ol>
+                    </div>
+
                     <div>
                         <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Student LRN (12 Digits)</label>
                         <input type="text" id="student-lrn" maxlength="12" placeholder="Enter 12-digit LRN" 
@@ -38,28 +51,16 @@
                     </div>
                     
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Set 4-Digit PIN (for login)</label>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Set 4-Digit Parent PIN</label>
                         <input type="password" id="parent-pin" maxlength="4" placeholder="Enter 4-digit PIN" 
                             class="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-blue-500 focus:outline-none font-bold text-gray-900 transition-all">
                     </div>
                     
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Confirm PIN</label>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Confirm Parent PIN</label>
                         <input type="password" id="confirm-pin" maxlength="4" placeholder="Confirm 4-digit PIN" 
                             class="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-blue-500 focus:outline-none font-bold text-gray-900 transition-all">
                         <p id="pin-error" class="text-[10px] text-red-500 font-bold mt-2 hidden">PINs do not match or are not 4 digits.</p>
-                    </div>
-
-                    <div class="bg-blue-50 rounded-2xl p-4 border border-blue-100">
-                        <h4 class="text-xs font-black text-blue-800 uppercase mb-2 flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z"></path></svg>
-                            Registration Steps
-                        </h4>
-                        <ol class="text-[10px] text-blue-700 space-y-2 font-semibold">
-                            <li>1. Enter your child's <b>12-digit LRN</b>.</li>
-                            <li>2. Read and check the <b>Data Privacy Consent</b> box below.</li>
-                            <li>3. Click <b>Start Registration</b> button to verify the identity of your child.</li>
-                        </ol>
                     </div>
 
                     <!-- DPA Consent Section -->
@@ -109,7 +110,7 @@
                     </div>
 
                     <p id="step-instruction" class="text-xs text-blue-600 font-black mb-4 uppercase tracking-widest animate-bounce">
-                        Final Step: Tap "Get Started" in Messenger 
+                        Final Step: Tap "Get Started" in Messenger, then send the secure code below
                     </p>
                     
                     <div id="action-area" class="flex flex-col items-center gap-4">
@@ -122,13 +123,14 @@
                         </button>
                         
                         <div id="alternative-method" class="w-full border-t border-gray-100 my-4 pt-4">
-                            <p class="text-[9px] text-gray-400 font-bold uppercase mb-2">If button fails: Send this code to our chat</p>
+                            <p class="text-[9px] text-gray-400 font-bold uppercase mb-2">Secure confirmation code</p>
                             <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100">
                                 <code id="copy-code-text" class="flex-1 text-[10px] font-mono font-bold text-gray-600"></code>
                                 <button id="copy-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-600 p-1.5 rounded-md transition-all">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
                                 </button>
                             </div>
+                            <p class="text-[8px] text-gray-500 font-bold uppercase mt-2">After tapping Connect Messenger, reply with this exact code to finish the link.</p>
                         </div>
                     </div>
 
@@ -226,6 +228,11 @@
             }).join(' ');
         }
 
+        function generateRegistrationToken() {
+            const token = Math.random().toString(36).toUpperCase().slice(2, 10);
+            return token.padEnd(8, 'X');
+        }
+
         // Initialize security check
         updateButtonState();
 
@@ -300,9 +307,11 @@
                 formSection.classList.add('hidden');
                 messengerSection.classList.remove('hidden');
 
-                // Official m.me link is superior for mobile app redirection and bot parameter passing (ref)
-                const pageName = "ulhsofficial"; 
-                const messengerLink = `https://m.me/${pageName}?ref=reg_${lrn}`;
+                // Secure registration flow: require a unique confirmation code tied to this registration attempt.
+                const registrationToken = generateRegistrationToken();
+                const pageName = "ulhsofficial";
+                const referralCode = `reg_${lrn}_${registrationToken}`;
+                const messengerLink = `https://m.me/${pageName}?ref=${referralCode}`;
                 
                 const container = document.getElementById('messenger-button-container');
                 const copyCodeText = document.getElementById('copy-code-text');
@@ -310,10 +319,15 @@
 
                 // Mask LRN in display but keep full LRN for copy function
                 const maskedLrn = lrn.substring(0, 3) + "******" + lrn.substring(9);
-                copyCodeText.textContent = `reg_${maskedLrn}`;
+                const safeConfirmationText = `CONFIRM ${registrationToken}`;
+                copyCodeText.textContent = `${safeConfirmationText} (${maskedLrn})`;
                 
-                copyBtn.onclick = () => {
-                    navigator.clipboard.writeText(`reg_${lrn}`);
+                copyBtn.onclick = async () => {
+                    try {
+                        await navigator.clipboard.writeText(safeConfirmationText);
+                    } catch (err) {
+                        console.warn('Clipboard copy failed:', err);
+                    }
                     const originalIcon = copyBtn.innerHTML;
                     copyBtn.innerHTML = '<svg class="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
                     setTimeout(() => copyBtn.innerHTML = originalIcon, 2000);

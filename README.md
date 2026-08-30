@@ -14,6 +14,7 @@ Welcome to the official website for **Upper Labay High School**. This project is
 - **Privacy Policy**: Complete transparency about data handling in compliance with RA 10173 (Data Privacy Act of 2012).
 
 ### Parent Portal Features
+- **Secure Messenger Registration**: Parent account linking is completed through the official ULHS registration flow, with secure confirmation codes and token validation instead of accepting raw LRN messages. Registration is only completed after the secure Messenger confirmation code is verified.
 - **Secure Login**: PIN-based authentication with rate limiting and encrypted session storage.
 - **Student Selector**: Switch between multiple linked children with student photos.
 - **Grades Viewing**: Access term grades with color-coded performance indicators.
@@ -41,7 +42,7 @@ Welcome to the official website for **Upper Labay High School**. This project is
 - **Storage**: Supabase Storage for student photos and documents
 - **Design**: Cultural-inspired theme using the traditional Blaan beadwork palette (Red, Yellow, Blue, Black, White).
 - **Hosting**: GitHub Pages for frontend, Supabase for backend.
-- **Security**: CryptoJS for PIN hashing and encrypted session storage.
+- **Security**: CryptoJS for PIN hashing, encrypted session storage, secure Messenger confirmation tokens, and Facebook webhook signature validation.
 
 ## 🚀 Deployment
 
@@ -53,6 +54,8 @@ This system complies with the **Data Privacy Act of 2012 (RA 10173)**. Key secur
 - Row Level Security (RLS) on all database tables
 - Encrypted PIN storage (never stored in plaintext)
 - Encrypted session storage
+- Secure Messenger registration with unique confirmation tokens and verification codes
+- Facebook webhook signature verification before processing Messenger events
 - Rate limiting on login attempts
 - HTTPS for all data transfers
 - Role-Based Access Control (RBAC)

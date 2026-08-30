@@ -51,6 +51,7 @@
                         <ul class="list-disc pl-5 text-sm space-y-1">
                             <li>Name and Facebook Page Scoped ID (PSID) for attendance alerts</li>
                             <li>Hashed PIN for Parent Portal login (PIN is never stored in plaintext)</li>
+                            <li>Secure confirmation tokens and Messenger verification codes used only to validate the parent registration process</li>
                         </ul>
                     </div>
                     <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
@@ -63,7 +64,19 @@
                 </section>
 
                 <section>
-                    <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-l-4 border-blue-600 pl-3">3. Purpose of Processing</h2>
+                    <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-l-4 border-blue-600 pl-3">3. Secure Messenger Registration</h2>
+                    <p class="text-sm mb-2">To protect student privacy and prevent unauthorized linking, parent registration through Facebook Messenger is governed by a secure confirmation process:</p>
+                    <ul class="list-disc pl-5 text-sm space-y-1">
+                        <li>Parents must begin the process through the official ULHS Parent Registration page</li>
+                        <li>Each registration uses a unique secure token and confirmation code</li>
+                        <li>Raw or direct LRN messages, direct REG_ values, and direct LINK values are not accepted as valid proof of identity</li>
+                        <li>Messenger webhooks are validated using the Facebook app secret signature before any event is processed</li>
+                    </ul>
+                    <p class="text-sm mt-2">This prevents unauthorized linking of a student's record to a random Facebook account. Parent registration is only completed after the secure confirmation code is validated in Messenger.</p>
+                </section>
+
+                <section>
+                    <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-l-4 border-blue-600 pl-3">4. Purpose of Processing</h2>
                     <p class="text-sm mb-2">Data is processed solely for the following legitimate educational purposes:</p>
                     <ul class="list-disc pl-5 text-sm space-y-1">
                         <li>Notify parents/guardians about their child's school attendance in real-time</li>
@@ -74,7 +87,7 @@
                 </section>
 
                 <section>
-                    <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-l-4 border-blue-600 pl-3">4. Data Storage & Security</h2>
+                    <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-l-4 border-blue-600 pl-3">5. Data Storage & Security</h2>
                     <p class="text-sm mb-2">All data is stored securely in a cloud database with strict Row Level Security (RLS) policies. Our security measures include:</p>
                     <ul class="list-disc pl-5 text-sm space-y-1">
                         <li>Access restricted to authorized school personnel only</li>
@@ -82,12 +95,13 @@
                         <li>Encrypted session storage for all portal sessions</li>
                         <li>Rate limiting on login attempts to prevent brute-force attacks</li>
                         <li>Secure connections (HTTPS) for all data transfers</li>
+                        <li>Webhook signature verification for Messenger events using the Facebook app secret</li>
                         <li>Regular security audits and updates</li>
                     </ul>
                 </section>
 
                 <section id="deletion">
-                    <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-l-4 border-blue-600 pl-3">5. Data Deletion & User Rights</h2>
+                    <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-l-4 border-blue-600 pl-3">6. Data Deletion & User Rights</h2>
                     <p class="text-sm mb-2">In compliance with the Data Privacy Act of 2012, users have the following rights:</p>
                     <ul class="list-disc pl-5 text-sm space-y-1 mb-4">
                         <li>Right to access their personal data</li>
@@ -104,7 +118,7 @@
                 </section>
 
                 <section>
-                    <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-l-4 border-blue-600 pl-3">6. Contact Us</h2>
+                    <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-l-4 border-blue-600 pl-3">7. Contact Us</h2>
                     <p class="text-sm">For questions regarding your data privacy, or to exercise your rights under the DPA, please contact our Data Protection Officer at the Upper Labay High School ICT Department or visit our official Facebook Page.</p>
                 </section>
             </div>

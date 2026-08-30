@@ -22,7 +22,8 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
-        "npm:supabase@^2.98.0"
+        "npm:@supabase/supabase-js@^2.109.1",
+        "npm:mammoth@^1.5.2"
       ]
     }
   }
