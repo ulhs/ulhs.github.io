@@ -312,6 +312,24 @@
                 const pageName = "ulhsofficial";
                 const referralCode = `reg_${lrn}_${registrationToken}`;
                 const messengerLink = `https://m.me/${pageName}?ref=${referralCode}`;
+                const pendingParentPsid = `PENDING_${Date.now()}_${lrn}`;
+
+                const { error: codeInsertError } = await window.supabaseClient
+                    .from('verification_codes')
+                    .insert({
+                        parent_psid: pendingParentPsid,
+                        student_lrn: lrn,
+                        code: registrationToken,
+                        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+                        used: false
+                    });
+
+                if (codeInsertError) {
+                    console.error('⚠️ Failed to store registration confirmation code:', codeInsertError);
+                    alert('Unable to create the secure confirmation code. Please try again.');
+                    location.reload();
+                    return;
+                }
                 
                 const container = document.getElementById('messenger-button-container');
                 const copyCodeText = document.getElementById('copy-code-text');
@@ -319,7 +337,7 @@
 
                 // Mask LRN in display but keep full LRN for copy function
                 const maskedLrn = lrn.substring(0, 3) + "******" + lrn.substring(9);
-                const safeConfirmationText = `CONFIRM ${registrationToken}`;
+                const safeConfirmationText = `CONFIRM ${registrationToken} ${lrn}`;
                 copyCodeText.textContent = `${safeConfirmationText} (${maskedLrn})`;
                 
                 copyBtn.onclick = async () => {

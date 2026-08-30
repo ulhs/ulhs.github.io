@@ -259,13 +259,21 @@ serve(async (req) => {
 
                 console.log(`🔐 Validating confirmation code ${parsedConfirm.code} for PSID ${psid} and LRN ${parsedConfirm.lrn || 'unspecified'}`);
 
-                const { data: validCode, error: codeError } = await supabase
+                const pendingLrn = parsedConfirm.lrn || null;
+                let codeQuery = supabase
                   .from('verification_codes')
                   .select('*')
-                  .eq('parent_psid', psid)
                   .eq('code', parsedConfirm.code)
                   .eq('used', false)
-                  .gt('expires_at', new Date().toISOString())
+                  .gt('expires_at', new Date().toISOString());
+
+                if (pendingLrn) {
+                  codeQuery = codeQuery.eq('student_lrn', pendingLrn);
+                } else {
+                  codeQuery = codeQuery.eq('parent_psid', psid);
+                }
+
+                const { data: validCode, error: codeError } = await codeQuery
                   .order('created_at', { ascending: false })
                   .limit(1)
                   .single();
@@ -274,6 +282,17 @@ serve(async (req) => {
                   console.warn(`⚠️ Invalid or expired confirmation code for PSID ${psid}: ${parsedConfirm.code}`);
                   await sendResponse(psid, `❌ Invalid or expired confirmation code. Please request a fresh verification code from the secure registration flow.`);
                   continue;
+                }
+
+                if (pendingLrn) {
+                  const { error: updatePendingError } = await supabase
+                    .from('verification_codes')
+                    .update({ parent_psid: psid })
+                    .eq('id', validCode.id);
+
+                  if (updatePendingError) {
+                    console.error(`⚠️ Failed to attach PSID ${psid} to valid registration code ${validCode.id}:`, updatePendingError);
+                  }
                 }
 
                 const targetLrn = parsedConfirm.lrn || null;
