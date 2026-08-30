@@ -316,19 +316,25 @@ serve(async (req) => {
                   continue;
                 }
 
-                const { error: updateError } = await supabase
+                const { data: updatedStudent, error: updateError } = await supabase
                   .from('students')
                   .update({
                     parent_messenger_id: psid,
                     notify_parent: true
                   })
                   .eq('lrn', studentData.lrn)
-                  .eq('parent_messenger_id', targetLrn ? studentData.parent_messenger_id ?? null : studentData.parent_messenger_id ?? null)
-                  .or(`parent_messenger_id.is.null,parent_messenger_id.eq.${psid}`);
+                  .or(`parent_messenger_id.is.null,parent_messenger_id.eq.${psid}`)
+                  .select();
 
                 if (updateError) {
                   console.error(`❌ Error linking student ${studentData.lrn} to PSID ${psid}:`, updateError);
                   await sendResponse(psid, `❌ I could not complete the link. Please try again.`);
+                  continue;
+                }
+
+                if (!updatedStudent || updatedStudent.length === 0) {
+                  console.warn(`⚠️ Confirmed code was valid, but the student record for LRN ${studentData.lrn} was not updated for PSID ${psid}.`);
+                  await sendResponse(psid, `❌ The confirmation was valid, but the link did not update correctly. Please try again or request a fresh code.`);
                   continue;
                 }
 
