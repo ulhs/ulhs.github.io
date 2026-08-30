@@ -20,10 +20,18 @@
         { "text": "Career & College Portal", "url": "pages/career-portal.html" },
         { "text": "Transparency Board", "url": "pages/transparency.html" }
     ],
-    "announcement": {
-        "enabled": true,
-        "text": "For ULHS personnel, please log your Work-From-Home attendance by clicking this <a href=\"https://forms.gle/VSEWqBX12aVQPMeS8\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"background-color: pink; color: darkred; border-radius: 4px; padding: 3px 4px; text-decoration: none; display: inline-block;\">link</a>.",
-        "button_text": "Ask SirChris for help",
-        "link": "https://facebook.com/sirchrisperegrino"
-    }
+    "announcement": [
+        {
+            "enabled": true,
+            "text": "For ULHS personnel, please log your Work-From-Home attendance.",
+            "button_text": "Open Attendance Form",
+            "link": "https://forms.gle/VSEWqBX12aVQPMeS8"
+        },
+        {
+            "enabled": true,
+            "text": "The Upper Labay National High School portal is now active. Proceed to the Link Grading Program to continue.",
+            "button_text": "Open Link Grading Program",
+            "link": "https://katangawandistrict.com/ulhs"
+        }
+        ]
 }

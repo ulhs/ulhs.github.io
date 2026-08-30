@@ -755,35 +755,41 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function injectAnnouncement(data, root) {
-        if (document.getElementById('site-announcement')) return;
-        if (sessionStorage.getItem('announcementDismissed')) return;
+    function injectAnnouncement(data, root, anchorElement = null, bannerIndex = 0) {
+        if (!data || !data.enabled) return null;
+        if (sessionStorage.getItem('announcementDismissed') && bannerIndex === 0) return null;
 
         const header = document.querySelector('header');
-        if (!header) return;
+        if (!header) return null;
 
         const banner = document.createElement('div');
-        banner.id = 'site-announcement';
+        banner.id = `site-announcement-${bannerIndex}`;
         banner.className = 'announcement-banner';
         
-        const linkUrl = data.link.startsWith('http') ? data.link : root + data.link;
-        const target = data.link.startsWith('http') ? 'target="_blank"' : '';
+        const linkUrl = data.link && data.link.startsWith('http') ? data.link : root + (data.link || '');
+        const target = data.link && data.link.startsWith('http') ? 'target="_blank"' : '';
         
         banner.innerHTML = `
             <div class="announcement-content">
                 <span class="announcement-text">${data.text}</span>
-                <a href="${linkUrl}" class="announcement-btn" ${target}>${data.button_text}</a>
+                <a href="${linkUrl}" class="announcement-btn" ${target}>${data.button_text || 'Learn More'}</a>
             </div>
-            <button class="announcement-close" id="close-announcement">&times;</button>
+            <button class="announcement-close" id="close-announcement-${bannerIndex}">&times;</button>
         `;
 
-        // Insert below the header
-        header.after(banner);
+        if (anchorElement) {
+            anchorElement.after(banner);
+        } else {
+            header.after(banner);
+        }
 
-        document.getElementById('close-announcement').addEventListener('click', () => {
+        const closeButton = banner.querySelector('.announcement-close');
+        closeButton.addEventListener('click', () => {
             banner.style.display = 'none';
             sessionStorage.setItem('announcementDismissed', 'true');
         });
+
+        return banner;
     }
 
     function updateGlobalUI(config, root) {
@@ -807,8 +813,23 @@ document.addEventListener('DOMContentLoaded', () => {
                           window.location.pathname.endsWith('index.html') ||
                           (window.location.pathname.split('/').pop() === '');
         
-        if (isHomePage && config.announcement && config.announcement.enabled) {
-            injectAnnouncement(config.announcement, root);
+        if (isHomePage && config.announcement) {
+            const announcements = Array.isArray(config.announcement)
+                ? config.announcement
+                : [config.announcement];
+
+            let anchorElement = document.querySelector('header');
+            let bannerIndex = 0;
+
+            announcements.forEach((announcement) => {
+                if (!announcement || !announcement.enabled) return;
+
+                const insertedBanner = injectAnnouncement(announcement, root, anchorElement, bannerIndex);
+                if (insertedBanner) {
+                    anchorElement = insertedBanner;
+                    bannerIndex += 1;
+                }
+            });
         }
 
         // Update Site-wide Branding (School Name in Footer/Header)
