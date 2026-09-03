@@ -1,3 +1,30 @@
+const SARDO_ALLOWED_ROLES = ['admin', 'school_head', 'guidance_counselor'];
+const ADMIN_MANAGEMENT_ROLES = ['admin', 'school_head'];
+
+function hasAnyRole(role, allowedRoles) {
+    return allowedRoles.includes(String(role || '').trim().toLowerCase());
+}
+
+function isSardoAccessAllowed(profile = null, roleOverride = null) {
+    const role = String(roleOverride || profile?.role || sessionStorage.getItem('userRole') || 'staff').trim().toLowerCase();
+    const access = JSON.parse(sessionStorage.getItem('userAccess') || '{}');
+    const permissionFlag = Boolean(profile?.can_view_sardo ?? access?.sardo ?? false);
+    return permissionFlag || hasAnyRole(role, SARDO_ALLOWED_ROLES);
+}
+
+function isPermissionAllowed(profile = null, roleOverride = null, allowedRoles = [], permissionKey = null) {
+    const role = String(roleOverride || profile?.role || sessionStorage.getItem('userRole') || 'staff').trim().toLowerCase();
+    const access = JSON.parse(sessionStorage.getItem('userAccess') || '{}');
+    const permissionFlag = permissionKey ? Boolean(profile?.[permissionKey] ?? access?.[permissionKey] ?? false) : false;
+    return permissionFlag || hasAnyRole(role, allowedRoles);
+}
+
+window.SARDO_ALLOWED_ROLES = SARDO_ALLOWED_ROLES;
+window.ADMIN_MANAGEMENT_ROLES = ADMIN_MANAGEMENT_ROLES;
+window.hasAnyRole = hasAnyRole;
+window.isSardoAccessAllowed = isSardoAccessAllowed;
+window.isPermissionAllowed = isPermissionAllowed;
+
 document.addEventListener('DOMContentLoaded', async () => {
     // --- Admin Session Guard ---
     async function syncAdminSession() {
@@ -23,11 +50,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     sessionStorage.setItem('userRole', profile.role);
                     sessionStorage.setItem('userName', profile.full_name);
                     
+                    const userRole = String(profile.role || 'staff').trim().toLowerCase();
                     const access = {
                         attendance: profile.can_scan,
                         idGen: profile.can_manage_ids,
                         stats: profile.can_view_dashboard,
-                        sardo: profile.can_view_sardo,
+                        sardo: Boolean(profile.can_view_sardo || SARDO_ALLOWED_ROLES.includes(userRole)),
                         grades: profile.can_manage_grades,
                         exams: profile.can_manage_exams || profile.can_manage_grades,
                         calendarExceptions: Boolean(profile.can_manage_calendar_exceptions || profile.can_manage_suspended_days),

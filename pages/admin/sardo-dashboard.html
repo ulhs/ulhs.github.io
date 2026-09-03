@@ -19,6 +19,14 @@
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
     <script>
+        const sardoAllowedRoles = window.SARDO_ALLOWED_ROLES || ['admin', 'school_head', 'guidance_counselor'];
+
+        function isSardoAccessAllowed(profile, roleOverride = null) {
+            const role = String(roleOverride || profile?.role || sessionStorage.getItem('userRole') || 'staff').trim().toLowerCase();
+            const access = JSON.parse(sessionStorage.getItem('userAccess') || '{}');
+            return Boolean(profile?.can_view_sardo || access?.sardo || sardoAllowedRoles.includes(role));
+        }
+
         async function checkAccess() {
             if (!window.supabaseClient) {
                 setTimeout(checkAccess, 100);
@@ -36,8 +44,8 @@
 
                 if (profileError) throw profileError;
 
-                const userRole = (profile?.role || 'staff').toLowerCase();
-                const canAccess = profile?.can_view_sardo || ['admin', 'school_head', 'guidance_counselor', 'teacher'].includes(userRole);
+                const userRole = String(profile?.role || 'staff').trim().toLowerCase();
+                const canAccess = isSardoAccessAllowed(profile, userRole);
                 
                 if (!canAccess) {
                     alert("ACCESS DENIED: You do not have permission to use the SARDO Dashboard.");
@@ -48,6 +56,9 @@
                 sessionStorage.setItem('userName', profile?.full_name || session.user.email);
                 sessionStorage.setItem('userRole', userRole);
                 sessionStorage.setItem('adminLoggedIn', 'true');
+                if (typeof window.logAdminAction === 'function') {
+                    window.logAdminAction('sardo_dashboard_accessed', null, { assessment_version: '2026.09.expected-sessions-v1' });
+                }
                 console.log("SARDO Access granted to:", userRole);
             } catch (e) {
                 console.error("Security Check Critical Error:", e);
@@ -117,7 +128,7 @@
                                 </li>`;
                         }
                         
-                        if (role === 'admin' || role === 'school_head' || role === 'guidance_counselor' || access.sardo || false) {
+                        if (sardoAllowedRoles.includes(String(role || '').toLowerCase()) || access.sardo || false) {
                             html += `
                                 <li class="list" data-page="sardo-dashboard.html">
                                     <a href="sardo-dashboard.html">
@@ -197,6 +208,11 @@
                             <svg class="w-6 h-6 text-deped-red" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                             SARDO Risk Dashboard
                         </h2>
+                        <div class="flex flex-wrap gap-2 mb-5">
+                            <a href="attendance-corrections.html" class="px-3 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-[10px] font-black uppercase tracking-wider"><i class="fa-solid fa-clipboard-list mr-1"></i> Corrections</a>
+                            <a href="attendance-duplicate-review.html" class="px-3 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-[10px] font-black uppercase tracking-wider"><i class="fa-solid fa-copy mr-1"></i> Duplicate Review</a>
+                            <a href="sardo-settings.html" class="px-3 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-[10px] font-black uppercase tracking-wider"><i class="fa-solid fa-sliders mr-1"></i> Settings</a>
+                        </div>
 
                         <div class="space-y-4">
                             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -212,6 +228,7 @@
                                         <option value="critical">Critical Only</option>
                                         <option value="high">High Only</option>
                                         <option value="medium">Medium Only</option>
+                                        <option value="low">Low Only</option>
                                     </select>
                                 </div>
                                 <div class="w-full md:w-48">
@@ -233,6 +250,10 @@
                                 <button id="refresh-btn" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-200">
                                     <i class="fa-solid fa-sync-alt mr-2"></i>
                                     Refresh
+                                </button>
+                                <button id="clear-filters-btn" type="button" class="px-6 py-3 border border-gray-300 bg-white text-gray-700 rounded-xl text-xs font-black uppercase tracking-widest transition-all hover:bg-gray-50">
+                                    <i class="fa-solid fa-filter-circle-xmark mr-2"></i>
+                                    Clear Filters
                                 </button>
                             </div>
 
@@ -359,6 +380,12 @@
             const factorsList = (riskData.triggering_factors || []).map(f => 
                 `<li class="flex items-start"><i class="fa-solid fa-circle text-xs mt-1.5 mr-2 text-gray-400"></i>${f}</li>`
             ).join('');
+            const interventionList = (riskData.interventions || []).slice(0, 3).map(intervention => `
+                <li class="flex items-center justify-between gap-2">
+                    <span>${intervention.intervention_type.replaceAll('_', ' ')}</span>
+                    <button type="button" class="sardo-status-btn text-blue-700 underline" data-intervention-id="${intervention.id}" data-status="${intervention.status}">${intervention.status.replaceAll('_', ' ')}</button>
+                </li>
+            `).join('');
 
             return `
                 <div class="bg-white rounded-2xl border-2 ${getRiskLevelBgClass(riskData.risk_level)} p-6 transition-all duration-300 hover:shadow-md">
@@ -406,14 +433,35 @@
                                     ${getInterventionRecommendation(riskData.risk_level, riskData.triggering_factors)}
                                 </p>
                             </div>
+                            ${(interventionList ? `<div class="mt-4 text-left"><p class="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Recent Follow-up</p><ul class="text-xs text-gray-600 space-y-1">${interventionList}</ul></div>` : '')}
                         </div>
                         <div class="ml-6 text-right text-xs text-gray-500">
                             <p class="font-bold uppercase tracking-wider">Last Attendance</p>
                             <p class="font-mono mt-1">${student.last_scan_date || 'No data'}</p>
-                            <p class="font-bold uppercase tracking-wider mt-3">60-Day Rate</p>
-                            <p class="font-mono mt-1 font-black ${(riskData.metrics?.attendance_rate_60 || 100) < 80 ? 'text-red-600' : 'text-green-600'}">
-                                ${riskData.metrics?.attendance_rate_60 || 100}%
+                            <p class="font-bold uppercase tracking-wider mt-3">20-Day Attendance</p>
+                            <p class="font-mono mt-1 font-black ${(riskData.metrics?.attendance_rate_20 ?? riskData.metrics?.attendance_rate_60 ?? 100) < 80 ? 'text-red-600' : 'text-green-600'}">
+                                ${(riskData.metrics?.attendance_rate_20 ?? riskData.metrics?.attendance_rate_60 ?? 100)}%
                             </p>
+                            <p class="font-bold uppercase tracking-wider mt-3">Sessions</p>
+                            <p class="font-mono mt-1 font-black text-gray-700">
+                                ${riskData.metrics?.present_sessions_20 ?? 0}/${riskData.metrics?.expected_sessions_20 ?? 0}
+                            </p>
+                            ${(riskData.metrics?.stale_expected_days ?? 0) > 0 ? `
+                                <p class="font-bold uppercase tracking-wider mt-3">Stale Days</p>
+                                <p class="font-mono mt-1 font-black text-orange-600">${riskData.metrics.stale_expected_days}</p>
+                            ` : ''}
+                            <p class="font-bold uppercase tracking-wider mt-3">Data Quality</p>
+                            <p class="font-mono mt-1 font-black ${riskData.data_quality === 'ok' ? 'text-green-600' : 'text-orange-600'}">
+                                ${String(riskData.data_quality || 'unknown').replaceAll('_', ' ')}
+                            </p>
+                            ${riskData.risk_level !== 'Low' ? `
+                                <button type="button" class="sardo-intervention-btn mt-4 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider" data-lrn="${student.lrn}" data-risk-level="${riskData.risk_level}" data-risk-score="${riskData.risk_score}">
+                                    <i class="fa-solid fa-clipboard-check mr-1"></i> Log Intervention
+                                </button>
+                                <button type="button" class="sardo-correction-btn mt-4 ml-2 px-3 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-[10px] font-black uppercase tracking-wider" data-lrn="${student.lrn}">
+                                    <i class="fa-solid fa-pen-to-square mr-1"></i> Request Correction
+                                </button>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
@@ -436,21 +484,31 @@
 
                 for (const student of students) {
                     try {
+                        const studentLrn = String(student.lrn ?? '');
                         const { data: riskResult, error: riskError } = await window.supabaseClient
-                            .rpc('calculate_sardo_risk_score', { student_lrn_param: student.lrn });
+                            .rpc('calculate_sardo_risk_score', { student_lrn_param: studentLrn });
                         
                         if (riskError) throw riskError;
-                        
-                        const riskData = riskResult || {
-                            risk_score: 0,
-                            risk_level: 'Low',
-                            triggering_factors: ['Insufficient data'],
-                            metrics: {}
+
+                        const normalized = Array.isArray(riskResult)
+                            ? riskResult[0] || {}
+                            : riskResult || {};
+
+                        const riskData = {
+                            risk_score: Number(normalized.risk_score ?? 0),
+                            risk_level: String(normalized.risk_level || 'Low'),
+                            triggering_factors: Array.isArray(normalized.triggering_factors)
+                                ? normalized.triggering_factors
+                                : (typeof normalized.triggering_factors === 'string' ? [normalized.triggering_factors] : ['Insufficient data']),
+                            metrics: normalized.metrics || {},
+                            data_quality: String(normalized.data_quality || 'unknown'),
+                            interventions: []
                         };
                         
                         riskAssessments.push({
                             student,
-                            riskData
+                            riskData,
+                            interventions: []
                         });
 
                         counts[riskData.risk_level.toLowerCase()] = (counts[riskData.risk_level.toLowerCase()] || 0) + 1;
@@ -462,12 +520,23 @@
                                 risk_score: 0,
                                 risk_level: 'Low',
                                 triggering_factors: ['Error calculating risk'],
-                                metrics: {}
+                                metrics: {},
+                                interventions: []
                             }
                         });
                         counts.low++;
                     }
                 }
+
+                const { data: interventions } = await window.supabaseClient
+                    .from('sardo_interventions')
+                    .select('id, student_lrn, intervention_type, status, notes, follow_up_date, created_at')
+                    .in('student_lrn', students.map(student => String(student.lrn)))
+                    .order('created_at', { ascending: false });
+                (interventions || []).forEach(intervention => {
+                    const assessment = riskAssessments.find(item => String(item.student.lrn) === String(intervention.student_lrn));
+                    if (assessment) assessment.riskData.interventions.push(intervention);
+                });
 
                 document.getElementById('critical-count').textContent = counts.critical;
                 document.getElementById('high-count').textContent = counts.high;
@@ -488,6 +557,24 @@
             }
         }
 
+        function updateSummaryCounts(filteredAssessments) {
+            const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+
+            filteredAssessments.forEach(({ riskData }) => {
+                const level = String(riskData?.risk_level || 'Low').toLowerCase();
+                if (counts[level] !== undefined) {
+                    counts[level] += 1;
+                } else {
+                    counts.low += 1;
+                }
+            });
+
+            document.getElementById('critical-count').textContent = counts.critical;
+            document.getElementById('high-count').textContent = counts.high;
+            document.getElementById('medium-count').textContent = counts.medium;
+            document.getElementById('low-count').textContent = counts.low;
+        }
+
         function updateStudentsList(riskAssessments) {
             const riskFilter = document.getElementById('risk-filter').value;
             const gradeFilter = document.getElementById('grade-filter').value;
@@ -497,7 +584,7 @@
             let filtered = riskAssessments;
             
             if (riskFilter !== 'all') {
-                filtered = filtered.filter(a => a.riskData.risk_level.toLowerCase() === riskFilter);
+                filtered = filtered.filter(a => String(a.riskData.risk_level || 'Low').toLowerCase() === riskFilter);
             }
             if (gradeFilter !== 'all') {
                 filtered = filtered.filter(a => String(a.student.grade_level) === gradeFilter);
@@ -507,6 +594,7 @@
             }
 
             const sorted = filtered.sort((a, b) => b.riskData.risk_score - a.riskData.risk_score);
+            updateSummaryCounts(sorted);
 
             document.getElementById('student-count').textContent = `${sorted.length} STUDENT${sorted.length !== 1 ? 'S' : ''}`;
 
@@ -526,6 +614,7 @@
             const gradeFilter = document.getElementById('grade-filter');
             const sectionFilter = document.getElementById('section-filter');
             const selectedGrade = gradeFilter.value;
+            const previousSelection = sectionFilter.value;
             
             sectionFilter.innerHTML = '';
             const allOption = document.createElement('option');
@@ -533,23 +622,150 @@
             allOption.textContent = 'All Sections';
             sectionFilter.appendChild(allOption);
 
-            if (selectedGrade !== 'all' && sectionsByGrade[selectedGrade]) {
-                sectionsByGrade[selectedGrade].forEach(section => {
-                    const option = document.createElement('option');
-                    option.value = section;
-                    option.textContent = section;
-                    sectionFilter.appendChild(option);
+            const availableSections = [];
+
+            if (selectedGrade !== 'all') {
+                const studentsForGrade = allStudents.filter(student => String(student.grade_level) === selectedGrade);
+                studentsForGrade.forEach(student => {
+                    if (student.section && !availableSections.includes(student.section)) {
+                        availableSections.push(student.section);
+                    }
                 });
+            }
+
+            if (availableSections.length === 0 && selectedGrade !== 'all' && sectionsByGrade[selectedGrade]) {
+                sectionsByGrade[selectedGrade].forEach(section => {
+                    if (!availableSections.includes(section)) {
+                        availableSections.push(section);
+                    }
+                });
+            }
+
+            availableSections.sort().forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = section;
+                sectionFilter.appendChild(option);
+            });
+
+            if (previousSelection && previousSelection !== 'all' && Array.from(sectionFilter.options).some(option => option.value === previousSelection)) {
+                sectionFilter.value = previousSelection;
+            } else {
+                sectionFilter.value = 'all';
             }
         }
 
+        function clearFilters() {
+            document.getElementById('risk-filter').value = 'all';
+            document.getElementById('grade-filter').value = 'all';
+            document.getElementById('section-filter').value = 'all';
+            updateSectionFilter();
+            updateStudentsList(allRiskAssessments);
+        }
+
         document.getElementById('refresh-btn').addEventListener('click', loadRiskDashboard);
+        document.getElementById('clear-filters-btn').addEventListener('click', clearFilters);
         document.getElementById('risk-filter').addEventListener('change', () => updateStudentsList(allRiskAssessments));
         document.getElementById('grade-filter').addEventListener('change', () => {
             updateSectionFilter();
             updateStudentsList(allRiskAssessments);
         });
         document.getElementById('section-filter').addEventListener('change', () => updateStudentsList(allRiskAssessments));
+
+        document.addEventListener('click', async (event) => {
+            const button = event.target.closest('.sardo-intervention-btn');
+            if (!button) return;
+
+            const interventionType = window.prompt('Intervention type (parent_contact, student_conference, guidance_referral, monitoring, other):', 'parent_contact');
+            if (!interventionType) return;
+            const notes = window.prompt('Brief intervention notes:');
+            if (notes === null) return;
+
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (!session) return;
+            const { error } = await window.supabaseClient.from('sardo_interventions').insert({
+                student_lrn: button.dataset.lrn,
+                risk_level: button.dataset.riskLevel,
+                risk_score: Number(button.dataset.riskScore),
+                intervention_type: interventionType,
+                notes,
+                created_by: session.user.id
+            });
+            if (error) {
+                alert(`Could not record intervention: ${error.message}`);
+                return;
+            }
+            if (typeof window.logAdminAction === 'function') {
+                window.logAdminAction('sardo_intervention_created', button.dataset.lrn, { intervention_type: interventionType });
+            }
+            alert('Intervention recorded.');
+        });
+
+        document.addEventListener('click', async (event) => {
+            const button = event.target.closest('.sardo-status-btn');
+            if (!button) return;
+            const nextStatus = window.prompt('New status (open, in_progress, completed, closed):', button.dataset.status);
+            if (!nextStatus || !['open', 'in_progress', 'completed', 'closed'].includes(nextStatus)) return;
+            const { error } = await window.supabaseClient.from('sardo_interventions').update({
+                status: nextStatus,
+                closed_at: ['completed', 'closed'].includes(nextStatus) ? new Date().toISOString() : null,
+                updated_at: new Date().toISOString()
+            }).eq('id', button.dataset.interventionId);
+            if (error) {
+                alert(`Could not update intervention: ${error.message}`);
+                return;
+            }
+            await loadRiskDashboard();
+        });
+
+        document.addEventListener('click', async (event) => {
+            const button = event.target.closest('.sardo-correction-btn');
+            if (!button) return;
+            const reason = window.prompt('Reason for attendance correction request:');
+            if (!reason) return;
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (!session) return;
+            const { data: latestLog, error: logError } = await window.supabaseClient
+                .from('attendance_logs')
+                .select('id, session, status, scanned_at, local_date')
+                .eq('student_lrn', button.dataset.lrn)
+                .in('session', ['AM', 'PM'])
+                .order('scanned_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+            if (logError) {
+                alert(`Could not load the attendance record: ${logError.message}`);
+                return;
+            }
+            if (!latestLog) {
+                alert('No AM or PM attendance record exists for this student. Submit a correction through the attendance records page.');
+                return;
+            }
+            const newStatus = window.prompt('Corrected status (PRESENT, ABSENT, TARDY):', latestLog.status);
+            if (!newStatus) return;
+            const { error } = await window.supabaseClient.from('attendance_corrections').insert({
+                student_lrn: button.dataset.lrn,
+                attendance_log_id: latestLog.id,
+                old_session: latestLog.session,
+                new_session: latestLog.session,
+                old_status: latestLog.status,
+                new_status: newStatus.toUpperCase(),
+                old_scanned_at: latestLog.scanned_at,
+                new_scanned_at: latestLog.scanned_at,
+                old_local_date: latestLog.local_date,
+                new_local_date: latestLog.local_date,
+                reason,
+                requested_by: session.user.id
+            });
+            if (error) {
+                alert(`Could not submit correction request: ${error.message}`);
+                return;
+            }
+            if (typeof window.logAdminAction === 'function') {
+                window.logAdminAction('attendance_correction_requested', button.dataset.lrn, { reason });
+            }
+            alert('Correction request submitted for approval.');
+        });
 
         document.addEventListener('DOMContentLoaded', () => {
             loadRiskDashboard();

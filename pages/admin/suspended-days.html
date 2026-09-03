@@ -39,7 +39,7 @@
                 .single();
 
             if (!profile || (profile.role !== 'admin' && profile.role !== 'school_head' && !(profile.can_manage_calendar_exceptions || profile.can_manage_suspended_days))) {
-                alert("ACCESS DENIED: You do not have permission to manage suspended days.");
+                alert("ACCESS DENIED: You do not have permission to access this page.");
                 window.location.href = './admin-dashboard.html';
             }
         }

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Duplicate Attendance Review | Upper Labay High School</title>
+    <link rel="stylesheet" href="../../assets/vendor/font-awesome/css/all.min.css">
+    <script src="../../assets/lib/tailwind.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
+    <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/admin-nav.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-6"><div><p class="text-xs font-black uppercase tracking-widest text-blue-700">Data Quality</p><h1 class="text-2xl font-black text-gray-900">Duplicate Attendance Review</h1><p class="text-sm text-gray-600 mt-1">Historical duplicates are preserved and marked for review.</p></div><a href="sardo-dashboard.html" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-black uppercase">Back to SARDO</a></div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-auto"><table class="min-w-full text-sm"><thead class="bg-gray-50 text-left text-xs uppercase tracking-wider"><tr><th class="p-3">LRN</th><th class="p-3">Date</th><th class="p-3">Session</th><th class="p-3">Duplicate</th><th class="p-3">Canonical</th><th class="p-3">Scanned</th></tr></thead><tbody id="rows"><tr><td colspan="6" class="p-8 text-center text-gray-500">Loading...</td></tr></tbody></table></div>
+    </main>
+    <script>
+        function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[c]); }
+        async function init() {
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            const { data: profile } = await window.supabaseClient.from('profiles').select('role').eq('id', session?.user?.id).single();
+            if (!profile || !['admin', 'school_head'].includes(String(profile.role).toLowerCase())) { alert('Administrator or School Head permission is required.'); location.href = './admin-dashboard.html'; return; }
+            const { data, error } = await window.supabaseClient.from('attendance_duplicate_review').select('*').order('attendance_date', { ascending: false });
+            const rows = document.getElementById('rows');
+            if (error) { rows.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-600">${escapeHtml(error.message)}</td></tr>`; return; }
+            rows.innerHTML = data?.length ? data.map(row => `<tr class="border-t"><td class="p-3 font-mono">${escapeHtml(row.student_lrn)}</td><td class="p-3">${escapeHtml(row.attendance_date)}</td><td class="p-3">${escapeHtml(row.session)}</td><td class="p-3">#${escapeHtml(row.id)} · ${escapeHtml(row.status)}</td><td class="p-3">#${escapeHtml(row.duplicate_of_id)} · ${escapeHtml(row.canonical_status)}</td><td class="p-3">${escapeHtml(row.scanned_at)}</td></tr>`).join('') : '<tr><td colspan="6" class="p-8 text-center text-green-600">No marked duplicates.</td></tr>';
+        }
+        window.addEventListener('load', () => window.supabaseClient ? init() : setTimeout(init, 100));
+    </script>
+</body>
+</html>

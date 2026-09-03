@@ -1923,8 +1923,8 @@ async function triggerParentNotification(student, timeData, scanTime, forceType 
     }
 
     try {
-        const psidList = String(student.parent_messenger_id || '').split(',').map(id => id.trim()).filter(id => id);
-        if (psidList.length === 0) {
+        const rawPsidList = String(student.parent_messenger_id || '').split(',').map(id => id.trim()).filter(id => id);
+        if (rawPsidList.length === 0) {
             statusText = "Skipped: No parent messenger ID configured";
             statusClass = "bg-white rounded-lg p-2 text-xs font-bold border border-yellow-200 min-h-[32px] text-yellow-700";
             if (notificationStatusEl) {
@@ -1932,6 +1932,47 @@ async function triggerParentNotification(student, timeData, scanTime, forceType 
                 notificationStatusEl.className = statusClass;
             }
             console.log("[Notification] Skipped: No parent messenger ID");
+            return;
+        }
+
+        const { data: currentStudent, error: linkCheckError } = await window.supabaseClient
+            .from('students')
+            .select('parent_messenger_id, notify_parent')
+            .eq('lrn', student.lrn)
+            .maybeSingle();
+
+        if (linkCheckError) {
+            console.warn('[Notification] Could not verify current parent link status:', linkCheckError.message);
+        }
+
+        const activePsids = String(currentStudent?.parent_messenger_id || student.parent_messenger_id || '')
+            .split(',')
+            .map(id => id.trim())
+            .filter(id => id);
+
+        const linkedPsids = activePsids.filter(psid => {
+            if (!currentStudent || currentStudent.notify_parent !== true) {
+                return false;
+            }
+            return true;
+        });
+
+        const psidList = rawPsidList.filter(psid => {
+            const isStillLinked = linkedPsids.includes(psid) && currentStudent?.notify_parent === true;
+            if (!isStillLinked) {
+                console.log(`[Notification] Skipping stale/unlinked PSID ${psid} for student ${student.lrn}`);
+            }
+            return isStillLinked;
+        });
+
+        if (psidList.length === 0) {
+            statusText = "Skipped: Parent not currently linked for this student";
+            statusClass = "bg-white rounded-lg p-2 text-xs font-bold border border-yellow-200 min-h-[32px] text-yellow-700";
+            if (notificationStatusEl) {
+                notificationStatusEl.textContent = statusText;
+                notificationStatusEl.className = statusClass;
+            }
+            console.log(`[Notification] Skipped: no active linked PSIDs for ${student.lrn}`);
             return;
         }
 
@@ -1946,21 +1987,21 @@ async function triggerParentNotification(student, timeData, scanTime, forceType 
         // Use forced type if provided, otherwise default to arrival
         const type = forceType || (timeData.session === 'DEPARTURE' ? 'departure' : 'arrival');
 
-        // Send to each PSID
-                const notificationPromises = psidList.map(psid => {
-                    return window.supabaseClient.functions.invoke('send-messenger-alert', {
-                        body: {
-                            psid: psid,
-                            studentName: student.parsedName,
-                            studentLrn: student.lrn,
-                            session: timeData.session,
-                            status: timeData.status,
-                            time: scanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                            type: type,
-                            context: context
-                        }
-                    });
-                });
+        // Send to each PSID only if still linked to this student
+        const notificationPromises = psidList.map(psid => {
+            return window.supabaseClient.functions.invoke('send-messenger-alert', {
+                body: {
+                    psid: psid,
+                    studentName: student.parsedName,
+                    studentLrn: student.lrn,
+                    session: timeData.session,
+                    status: timeData.status,
+                    time: scanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    type: type,
+                    context: context
+                }
+            });
+        });
 
         const results = await Promise.allSettled(notificationPromises);
         const successCount = results.filter(r => r.status === 'fulfilled' && !r.value.error).length;

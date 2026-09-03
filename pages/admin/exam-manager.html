@@ -35,9 +35,10 @@
                 .eq('id', session.user.id)
                 .single();
 
-            if (!profile || (profile.role !== 'admin' && profile.role !== 'school_head' && !(profile.can_manage_exams || profile.can_manage_grades))) {
-                alert("ACCESS DENIED: You do not have permission to manage exams.");
-                window.location.href = './attendance.html';
+            const hasAccess = window.isPermissionAllowed(profile, null, ['admin', 'school_head'], 'can_manage_exams') || window.isPermissionAllowed(profile, null, ['admin', 'school_head'], 'can_manage_grades');
+            if (!profile || !hasAccess) {
+                alert("ACCESS DENIED: You do not have permission to access this page.");
+                window.location.href = './admin-dashboard.html';
             }
         }
         checkExamManagerAccess();
@@ -79,19 +80,19 @@
                     if (role === 'admin' || access.attendance) {
                         html += `<li class="list" data-page="attendance.html"><a href="attendance.html"><span class="icon"><i class="fa-solid fa-clipboard-user"></i></span><span class="text">ATTENDANCE</span></a></li>`;
                     }
-                    if (role === 'admin' || role === 'school_head' || role === 'guidance_counselor' || access.sardo || false) {
+                    if (window.hasAnyRole(role, window.SARDO_ALLOWED_ROLES) || access.sardo || false) {
                         html += `<li class="list" data-page="sardo-dashboard.html"><a href="sardo-dashboard.html"><span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span><span class="text">SARDO</span></a></li>`;
                     }
                     if (role === 'admin' || access.grades || false) {
                         html += `<li class="list" data-page="grade-encoding.html"><a href="grade-encoding.html"><span class="icon"><i class="fa-solid fa-book-open-reader"></i></span><span class="text">GRADES</span></a></li>`;
                     }
-                    if (role === 'admin' || role === 'school_head' || access.exams || access.grades || false) {
+                    if (window.hasAnyRole(role, window.ADMIN_MANAGEMENT_ROLES) || access.exams || access.grades || false) {
                         html += `<li class="list" data-page="exam-manager.html"><a href="exam-manager.html"><span class="icon"><i class="fa-solid fa-file-circle-check"></i></span><span class="text">EXAMS</span></a></li>`;
                     }
-                    if (role === 'admin' || role === 'school_head' || access.suspended) {
+                    if (window.hasAnyRole(role, window.ADMIN_MANAGEMENT_ROLES) || access.suspended) {
                         html += `<li class="list" data-page="calendar-exceptions.html"><a href="calendar-exceptions.html"><span class="icon"><i class="fa-solid fa-calendar-times"></i></span><span class="text">CALENDAR EXCEPTIONS</span></a></li>`;
                     }
-                    if (role === 'admin' || role === 'school_head' || access.stats) {
+                    if (window.hasAnyRole(role, window.ADMIN_MANAGEMENT_ROLES) || access.stats) {
                         html += `<li class="list" data-page="admin-dashboard.html"><a href="admin-dashboard.html"><span class="icon"><i class="fa-solid fa-chart-line"></i></span><span class="text">DASHBOARD</span></a></li>`;
                     }
                     html += `<li class="list"><a href="./login.html" onclick="handleLogout(event)"><span class="icon"><i class="fa-solid fa-right-from-bracket"></i></span><span class="text">LOGOUT</span></a></li>`;

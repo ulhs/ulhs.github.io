@@ -40,9 +40,10 @@
                 .eq('id', session.user.id)
                 .single();
 
-            if (!profile || (profile.role !== 'admin' && !profile.can_manage_ids)) {
-                alert("ACCESS DENIED: You do not have permission to manage IDs.");
-                window.location.href = './attendance.html';
+            const hasAccess = window.isPermissionAllowed(profile, null, ['admin'], 'can_manage_ids');
+            if (!profile || !hasAccess) {
+                alert("ACCESS DENIED: You do not have permission to access this page.");
+                window.location.href = './admin-dashboard.html';
             }
         }
         checkIdGenAccess();
@@ -111,7 +112,7 @@
                         }
                         
                         // SARDO Risk Dashboard (Admin, School Head, Guidance, or with Sardo permission)
-                        if (role === 'admin' || role === 'school_head' || role === 'guidance_counselor' || access.sardo || false) {
+                        if (window.hasAnyRole(role, window.SARDO_ALLOWED_ROLES) || access.sardo || false) {
                             html += `
                                 <li class="list" data-page="sardo-dashboard.html">
                                     <a href="sardo-dashboard.html">
@@ -133,7 +134,7 @@
                         }
 
                         // EXAMS Manager (Admin, School Head, or with Exams permission)
-                        if (role === 'admin' || role === 'school_head' || access.exams || access.grades || false) {
+                        if (window.hasAnyRole(role, window.ADMIN_MANAGEMENT_ROLES) || access.exams || access.grades || false) {
                             html += `
                                 <li class="list" data-page="exam-manager.html">
                                     <a href="exam-manager.html">
@@ -144,7 +145,7 @@
                         }
 
                         // CALENDAR EXCEPTIONS (Admin, School Head, or authorized personnel)
-                        if (role === 'admin' || role === 'school_head' || access.suspended) {
+                        if (window.hasAnyRole(role, window.ADMIN_MANAGEMENT_ROLES) || access.suspended) {
                             html += `
                                 <li class="list" data-page="calendar-exceptions.html">
                                     <a href="calendar-exceptions.html">
@@ -154,7 +155,7 @@
                                 </li>`;
                         }
                         
-                        if (role === 'admin' || role === 'school_head' || access.stats) {
+                        if (window.hasAnyRole(role, window.ADMIN_MANAGEMENT_ROLES) || access.stats) {
                             html += `
                                 <li class="list" data-page="admin-dashboard.html">
                                     <a href="admin-dashboard.html">

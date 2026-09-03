@@ -172,6 +172,8 @@
 
                 statusText.textContent = "Welcome, " + (finalProfile.full_name || "Admin");
                 
+                const userRole = String(finalProfile.role || 'staff').trim().toLowerCase();
+
                 // Hydrate Session Storage
                 sessionStorage.setItem('adminLoggedIn', 'true');
                 sessionStorage.setItem('userEmail', finalProfile.email);
@@ -181,7 +183,7 @@
                     attendance: finalProfile.can_scan,
                     idGen: finalProfile.can_manage_ids,
                     stats: finalProfile.can_view_dashboard,
-                    sardo: finalProfile.can_view_sardo,
+                    sardo: Boolean(finalProfile.can_view_sardo || ['admin', 'school_head', 'guidance_counselor'].includes(userRole)),
                     grades: finalProfile.can_manage_grades,
                     exams: finalProfile.can_manage_exams
                 }));

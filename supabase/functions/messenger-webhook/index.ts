@@ -390,25 +390,84 @@ serve(async (req) => {
                 console.log(`🔍 UNLINK command for LRN: ${targetLrn} (Original: ${rawText})`);
                 
                 if (targetLrn.length === 12) {
-                  const { data, error } = await supabase
-                    .from('students')
-                    .update({ 
-                      parent_messenger_id: null,
-                      notify_parent: false 
-                    })
-                    .eq('lrn', targetLrn)
-                    .eq('parent_messenger_id', psid)
-                    .select();
+                  try {
+                    const { data: linkedStudents, error: linkedFetchError } = await supabase
+                      .from('students')
+                      .select('lrn, full_name, parent_messenger_id, notify_parent')
+                      .like('parent_messenger_id', `%${psid}%`)
+                      .not('parent_messenger_id', 'is', null);
 
-                  if (error) {
+                    if (linkedFetchError) {
+                      throw linkedFetchError;
+                    }
+
+                    const updates = [];
+                    const studentsToUpdate = (linkedStudents || []).filter(studentRow => {
+                      const ids = String(studentRow.parent_messenger_id || '')
+                        .split(',')
+                        .map(id => id.trim())
+                        .filter(Boolean);
+
+                      return ids.includes(psid) || studentRow.lrn === targetLrn;
+                    });
+
+                    for (const studentRow of studentsToUpdate) {
+                      const ids = String(studentRow.parent_messenger_id || '')
+                        .split(',')
+                        .map(id => id.trim())
+                        .filter(Boolean);
+
+                      const remainingIds = ids.filter(id => id !== psid);
+                      const isTargetStudent = studentRow.lrn === targetLrn;
+                      const shouldDisable = isTargetStudent || remainingIds.length === 0;
+
+                      updates.push({
+                        lrn: studentRow.lrn,
+                        full_name: studentRow.full_name,
+                        parent_messenger_id: remainingIds.length > 0 ? remainingIds.join(',') : null,
+                        notify_parent: !shouldDisable && remainingIds.length > 0,
+                        parent_pin: isTargetStudent ? null : studentRow.parent_pin || null
+                      });
+                    }
+
+                    if (updates.length === 0) {
+                      console.warn(`⚠️ UNLINK failed/No match for LRN ${targetLrn} and PSID ${psid}`);
+                      await sendResponse(psid, `❌ Unlink failed. Siguraduha nga sakto ang LRN ${targetLrn} ug naka-link kini sa imong account.`);
+                    } else {
+                      const updateResults = await Promise.all(updates.map(async (row) => {
+                        const { data, error } = await supabase
+                          .from('students')
+                          .update({
+                            parent_messenger_id: row.parent_messenger_id,
+                            notify_parent: row.notify_parent,
+                            parent_pin: row.parent_pin
+                          })
+                          .eq('lrn', row.lrn)
+                          .select();
+
+                        if (error) {
+                          console.error(`❌ DB Error cleaning PSID for ${row.lrn}:`, error.message);
+                          return null;
+                        }
+
+                        return data?.[0] || null;
+                      }));
+
+                      const successfulRows = updateResults.filter(Boolean);
+
+                      const targetStudent = successfulRows.find(row => row.lrn === targetLrn) || successfulRows[0];
+
+                      if (successfulRows.length > 0 && targetStudent) {
+                        console.log(`✅ UNLINK success for ${targetStudent.full_name} (LRN: ${targetLrn}) and cleaned stale PSIDs across linked records.`);
+                        await sendResponse(psid, `✅ Successfully unlinked from ${targetStudent.full_name}. Dili na ka makadawat ug alerts para ani nga LRN, ug ang stale Messenger link has been removed from your other linked student records too.`);
+                      } else {
+                        console.warn(`⚠️ UNLINK failed/No match for LRN ${targetLrn} and PSID ${psid}`);
+                        await sendResponse(psid, `❌ Unlink failed. Siguraduha nga sakto ang LRN ${targetLrn} ug naka-link kini sa imong account.`);
+                      }
+                    }
+                  } catch (error) {
                     console.error(`❌ DB Error (UNLINK):`, error.message);
                     await sendResponse(psid, `❌ Error unlinking student. Palihog sulayi pag-usab unya.`);
-                  } else if (data && data.length > 0) {
-                    console.log(`✅ UNLINK success for ${data[0].full_name} (LRN: ${targetLrn})`);
-                    await sendResponse(psid, `✅ Successfully unlinked from ${data[0].full_name}. Dili na ka makadawat ug alerts para ani nga LRN.`);
-                  } else {
-                    console.warn(`⚠️ UNLINK failed/No match for LRN ${targetLrn} and PSID ${psid}`);
-                    await sendResponse(psid, `❌ Unlink failed. Siguraduha nga sakto ang LRN ${targetLrn} ug naka-link kini sa imong account.`);
                   }
                 } else {
                   console.warn(`⚠️ Invalid UNLINK LRN length: ${targetLrn}`);

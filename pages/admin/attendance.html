@@ -65,7 +65,7 @@
                 const canScan = profile?.can_scan || userRole === 'admin';
                 
                 if (!canScan) {
-                    alert("ACCESS DENIED: You do not have permission to use the Attendance Scanner.");
+                    alert("ACCESS DENIED: You do not have permission to access this page.");
                     window.location.href = './admin-dashboard.html';
                     return;
                 }
