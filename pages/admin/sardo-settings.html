@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SARDO Settings | Upper Labay High School</title>
     <link rel="stylesheet" href="../../assets/vendor/font-awesome/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/sardo-pages.css">
     <script src="../../assets/lib/tailwind.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../../assets/js/supabase-config.js"></script>
     <script src="../../assets/js/main.js"></script>
     <script src="../../assets/js/admin-nav.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen font-sans">
+<body class="sardo-page bg-gray-100 min-h-screen font-sans">
     <main class="max-w-3xl mx-auto px-4 py-8">
         <div class="flex items-center justify-between gap-4 mb-6"><div><p class="text-xs font-black uppercase tracking-widest text-blue-700">SARDO Administration</p><h1 class="text-2xl font-black text-gray-900">Assessment Settings</h1></div><a href="sardo-dashboard.html" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-black uppercase">Back to SARDO</a></div>
         <form id="settings-form" class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -25,7 +26,7 @@
             <label class="flex items-center gap-2 text-sm font-bold text-gray-700 mt-6"><input id="critical_missing_history" type="checkbox"> Missing history is Critical</label>
             <div class="md:col-span-2 flex justify-end"><button class="px-5 py-3 bg-blue-600 text-white rounded-lg text-xs font-black uppercase" type="submit">Save Settings</button></div>
         </form>
-        <p id="status" class="mt-4 text-sm font-semibold"></p>
+        <p id="status" role="status" aria-live="polite" class="mt-4 text-sm font-semibold"></p>
     </main>
     <script>
         const fields = ['school_year', 'recent_window_days', 'trend_window_days', 'stale_after_school_days', 'critical_score', 'high_score', 'medium_score'];
@@ -42,7 +43,9 @@
             event.preventDefault();
             const payload = Object.fromEntries(fields.map(field => [field, ['recent_window_days', 'trend_window_days', 'stale_after_school_days', 'critical_score', 'high_score', 'medium_score'].includes(field) ? Number(document.getElementById(field).value) : document.getElementById(field).value]));
             payload.critical_missing_history = document.getElementById('critical_missing_history').checked;
-            payload.updated_by = (await window.supabaseClient.auth.getSession()).data.session.user.id;
+            const currentSession = (await window.supabaseClient.auth.getSession()).data.session;
+            if (!currentSession) { document.getElementById('status').textContent = 'Your session has expired. Please sign in again.'; return; }
+            payload.updated_by = currentSession.user.id;
             const { error } = await window.supabaseClient.from('sardo_assessment_config').update(payload).eq('id', true);
             document.getElementById('status').textContent = error ? error.message : 'Settings saved.';
             if (!error && typeof window.logAdminAction === 'function') window.logAdminAction('sardo_assessment_config_updated', null, payload);

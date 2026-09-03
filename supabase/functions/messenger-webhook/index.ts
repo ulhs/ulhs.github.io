@@ -139,7 +139,7 @@ serve(async (req) => {
                 const { data: matchingCode, error: codeLookupError } = await supabase
                   .from('verification_codes')
                   .select('*')
-                  .eq('parent_psid', psid)
+                  .eq('student_lrn', lrn)
                   .eq('code', token)
                   .eq('used', false)
                   .gt('expires_at', new Date().toISOString())
@@ -153,41 +153,8 @@ serve(async (req) => {
                   continue;
                 }
 
-                const defaultName = await getMessengerUserName(psid);
-                const updateData = {
-                  parent_messenger_id: psid,
-                  notify_parent: true
-                };
-                if (defaultName) {
-                  updateData.parent_guardian_name = defaultName;
-                }
-                
-                const { data, error } = await supabase
-                  .from('students')
-                  .update(updateData)
-                  .eq('lrn', lrn)
-                  .select();
-
-                if (error) {
-                  console.error(`❌ Database error during registration for LRN ${lrn}:`, error.message);
-                  await sendResponse(psid, `❌ Registration Error: Dili ma-update ang database sa pagkakaron.`);
-                } else if (data && data.length > 0) {
-                  const { error: markUsedError } = await supabase
-                    .from('verification_codes')
-                    .update({ used: true })
-                    .eq('id', matchingCode.id);
-
-                  if (markUsedError) {
-                    console.error(`❌ Error marking secure code ${token} as used:`, markUsedError);
-                  }
-
-                  console.log(`✅ PSID ${psid} successfully linked to ${data[0].full_name} (LRN: ${lrn}) after secure code validation`);
-                  const nameMsg = defaultName ? ` (Using your name: ${defaultName})` : '';
-                  await sendResponse(psid, `✅ Registration Successful! Makadawat na ka ug attendance alerts ni ${data[0].full_name}.${nameMsg}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nPara i-set or i-reset imong PIN, i-send: RESET\nPara i-set o i-update ang imong ngalan, i-send: NAME [Your Full Name]\nPara makita ang tanan nimo nga linked students, i-send: LIST`);
-                } else {
-                  console.warn(`⚠️ Registration failed: LRN ${lrn} not found in database.`);
-                  await sendResponse(psid, `❌ Registration Failed: Dili makit-an ang LRN ${lrn} sa among listahan.`);
-                }
+                console.log(`✅ Registration referral received for PSID ${psid} and LRN ${lrn}; awaiting explicit CONFIRM message.`);
+                await sendResponse(psid, `👋 Your secure registration request is ready. Please reply with the exact confirmation message shown on the ULHS registration page: CONFIRM ${token} ${lrn}`);
               }
             } 
             // Handle Get Started button without referral
@@ -212,10 +179,12 @@ serve(async (req) => {
                 
                 // First check if parent has at least one linked student
                 console.log(`🔍 Checking linked students for PSID ${psid}`);
-                const { data: students, error: studentsError } = await supabase
-                  .from('students')
-                  .select('lrn, full_name')
-                  .eq('parent_messenger_id', psid);
+                const { data: linkedRows, error: studentsError } = await supabase
+                  .from('parent_student_links')
+                  .select('student_lrn, students(lrn, full_name)')
+                  .eq('parent_psid', psid)
+                  .eq('notify_parent', true);
+                const students = (linkedRows || []).map(row => row.students).filter(Boolean);
                 
                 if (studentsError) {
                   console.error(`❌ Error checking linked students for PSID ${psid}:`, JSON.stringify(studentsError));
@@ -316,14 +285,13 @@ serve(async (req) => {
                   continue;
                 }
 
-                const { data: updatedStudent, error: updateError } = await supabase
-                  .from('students')
-                  .update({
-                    parent_messenger_id: psid,
+                const { data: updatedLink, error: updateError } = await supabase
+                  .from('parent_student_links')
+                  .upsert({
+                    student_lrn: studentData.lrn,
+                    parent_psid: psid,
                     notify_parent: true
-                  })
-                  .eq('lrn', studentData.lrn)
-                  .or(`parent_messenger_id.is.null,parent_messenger_id.eq.${psid}`)
+                  }, { onConflict: 'student_lrn,parent_psid' })
                   .select();
 
                 if (updateError) {
@@ -332,10 +300,21 @@ serve(async (req) => {
                   continue;
                 }
 
-                if (!updatedStudent || updatedStudent.length === 0) {
-                  console.warn(`⚠️ Confirmed code was valid, but the student record for LRN ${studentData.lrn} was not updated for PSID ${psid}.`);
+                if (!updatedLink || updatedLink.length === 0) {
+                  console.warn(`⚠️ Confirmed code was valid, but the guardian link for LRN ${studentData.lrn} was not created for PSID ${psid}.`);
                   await sendResponse(psid, `❌ The confirmation was valid, but the link did not update correctly. Please try again or request a fresh code.`);
                   continue;
+                }
+
+                const legacyPsids = String(studentData.parent_messenger_id || '')
+                  .split(',')
+                  .map(id => id.trim())
+                  .filter(Boolean);
+                if (!legacyPsids.includes(psid)) {
+                  await supabase
+                    .from('students')
+                    .update({ parent_messenger_id: [...legacyPsids, psid].join(','), notify_parent: true })
+                    .eq('lrn', studentData.lrn);
                 }
 
                 const { error: markUsedError } = await supabase
@@ -362,9 +341,9 @@ serve(async (req) => {
                 }
                 
                 const { data, error } = await supabase
-                  .from('students')
-                  .update({ parent_guardian_name: newName })
-                  .eq('parent_messenger_id', psid)
+                  .from('parent_student_links')
+                  .update({ parent_guardian_name: newName, updated_at: new Date().toISOString() })
+                  .eq('parent_psid', psid)
                   .select();
                   
                 if (error) {
@@ -392,41 +371,23 @@ serve(async (req) => {
                 if (targetLrn.length === 12) {
                   try {
                     const { data: linkedStudents, error: linkedFetchError } = await supabase
-                      .from('students')
-                      .select('lrn, full_name, parent_messenger_id, notify_parent')
-                      .like('parent_messenger_id', `%${psid}%`)
-                      .not('parent_messenger_id', 'is', null);
+                      .from('parent_student_links')
+                      .select('id, student_lrn, students(full_name)')
+                      .eq('parent_psid', psid)
+                      .eq('student_lrn', targetLrn);
 
                     if (linkedFetchError) {
                       throw linkedFetchError;
                     }
 
                     const updates = [];
-                    const studentsToUpdate = (linkedStudents || []).filter(studentRow => {
-                      const ids = String(studentRow.parent_messenger_id || '')
-                        .split(',')
-                        .map(id => id.trim())
-                        .filter(Boolean);
-
-                      return ids.includes(psid) || studentRow.lrn === targetLrn;
-                    });
+                    const studentsToUpdate = linkedStudents || [];
 
                     for (const studentRow of studentsToUpdate) {
-                      const ids = String(studentRow.parent_messenger_id || '')
-                        .split(',')
-                        .map(id => id.trim())
-                        .filter(Boolean);
-
-                      const remainingIds = ids.filter(id => id !== psid);
-                      const isTargetStudent = studentRow.lrn === targetLrn;
-                      const shouldDisable = isTargetStudent || remainingIds.length === 0;
-
                       updates.push({
-                        lrn: studentRow.lrn,
-                        full_name: studentRow.full_name,
-                        parent_messenger_id: remainingIds.length > 0 ? remainingIds.join(',') : null,
-                        notify_parent: !shouldDisable && remainingIds.length > 0,
-                        parent_pin: isTargetStudent ? null : studentRow.parent_pin || null
+                        id: studentRow.id,
+                        lrn: studentRow.student_lrn,
+                        full_name: studentRow.students?.full_name || studentRow.student_lrn
                       });
                     }
 
@@ -436,13 +397,9 @@ serve(async (req) => {
                     } else {
                       const updateResults = await Promise.all(updates.map(async (row) => {
                         const { data, error } = await supabase
-                          .from('students')
-                          .update({
-                            parent_messenger_id: row.parent_messenger_id,
-                            notify_parent: row.notify_parent,
-                            parent_pin: row.parent_pin
-                          })
-                          .eq('lrn', row.lrn)
+                          .from('parent_student_links')
+                          .delete()
+                          .eq('id', row.id)
                           .select();
 
                         if (error) {
@@ -454,12 +411,28 @@ serve(async (req) => {
                       }));
 
                       const successfulRows = updateResults.filter(Boolean);
-
-                      const targetStudent = successfulRows.find(row => row.lrn === targetLrn) || successfulRows[0];
+                      const targetStudent = studentsToUpdate[0];
 
                       if (successfulRows.length > 0 && targetStudent) {
-                        console.log(`✅ UNLINK success for ${targetStudent.full_name} (LRN: ${targetLrn}) and cleaned stale PSIDs across linked records.`);
-                        await sendResponse(psid, `✅ Successfully unlinked from ${targetStudent.full_name}. Dili na ka makadawat ug alerts para ani nga LRN, ug ang stale Messenger link has been removed from your other linked student records too.`);
+                        const { data: legacyStudent } = await supabase
+                          .from('students')
+                          .select('parent_messenger_id')
+                          .eq('lrn', targetLrn)
+                          .single();
+                        const remainingPsids = String(legacyStudent?.parent_messenger_id || '')
+                          .split(',')
+                          .map(id => id.trim())
+                          .filter(id => id && id !== psid);
+                        await supabase
+                          .from('students')
+                          .update({
+                            parent_messenger_id: remainingPsids.length > 0 ? remainingPsids.join(',') : null,
+                            notify_parent: remainingPsids.length > 0
+                          })
+                          .eq('lrn', targetLrn);
+
+                        console.log(`✅ UNLINK success for ${targetStudent.students?.full_name || targetLrn} (LRN: ${targetLrn}) for PSID ${psid}.`);
+                        await sendResponse(psid, `✅ Successfully unlinked from ${targetStudent.students?.full_name || targetLrn}. Dili na ka makadawat ug alerts para ani nga LRN.`);
                       } else {
                         console.warn(`⚠️ UNLINK failed/No match for LRN ${targetLrn} and PSID ${psid}`);
                         await sendResponse(psid, `❌ Unlink failed. Siguraduha nga sakto ang LRN ${targetLrn} ug naka-link kini sa imong account.`);
@@ -476,10 +449,16 @@ serve(async (req) => {
               } else if (text === 'LIST' || text === 'STUDENTS' || text === 'HELP' || text === 'GET STARTED' || text === 'GET_STARTED') {
                 console.log(`📋 Processing command "${text}" for PSID: ${psid}`);
                 
-                const { data, error } = await supabase
-                  .from('students')
-                  .select('full_name, lrn, parent_guardian_name')
-                  .eq('parent_messenger_id', psid);
+                const { data: links, error } = await supabase
+                  .from('parent_student_links')
+                  .select('student_lrn, parent_guardian_name, students(full_name, lrn)')
+                  .eq('parent_psid', psid)
+                  .eq('notify_parent', true);
+                const data = (links || []).map(link => ({
+                  full_name: link.students?.full_name,
+                  lrn: link.students?.lrn || link.student_lrn,
+                  parent_guardian_name: link.parent_guardian_name
+                })).filter(student => student.full_name);
 
                 if (error) {
                   console.error(`❌ DB Error (${text}) for PSID ${psid}:`, error.message);

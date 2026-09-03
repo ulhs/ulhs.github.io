@@ -14,7 +14,7 @@ Welcome to the official website for **Upper Labay High School**. This project is
 - **Privacy Policy**: Complete transparency about data handling in compliance with RA 10173 (Data Privacy Act of 2012).
 
 ### Parent Portal Features
-- **Secure Messenger Registration**: Parent account linking is completed through the official ULHS registration flow, with secure confirmation codes and token validation instead of accepting raw LRN messages. Registration is only completed after the secure Messenger confirmation code is verified.
+- **Secure Messenger Registration**: Parent account linking is completed through the official ULHS registration flow, with secure confirmation codes and token validation instead of accepting raw LRN messages. Registration is only completed after the secure Messenger confirmation code is verified, and multiple guardians can link independently to the same child.
 - **Secure Login**: PIN-based authentication with rate limiting and encrypted session storage.
 - **Student Selector**: Switch between multiple linked children with student photos.
 - **Grades Viewing**: Access term grades with color-coded performance indicators.
@@ -31,8 +31,17 @@ Welcome to the official website for **Upper Labay High School**. This project is
 - **Hybrid Offline Support**: Works offline with local IndexedDB storage and syncs automatically when online.
 - **Grades Encoding**: Full-featured grade management system with edit/delete capabilities.
 - **Achievements Management**: Add and track student awards and achievements.
-- **SARDO Risk Dashboard**: Student At-Risk Dropout monitoring system.
+- **SARDO Risk Dashboard**: Student At-Risk Dropout monitoring system with attendance-based risk scores, Critical/High/Medium/Low summaries, student filtering, assessment progress tracking, triggering factors, and recommended interventions.
 - **Access Control**: Manage personnel permissions and roles.
+
+### SARDO Operations
+- **Dashboard**: Authorized administrators, school heads, and guidance counselors can review student risk assessments and record interventions.
+- **Attendance Data Quality**: Attendance correction and duplicate-review pages support validation of the data used for risk scoring.
+- **Assessment Configuration**: Authorized staff can manage SARDO assessment settings and review the previous assessment history for each student.
+- **Calendar Validation**: Import school-day, holiday, examination, special-schedule, and suspended-day rows before they are used in risk calculations.
+- **Pilot Review**: Record verified risk levels, intervention outcomes, and notes for calibration and monitoring.
+- **Follow-up Alerts**: The `sardo-follow-up-alerts` Supabase Edge Function sends notifications for relevant intervention follow-ups.
+- **Privacy**: SARDO is restricted by role-based access and RLS policies; scores are intended to identify students who may need support, not to make automated decisions about them.
 
 ## 🛠️ Technology Stack
 
@@ -46,7 +55,7 @@ Welcome to the official website for **Upper Labay High School**. This project is
 
 ## 🚀 Deployment
 
-The website is deployed on **GitHub Pages** with Supabase backend.
+The website is deployed on **GitHub Pages** with Supabase backend. SARDO requires the applicable SQL migrations in `supabase/migrations/`, including the risk-scoring function, process schema, calendar import, process improvements, pilot phase, and production risk-function migrations. Deploy the `sardo-follow-up-alerts` Edge Function from `supabase/functions/` and configure its `SARDO_ALERT_CRON_SECRET` when scheduled follow-up alerts are enabled.
 
 ## 🔒 Data Privacy & Security
 

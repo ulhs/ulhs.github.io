@@ -67,6 +67,7 @@ tmp/
 dist/
 
 *.sql
+!database/create_parent_student_links_table.sql
 
 # Ignore QR Batch Generator page
 pages/admin/qr-batch-generator.html

@@ -34,14 +34,16 @@ serve(async (req) => {
       }
     });
 
-    // First, verify that the studentLrn belongs to the parentPsid
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select('parent_messenger_id')
-      .eq('lrn', studentLrn)
-      .single();
+    // First, verify that the student belongs to this specific guardian.
+    const { data: link, error: linkError } = await supabase
+      .from('parent_student_links')
+      .select('id')
+      .eq('student_lrn', studentLrn)
+      .eq('parent_psid', parentPsid)
+      .eq('notify_parent', true)
+      .maybeSingle();
 
-    if (studentError || !student || student.parent_messenger_id !== parentPsid) {
+    if (linkError || !link) {
       throw new Error("Invalid student or parent.");
     }
 

@@ -48,38 +48,55 @@ serve(async (req) => {
       throw new Error("Invalid login attempt.");
     }
 
-    // 2. Verify the parent has a PIN set
-    if (!student.parent_pin) {
+    const { data: guardianLinks, error: linksError } = await supabase
+      .from('parent_student_links')
+      .select('parent_psid, parent_guardian_name, parent_pin')
+      .eq('student_lrn', lrn);
+
+    if (linksError) {
+      throw linksError;
+    }
+
+    const matchingLink = (guardianLinks || []).find(link => {
+      if (!link.parent_pin) return false;
+      const [salt, storedHash] = link.parent_pin.split(':');
+      return CryptoJS.SHA256(pin + salt).toString() === storedHash;
+    });
+
+    // Legacy fallback for records created before the relationship table migration.
+    const legacyPinMatches = !matchingLink && student.parent_pin
+      ? (() => {
+          const [salt, storedHash] = student.parent_pin.split(':');
+          return CryptoJS.SHA256(pin + salt).toString() === storedHash;
+        })()
+      : false;
+
+    if (!matchingLink && !legacyPinMatches) {
       throw new Error("PIN not set for this account. Please set a PIN first.");
     }
 
-    // 3. Verify the PIN
-    console.log("Verifying PIN...");
-    const [salt, storedHash] = student.parent_pin.split(':');
-    const inputHash = CryptoJS.SHA256(pin + salt).toString();
-
-    if (inputHash !== storedHash) {
-      console.error("PIN mismatch");
-      throw new Error("Invalid login attempt.");
-    }
+    const parentPsid = matchingLink?.parent_psid || student.parent_messenger_id;
 
     // 4. Fetch all students linked to this parent
-    console.log("Fetching all linked students for parent PSID:", student.parent_messenger_id);
-    const { data: allStudents, error: studentsError } = await supabase
-      .from('students')
-      .select('lrn, full_name, section, grade_level, photo_url, student_id_number')
-      .eq('parent_messenger_id', student.parent_messenger_id);
+    console.log("Fetching all linked students for parent PSID:", parentPsid);
+    const { data: linkedRows, error: studentsError } = await supabase
+      .from('parent_student_links')
+      .select('student_lrn, students(lrn, full_name, section, grade_level, photo_url, student_id_number)')
+      .eq('parent_psid', parentPsid)
+      .eq('notify_parent', true);
 
     if (studentsError) {
       console.error("Error fetching linked students:", studentsError);
       throw new Error("Failed to load linked students.");
     }
 
+    const allStudents = (linkedRows || []).map(row => row.students).filter(Boolean);
+
     // 5. Return success response with all necessary data
     return new Response(JSON.stringify({
       success: true,
-      parentPsid: student.parent_messenger_id,
-      parentName: student.parent_guardian_name,
+      parentPsid,
+      parentName: matchingLink?.parent_guardian_name || student.parent_guardian_name,
       students: allStudents,
       activeStudentLrn: lrn
     }), {

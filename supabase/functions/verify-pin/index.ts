@@ -47,17 +47,16 @@ serve(async (req) => {
       console.error(`❌ Error fetching student:`, studentError);
     }
     
-    if (!student || !student.parent_messenger_id) {
-      throw new Error('Invalid LRN or student not linked to parent');
+    if (!student) {
+      throw new Error('Invalid LRN or student not found');
     }
-    console.log(`✅ Found student with parent PSID ${student.parent_messenger_id}`);
+    console.log(`✅ Found student ${student.lrn}`);
 
     // Verify the code
     console.log(`🔍 Verifying code ${code}...`);
     const { data: validCode, error: codeError } = await supabase
       .from('verification_codes')
       .select('*')
-      .eq('parent_psid', student.parent_messenger_id)
       .eq('code', code)
       .eq('used', false)
       .gt('expires_at', new Date().toISOString())
@@ -74,7 +73,39 @@ serve(async (req) => {
     }
     console.log(`✅ Code is valid!`);
     
-    // Mark code as used
+    // Hash the new PIN using the same method as send-messenger-alert and login
+    console.log(`🔐 Hashing PIN...`);
+    const salt = CryptoJS.lib.WordArray.random(128/8).toString();
+    const hashedPin = CryptoJS.SHA256(pin + salt).toString();
+    const parentPin = salt + ':' + hashedPin;
+    console.log(`✅ PIN hashed successfully!`);
+
+    const { data: guardianLink, error: guardianLinkError } = await supabase
+      .from('parent_student_links')
+      .select('id')
+      .eq('student_lrn', lrn)
+      .eq('parent_psid', validCode.parent_psid)
+      .eq('notify_parent', true)
+      .maybeSingle();
+
+    if (guardianLinkError || !guardianLink) {
+      throw new Error('This guardian link is not active. Please complete Messenger registration first.');
+    }
+
+    // Update only this guardian's PIN, not every guardian linked to the student.
+    console.log(`💾 Updating parent PIN for guardian PSID ${validCode.parent_psid}...`);
+    const { error: updatePinError } = await supabase
+      .from('parent_student_links')
+      .update({ parent_pin: parentPin })
+      .eq('id', guardianLink.id);
+
+    if (updatePinError) {
+      console.error(`❌ Error updating PIN:`, updatePinError);
+      throw updatePinError;
+    }
+    console.log(`✅ PIN updated successfully!`);
+
+    // Consume the code only after the guardian relationship and PIN update succeed.
     console.log(`💾 Marking code as used...`);
     const { error: updateCodeError } = await supabase
       .from('verification_codes')
@@ -84,26 +115,6 @@ serve(async (req) => {
     if (updateCodeError) {
       console.error("Error marking code as used:", updateCodeError);
     }
-
-    // Hash the new PIN using the same method as send-messenger-alert and login
-    console.log(`🔐 Hashing PIN...`);
-    const salt = CryptoJS.lib.WordArray.random(128/8).toString();
-    const hashedPin = CryptoJS.SHA256(pin + salt).toString();
-    const parentPin = salt + ':' + hashedPin;
-    console.log(`✅ PIN hashed successfully!`);
-
-    // Update parent PIN for all linked students
-    console.log(`💾 Updating parent PIN for PSID ${student.parent_messenger_id}...`);
-    const { error: updatePinError } = await supabase
-      .from('students')
-      .update({ parent_pin: parentPin })
-      .eq('parent_messenger_id', student.parent_messenger_id);
-
-    if (updatePinError) {
-      console.error(`❌ Error updating PIN:`, updatePinError);
-      throw updatePinError;
-    }
-    console.log(`✅ PIN updated successfully!`);
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

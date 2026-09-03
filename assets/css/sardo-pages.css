@@ -1,0 +1,62 @@
+.sardo-page {
+    color: #1f2937;
+}
+
+.sardo-page main {
+    width: min(100% - 2rem, 72rem);
+    margin-inline: auto;
+}
+
+.sardo-page button,
+.sardo-page a,
+.sardo-page select,
+.sardo-page input,
+.sardo-page textarea {
+    min-height: 2.75rem;
+}
+
+.sardo-page .sardo-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.sardo-page th,
+.sardo-page td {
+    vertical-align: top;
+}
+
+@media (max-width: 639px) {
+    .sardo-page main {
+        width: min(100% - 1rem, 72rem);
+        padding-block: 1rem;
+    }
+
+    .sardo-page h1 {
+        font-size: 1.5rem;
+        line-height: 1.2;
+    }
+
+    .sardo-page .sardo-table-wrap table {
+        min-width: 42rem;
+    }
+
+    .sardo-page .sardo-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .sardo-page .sardo-actions > * {
+        width: 100%;
+        margin-inline: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sardo-page *,
+    .sardo-page *::before,
+    .sardo-page *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}

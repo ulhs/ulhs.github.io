@@ -88,9 +88,18 @@ async function logAdminAction(action, targetLrn = null, details = null) {
         if (document.getElementById('faq-bot-toggle')) return;
         if (!document.body) return;
 
-        // Skip chatbot for admin pages or if dismissed for this session
-        const isAdminPage = window.location.pathname.includes('admin.html') || 
-                          window.location.pathname.includes('id-gen.html');
+        // Skip chatbot on selected admin utility pages or if dismissed for this session
+        const utilityPagesWithoutChatbot = [
+            'sardo-calendar.html',
+            'attendance-corrections.html',
+            'attendance-duplicate-review.html',
+            'sardo-settings.html',
+            'sardo-pilot.html'
+        ];
+        const currentPage = window.location.pathname.split('/').pop().toLowerCase();
+        const isAdminPage = window.location.pathname.includes('admin.html') ||
+                          window.location.pathname.includes('id-gen.html') ||
+                          utilityPagesWithoutChatbot.includes(currentPage);
         const isDismissed = sessionStorage.getItem('chatbot_dismissed') === 'true';
         
         if (isAdminPage || isDismissed) return;
@@ -374,16 +383,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* --- BACK TO TOP BUTTON LOGIC --- */
-    const backToTopBtn = document.createElement('div');
-    backToTopBtn.id = 'backToTop';
-    backToTopBtn.innerHTML = '↑';
-    backToTopBtn.setAttribute('data-tooltip', 'Back to Top');
-    document.body.appendChild(backToTopBtn);
+    const pagesWithoutBackToTop = [
+        'sardo-calendar.html',
+        'attendance-corrections.html',
+        'attendance-duplicate-review.html',
+        'sardo-settings.html',
+        'sardo-pilot.html'
+    ];
+    const currentPage = window.location.pathname.split('/').pop().toLowerCase();
+    if (!pagesWithoutBackToTop.includes(currentPage)) {
+        const backToTopBtn = document.createElement('div');
+        backToTopBtn.id = 'backToTop';
+        backToTopBtn.innerHTML = '↑';
+        backToTopBtn.setAttribute('data-tooltip', 'Back to Top');
+        document.body.appendChild(backToTopBtn);
 
-    let lastScrollTop = 0;
-    window.addEventListener('scroll', () => {
-        let st = window.pageYOffset || document.documentElement.scrollTop;
-        
+        let lastScrollTop = 0;
+        window.addEventListener('scroll', () => {
+            let st = window.pageYOffset || document.documentElement.scrollTop;
+
         // Show only when scrolling UP and beyond 300px
         if (st < lastScrollTop && st > 300) {
             backToTopBtn.classList.add('visible');
@@ -398,58 +416,61 @@ document.addEventListener('DOMContentLoaded', () => {
             const isNearFooter = footerRect.top <= window.innerHeight;
             document.body.classList.toggle('at-footer', isNearFooter);
         }
-        
-        lastScrollTop = st <= 0 ? 0 : st;
-    }, { passive: true });
 
-    backToTopBtn.addEventListener('click', () => {
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
+        lastScrollTop = st <= 0 ? 0 : st;
+        }, { passive: true });
+
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
         });
-    });
+    }
 
     /* --- LIGHTBOX LOGIC --- */
-    const lightbox = document.createElement('div');
-    lightbox.className = 'lightbox-overlay';
-    lightbox.innerHTML = `
+    if (currentPage === 'sardo-dashboard.html') {
+        const lightbox = document.createElement('div');
+        lightbox.className = 'lightbox-overlay';
+        lightbox.innerHTML = `
         <div class="lightbox-content">
             <span class="lightbox-close">&times;</span>
             <img src="" alt="Enlarged Image">
             <div class="lightbox-caption"></div>
         </div>
-    `;
-    document.body.appendChild(lightbox);
+        `;
+        document.body.appendChild(lightbox);
 
-    const lightboxImg = lightbox.querySelector('img');
-    const lightboxCaption = lightbox.querySelector('.lightbox-caption');
-    const lightboxClose = lightbox.querySelector('.lightbox-close');
+        const lightboxImg = lightbox.querySelector('img');
+        const lightboxCaption = lightbox.querySelector('.lightbox-caption');
+        const lightboxClose = lightbox.querySelector('.lightbox-close');
 
-    // Attach to all gallery images
-    document.addEventListener('click', (e) => {
-        const galleryCard = e.target.closest('.gallery-card');
-        if (galleryCard) {
-            const img = galleryCard.querySelector('img');
-            const title = galleryCard.querySelector('h4');
-            const desc = galleryCard.querySelector('p');
-            
-            if (img) {
-                lightboxImg.src = img.src;
-                lightboxCaption.innerHTML = `<strong>${title ? title.textContent : ''}</strong><br>${desc ? desc.textContent : ''}`;
-                lightbox.classList.add('active');
-                document.body.style.overflow = 'hidden'; // Prevent scroll
+        // Attach to all gallery images
+        document.addEventListener('click', (e) => {
+            const galleryCard = e.target.closest('.gallery-card');
+            if (galleryCard) {
+                const img = galleryCard.querySelector('img');
+                const title = galleryCard.querySelector('h4');
+                const desc = galleryCard.querySelector('p');
+                
+                if (img) {
+                    lightboxImg.src = img.src;
+                    lightboxCaption.innerHTML = `<strong>${title ? title.textContent : ''}</strong><br>${desc ? desc.textContent : ''}`;
+                    lightbox.classList.add('active');
+                    document.body.style.overflow = 'hidden'; // Prevent scroll
+                }
             }
+        });
+
+        lightboxClose.addEventListener('click', closeLightbox);
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) closeLightbox();
+        });
+
+        function closeLightbox() {
+            lightbox.classList.remove('active');
+            document.body.style.overflow = 'auto';
         }
-    });
-
-    lightboxClose.addEventListener('click', closeLightbox);
-    lightbox.addEventListener('click', (e) => {
-        if (e.target === lightbox) closeLightbox();
-    });
-
-    function closeLightbox() {
-        lightbox.classList.remove('active');
-        document.body.style.overflow = 'auto';
     }
 
     /* --- SCROLL REVEAL LOGIC --- */

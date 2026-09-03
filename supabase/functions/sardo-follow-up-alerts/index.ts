@@ -37,7 +37,7 @@ serve(async (req) => {
     for (const followUp of followUps || []) {
       const { data: students, error: studentError } = await supabase
         .from('students')
-        .select('lrn, full_name, notify_parent, parent_messenger_id')
+        .select('lrn, full_name, notify_parent, parent_messenger_id, parent_phone')
         .eq('lrn', followUp.student_lrn)
         .limit(1)
       if (studentError) throw studentError
@@ -103,6 +103,15 @@ serve(async (req) => {
           error_message: errorMessage
         })
         success ? sent++ : skipped++
+        if (!success && student.parent_phone) {
+          await supabase.from('notification_fallback_queue').insert({
+            student_lrn: String(student.lrn),
+            student_name: student.full_name,
+            recipient: student.parent_phone,
+            channel: 'sms',
+            message
+          })
+        }
         results.push({ intervention_id: followUp.id, psid, success })
       }
     }

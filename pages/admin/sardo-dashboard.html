@@ -78,11 +78,11 @@
             </a>
         </div>
         <div class="user-greeting">
+            <span class="user-name" id="user-greeting-name"></span>
             <script>
-                const userName = sessionStorage.getItem('userName');
-                if (userName) {
-                    document.write('<span class="user-name">' + userName + '</span>');
-                }
+                const greetingElement = document.getElementById('user-greeting-name');
+                const storedUserName = sessionStorage.getItem('userName');
+                if (greetingElement && storedUserName) greetingElement.textContent = storedUserName;
             </script>
         </div>
         <input type="checkbox" id="nav-toggle" class="nav-toggle">
@@ -212,6 +212,8 @@
                             <a href="attendance-corrections.html" class="px-3 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-[10px] font-black uppercase tracking-wider"><i class="fa-solid fa-clipboard-list mr-1"></i> Corrections</a>
                             <a href="attendance-duplicate-review.html" class="px-3 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-[10px] font-black uppercase tracking-wider"><i class="fa-solid fa-copy mr-1"></i> Duplicate Review</a>
                             <a href="sardo-settings.html" class="px-3 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-[10px] font-black uppercase tracking-wider"><i class="fa-solid fa-sliders mr-1"></i> Settings</a>
+                            <a href="sardo-pilot.html" class="px-3 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-[10px] font-black uppercase tracking-wider"><i class="fa-solid fa-flask mr-1"></i> Pilot Report</a>
+                            <a href="sardo-calendar.html" class="px-3 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-[10px] font-black uppercase tracking-wider"><i class="fa-solid fa-calendar-days mr-1"></i> Calendar</a>
                         </div>
 
                         <div class="space-y-4">
@@ -282,12 +284,14 @@
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                     <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
                         <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider">At-Risk Students</h3>
-                        <span id="student-count" class="bg-deped-blue text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0 STUDENTS</span>
                     </div>
                     <div id="students-list" class="p-6 space-y-4">
-                        <div class="text-center py-12 text-gray-500">
-                            <i class="fa-solid fa-spinner fa-spin text-4xl mb-4"></i>
-                            <p>Loading risk assessments...</p>
+                        <div class="max-w-md mx-auto py-10 text-gray-600" role="status" aria-live="polite">
+                            <div class="flex items-center justify-between gap-4 mb-3">
+                                <p id="assessment-progress-status" class="text-sm font-bold">Preparing risk assessments...</p>
+                                <span id="assessment-progress-percent" class="text-sm font-black text-blue-700">0%</span>
+                            </div>
+                            <progress id="assessment-progress-bar" class="w-full h-3" max="100" value="0" aria-label="Risk assessment progress"></progress>
                         </div>
                     </div>
                 </div>
@@ -376,32 +380,42 @@
             return 'No intervention needed at this time';
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>\"']/g, character => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[character]);
+        }
+
         function renderStudentCard(student, riskData) {
             const factorsList = (riskData.triggering_factors || []).map(f => 
-                `<li class="flex items-start"><i class="fa-solid fa-circle text-xs mt-1.5 mr-2 text-gray-400"></i>${f}</li>`
+                `<li class="flex items-start"><i class="fa-solid fa-circle text-xs mt-1.5 mr-2 text-gray-400"></i>${escapeHtml(f)}</li>`
             ).join('');
             const interventionList = (riskData.interventions || []).slice(0, 3).map(intervention => `
                 <li class="flex items-center justify-between gap-2">
-                    <span>${intervention.intervention_type.replaceAll('_', ' ')}</span>
-                    <button type="button" class="sardo-status-btn text-blue-700 underline" data-intervention-id="${intervention.id}" data-status="${intervention.status}">${intervention.status.replaceAll('_', ' ')}</button>
+                    <span>${escapeHtml(intervention.intervention_type).replaceAll('_', ' ')}</span>
+                    <button type="button" class="sardo-status-btn text-blue-700 underline" data-intervention-id="${escapeHtml(intervention.id)}" data-status="${escapeHtml(intervention.status)}">${escapeHtml(intervention.status).replaceAll('_', ' ')}</button>
                 </li>
             `).join('');
 
             return `
                 <div class="bg-white rounded-2xl border-2 ${getRiskLevelBgClass(riskData.risk_level)} p-6 transition-all duration-300 hover:shadow-md">
-                    <div class="flex items-start justify-between">
+                    <div class="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                         <div class="flex-1">
                             <div class="flex flex-wrap items-center gap-3 mb-4">
-                                <h3 class="text-xl font-black text-gray-900">${student.full_name}</h3>
+                                <h3 class="text-xl font-black text-gray-900 break-words">${escapeHtml(student.full_name)}</h3>
                                 <span class="px-3 py-1 rounded-full text-xs font-bold ${getRiskLevelClass(riskData.risk_level)}">
-                                    ${riskData.risk_level.toUpperCase()} (${riskData.risk_score}/100)
+                                    ${escapeHtml(riskData.risk_level).toUpperCase()} (${escapeHtml(riskData.risk_score)}/100)
                                 </span>
                             </div>
                             <p class="text-xs font-bold text-blue-700 uppercase tracking-widest mb-1">
-                                GRADE ${student.grade_level} - ${student.section}
+                                GRADE ${escapeHtml(student.grade_level)} - ${escapeHtml(student.section)}
                             </p>
                             <p class="text-xs font-bold text-gray-600 mb-4 font-mono">
-                                LRN: ${student.lrn}
+                                LRN: ${escapeHtml(student.lrn)}
                             </p>
                             <div class="mb-4">
                                 <div class="flex justify-between text-xs text-gray-600 mb-1">
@@ -435,33 +449,40 @@
                             </div>
                             ${(interventionList ? `<div class="mt-4 text-left"><p class="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Recent Follow-up</p><ul class="text-xs text-gray-600 space-y-1">${interventionList}</ul></div>` : '')}
                         </div>
-                        <div class="ml-6 text-right text-xs text-gray-500">
+                        <div class="w-full sm:w-48 sm:ml-6 text-left sm:text-right text-xs text-gray-500">
                             <p class="font-bold uppercase tracking-wider">Last Attendance</p>
-                            <p class="font-mono mt-1">${student.last_scan_date || 'No data'}</p>
+                            <p class="font-mono mt-1">${escapeHtml(student.last_scan_date || 'No data')}</p>
                             <p class="font-bold uppercase tracking-wider mt-3">20-Day Attendance</p>
                             <p class="font-mono mt-1 font-black ${(riskData.metrics?.attendance_rate_20 ?? riskData.metrics?.attendance_rate_60 ?? 100) < 80 ? 'text-red-600' : 'text-green-600'}">
                                 ${(riskData.metrics?.attendance_rate_20 ?? riskData.metrics?.attendance_rate_60 ?? 100)}%
                             </p>
                             <p class="font-bold uppercase tracking-wider mt-3">Sessions</p>
                             <p class="font-mono mt-1 font-black text-gray-700">
-                                ${riskData.metrics?.present_sessions_20 ?? 0}/${riskData.metrics?.expected_sessions_20 ?? 0}
+                                ${escapeHtml(riskData.metrics?.present_sessions_20 ?? 0)}/${escapeHtml(riskData.metrics?.expected_sessions_20 ?? 0)}
                             </p>
                             ${(riskData.metrics?.stale_expected_days ?? 0) > 0 ? `
                                 <p class="font-bold uppercase tracking-wider mt-3">Stale Days</p>
-                                <p class="font-mono mt-1 font-black text-orange-600">${riskData.metrics.stale_expected_days}</p>
+                                <p class="font-mono mt-1 font-black text-orange-600">${escapeHtml(riskData.metrics.stale_expected_days)}</p>
+                            ` : ''}
+                            ${riskData.previous_assessment ? `
+                                <p class="font-bold uppercase tracking-wider mt-3">Previous Risk</p>
+                                <p class="font-mono mt-1 font-black text-gray-700">${escapeHtml(riskData.previous_assessment.risk_level)} (${escapeHtml(riskData.previous_assessment.risk_score)})</p>
                             ` : ''}
                             <p class="font-bold uppercase tracking-wider mt-3">Data Quality</p>
                             <p class="font-mono mt-1 font-black ${riskData.data_quality === 'ok' ? 'text-green-600' : 'text-orange-600'}">
-                                ${String(riskData.data_quality || 'unknown').replaceAll('_', ' ')}
+                                ${escapeHtml(String(riskData.data_quality || 'unknown')).replaceAll('_', ' ')}
                             </p>
                             ${riskData.risk_level !== 'Low' ? `
-                                <button type="button" class="sardo-intervention-btn mt-4 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider" data-lrn="${student.lrn}" data-risk-level="${riskData.risk_level}" data-risk-score="${riskData.risk_score}">
+                                <button type="button" class="sardo-intervention-btn mt-4 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider" data-lrn="${escapeHtml(student.lrn)}" data-risk-level="${escapeHtml(riskData.risk_level)}" data-risk-score="${escapeHtml(riskData.risk_score)}">
                                     <i class="fa-solid fa-clipboard-check mr-1"></i> Log Intervention
                                 </button>
-                                <button type="button" class="sardo-correction-btn mt-4 ml-2 px-3 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-[10px] font-black uppercase tracking-wider" data-lrn="${student.lrn}">
+                                <button type="button" class="sardo-correction-btn mt-4 sm:ml-2 px-3 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-[10px] font-black uppercase tracking-wider" data-lrn="${escapeHtml(student.lrn)}">
                                     <i class="fa-solid fa-pen-to-square mr-1"></i> Request Correction
                                 </button>
                             ` : ''}
+                            <button type="button" class="sardo-pilot-btn mt-4 sm:ml-2 px-3 py-2 border border-blue-300 bg-blue-50 text-blue-700 rounded-lg text-[10px] font-black uppercase tracking-wider" data-lrn="${escapeHtml(student.lrn)}" data-risk-level="${escapeHtml(riskData.risk_level)}" data-risk-score="${escapeHtml(riskData.risk_score)}" data-version="${escapeHtml(riskData.assessment_version || '2026.09.expected-sessions-v1')}">
+                                <i class="fa-solid fa-flask mr-1"></i> Pilot Review
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -470,6 +491,19 @@
 
         async function loadRiskDashboard() {
             const studentsList = document.getElementById('students-list');
+            const progressBar = studentsList.querySelector('[role="progressbar"]');
+            const progressFill = document.getElementById('assessment-progress-bar');
+            const progressPercent = document.getElementById('assessment-progress-percent');
+            const progressStatus = document.getElementById('assessment-progress-status');
+
+            function updateAssessmentProgress(assessedCount, totalStudents, statusText) {
+                const percent = totalStudents ? Math.round((assessedCount / totalStudents) * 100) : 100;
+                progressBar?.setAttribute('aria-valuenow', String(percent));
+                if (progressFill) progressFill.value = percent;
+                if (progressPercent) progressPercent.textContent = `${percent}%`;
+                if (progressStatus && statusText) progressStatus.textContent = statusText;
+            }
+
             try {
                 const { data: students, error: studentsError } = await window.supabaseClient
                     .from('students')
@@ -478,11 +512,12 @@
                 
                 if (studentsError) throw studentsError;
                 allStudents = students;
+                updateAssessmentProgress(0, students.length, students.length ? 'Assessing student risk...' : 'No students found');
 
                 const riskAssessments = [];
                 let counts = { critical: 0, high: 0, medium: 0, low: 0 };
 
-                for (const student of students) {
+                for (const [index, student] of students.entries()) {
                     try {
                         const studentLrn = String(student.lrn ?? '');
                         const { data: riskResult, error: riskError } = await window.supabaseClient
@@ -504,6 +539,20 @@
                             data_quality: String(normalized.data_quality || 'unknown'),
                             interventions: []
                         };
+                        const { data: { session: assessmentSession } } = await window.supabaseClient.auth.getSession();
+                        if (assessmentSession) {
+                            await window.supabaseClient.from('sardo_assessment_history').upsert({
+                                student_lrn: studentLrn,
+                                assessment_date: new Date().toISOString().slice(0, 10),
+                                assessment_version: String(normalized.assessment_version || 'unknown'),
+                                risk_score: riskData.risk_score,
+                                risk_level: riskData.risk_level,
+                                data_quality: riskData.data_quality,
+                                triggering_factors: riskData.triggering_factors,
+                                metrics: riskData.metrics,
+                                assessed_by: assessmentSession.user.id
+                            }, { onConflict: 'student_lrn,assessment_date,assessment_version', ignoreDuplicates: true });
+                        }
                         
                         riskAssessments.push({
                             student,
@@ -525,8 +574,12 @@
                             }
                         });
                         counts.low++;
+                    } finally {
+                        updateAssessmentProgress(index + 1, students.length, `Assessed ${index + 1} of ${students.length} students`);
                     }
                 }
+
+                updateAssessmentProgress(students.length, students.length, 'Assessment complete');
 
                 const { data: interventions } = await window.supabaseClient
                     .from('sardo_interventions')
@@ -538,6 +591,21 @@
                     if (assessment) assessment.riskData.interventions.push(intervention);
                 });
 
+                const { data: history } = await window.supabaseClient
+                    .from('sardo_assessment_history')
+                    .select('student_lrn, risk_score, risk_level, assessed_at')
+                    .in('student_lrn', students.map(student => String(student.lrn)))
+                    .order('assessed_at', { ascending: false });
+                const historyByStudent = new Map();
+                (history || []).forEach(snapshot => {
+                    const key = String(snapshot.student_lrn);
+                    if (!historyByStudent.has(key)) historyByStudent.set(key, []);
+                    historyByStudent.get(key).push(snapshot);
+                });
+                riskAssessments.forEach(assessment => {
+                    assessment.riskData.previous_assessment = historyByStudent.get(String(assessment.student.lrn))?.[1] || null;
+                });
+
                 document.getElementById('critical-count').textContent = counts.critical;
                 document.getElementById('high-count').textContent = counts.high;
                 document.getElementById('medium-count').textContent = counts.medium;
@@ -547,13 +615,18 @@
                 updateStudentsList(riskAssessments);
             } catch (err) {
                 console.error('Dashboard load error:', err);
-                studentsList.innerHTML = `
-                    <div class="text-center py-12 text-red-600">
-                        <i class="fa-solid fa-triangle-exclamation text-4xl mb-4"></i>
-                        <p>Failed to load risk dashboard: ${err.message}</p>
-                        <p class="text-sm mt-2">Please ensure the SQL migration has been run in Supabase.</p>
-                    </div>
-                `;
+                studentsList.textContent = '';
+                const errorPanel = document.createElement('div');
+                errorPanel.className = 'text-center py-12 text-red-600';
+                const errorIcon = document.createElement('i');
+                errorIcon.className = 'fa-solid fa-triangle-exclamation text-4xl mb-4';
+                const errorMessage = document.createElement('p');
+                errorMessage.textContent = `Failed to load risk dashboard: ${err.message}`;
+                const errorHint = document.createElement('p');
+                errorHint.className = 'text-sm mt-2';
+                errorHint.textContent = 'Please ensure the SQL migration has been run in Supabase.';
+                errorPanel.append(errorIcon, errorMessage, errorHint);
+                studentsList.appendChild(errorPanel);
             }
         }
 
@@ -595,8 +668,6 @@
 
             const sorted = filtered.sort((a, b) => b.riskData.risk_score - a.riskData.risk_score);
             updateSummaryCounts(sorted);
-
-            document.getElementById('student-count').textContent = `${sorted.length} STUDENT${sorted.length !== 1 ? 'S' : ''}`;
 
             if (sorted.length === 0) {
                 studentsList.innerHTML = `
@@ -673,11 +744,39 @@
         document.getElementById('section-filter').addEventListener('change', () => updateStudentsList(allRiskAssessments));
 
         document.addEventListener('click', async (event) => {
+            const button = event.target.closest('.sardo-pilot-btn');
+            if (!button) return;
+            const actualRisk = window.prompt('Verified actual risk level (Critical, High, Medium, Low):');
+            if (!['Critical', 'High', 'Medium', 'Low'].includes(actualRisk)) return;
+            const interventionProvided = window.confirm('Was an intervention provided?');
+            const interventionEffective = interventionProvided ? window.confirm('Was the intervention effective?') : null;
+            const outcome = window.prompt('Pilot outcome or notes:') || null;
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (!session) return;
+            const { error } = await window.supabaseClient.from('sardo_pilot_reviews').insert({
+                student_lrn: button.dataset.lrn,
+                assessment_version: button.dataset.version,
+                assessed_risk_level: button.dataset.riskLevel,
+                actual_risk_level: actualRisk,
+                intervention_provided: interventionProvided,
+                intervention_effective: interventionEffective,
+                outcome,
+                reviewed_by: session.user.id
+            });
+            if (error) alert(`Could not save pilot review: ${error.message}`);
+            else alert('Pilot review recorded.');
+        });
+
+        document.addEventListener('click', async (event) => {
             const button = event.target.closest('.sardo-intervention-btn');
             if (!button) return;
 
-            const interventionType = window.prompt('Intervention type (parent_contact, student_conference, guidance_referral, monitoring, other):', 'parent_contact');
-            if (!interventionType) return;
+            const interventionType = window.prompt('Intervention type (parent_contact, student_conference, home_visit, guidance_referral, attendance_correction, monitoring, other):', 'parent_contact');
+            const allowedInterventionTypes = ['parent_contact', 'student_conference', 'home_visit', 'guidance_referral', 'attendance_correction', 'monitoring', 'other'];
+            if (!interventionType || !allowedInterventionTypes.includes(interventionType)) {
+                alert('Choose one of the listed intervention types.');
+                return;
+            }
             const notes = window.prompt('Brief intervention notes:');
             if (notes === null) return;
 
@@ -705,7 +804,10 @@
             const button = event.target.closest('.sardo-status-btn');
             if (!button) return;
             const nextStatus = window.prompt('New status (open, in_progress, completed, closed):', button.dataset.status);
-            if (!nextStatus || !['open', 'in_progress', 'completed', 'closed'].includes(nextStatus)) return;
+            if (!nextStatus || !['open', 'in_progress', 'completed', 'closed'].includes(nextStatus)) {
+                alert('Choose one of the listed statuses.');
+                return;
+            }
             const { error } = await window.supabaseClient.from('sardo_interventions').update({
                 status: nextStatus,
                 closed_at: ['completed', 'closed'].includes(nextStatus) ? new Date().toISOString() : null,
@@ -725,11 +827,16 @@
             if (!reason) return;
             const { data: { session } } = await window.supabaseClient.auth.getSession();
             if (!session) return;
+            const attendanceDate = window.prompt('Attendance date (YYYY-MM-DD):', new Date().toISOString().slice(0, 10));
+            if (!attendanceDate || !/^\d{4}-\d{2}-\d{2}$/.test(attendanceDate)) return;
+            const attendanceSession = window.prompt('Session (AM or PM):', 'AM');
+            if (!['AM', 'PM'].includes(String(attendanceSession).toUpperCase())) return;
             const { data: latestLog, error: logError } = await window.supabaseClient
                 .from('attendance_logs')
                 .select('id, session, status, scanned_at, local_date')
                 .eq('student_lrn', button.dataset.lrn)
-                .in('session', ['AM', 'PM'])
+                .eq('session', String(attendanceSession).toUpperCase())
+                .eq('local_date', attendanceDate)
                 .order('scanned_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
@@ -742,7 +849,10 @@
                 return;
             }
             const newStatus = window.prompt('Corrected status (PRESENT, ABSENT, TARDY):', latestLog.status);
-            if (!newStatus) return;
+            if (!newStatus || !['PRESENT', 'ABSENT', 'TARDY'].includes(newStatus.toUpperCase())) {
+                alert('Corrected status must be PRESENT, ABSENT, or TARDY.');
+                return;
+            }
             const { error } = await window.supabaseClient.from('attendance_corrections').insert({
                 student_lrn: button.dataset.lrn,
                 attendance_log_id: latestLog.id,
