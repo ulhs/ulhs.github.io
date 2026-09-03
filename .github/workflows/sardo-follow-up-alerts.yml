@@ -1,0 +1,23 @@
+name: SARDO Follow-up Alerts
+
+on:
+  schedule:
+    - cron: '0 1 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  send-alerts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger SARDO follow-up alerts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SARDO_ALERT_CRON_SECRET: ${{ secrets.SARDO_ALERT_CRON_SECRET }}
+        run: |
+          test -n "$SUPABASE_URL"
+          test -n "$SARDO_ALERT_CRON_SECRET"
+          curl --fail-with-body --request POST \
+            --url "$SUPABASE_URL/functions/v1/sardo-follow-up-alerts" \
+            --header "Content-Type: application/json" \
+            --header "x-sardo-cron-secret: $SARDO_ALERT_CRON_SECRET" \
+            --data '{}'
