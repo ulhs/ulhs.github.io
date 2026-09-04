@@ -228,6 +228,14 @@
             <!-- FORM SECTION -->
             <div class="form-section">
                 <form id="id-form" class="main-form">
+                    <!-- STUDENT SPECIFIC: LRN -->
+                    <div id="student-lrn-group" class="form-group">
+                        <label for="lrn">12-Digit LRN</label>
+                        <input type="text" id="lrn" required pattern="\d{12}" maxlength="12" placeholder="123456789012">
+                        <button type="button" id="btn-load-student" class="btn btn-small btn-secondary mt-2">Load Student</button>
+                        <span id="student-lookup-status" class="error-msg" role="status" aria-live="polite"></span>
+                    </div>
+
                     <div class="form-group">
                         <label id="photo-label">Photo</label>
                         <div id="id-camera-select-group" class="form-group mb-2" style="display:none">
@@ -286,12 +294,6 @@
                             <label for="lastname">Last Name</label>
                             <input type="text" id="lastname" required placeholder="Dela Cruz">
                         </div>
-                    </div>
-
-                    <!-- STUDENT SPECIFIC: LRN -->
-                    <div id="student-lrn-group" class="form-group">
-                        <label for="lrn">12-Digit LRN</label>
-                        <input type="text" id="lrn" required pattern="\d{12}" maxlength="12" placeholder="123456789012">
                     </div>
 
                     <!-- STUDENT SPECIFIC: Grade Level -->

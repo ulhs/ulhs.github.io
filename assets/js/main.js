@@ -3503,6 +3503,8 @@ async function initIDGenerator() {
     const processingOverlay = document.getElementById('processing-overlay');
     const idCameraSelect = document.getElementById('id-camera-select');
     const idCameraSelectGroup = document.getElementById('id-camera-select-group');
+    const btnLoadStudent = document.getElementById('btn-load-student');
+    const studentLookupStatus = document.getElementById('student-lookup-status');
 
     // Signature Elements
     const btnUploadSig = document.getElementById('btn-upload-sig');
@@ -3588,6 +3590,101 @@ async function initIDGenerator() {
                 addressManual.required = false;
             }
         });
+    }
+
+    function setStudentLookupStatus(message, isError = false) {
+        if (!studentLookupStatus) return;
+        studentLookupStatus.textContent = message;
+        studentLookupStatus.style.color = isError ? 'var(--madder-red)' : 'var(--deped-blue)';
+    }
+
+    async function loadStudentProfile() {
+        const lrn = document.getElementById('lrn')?.value.trim();
+        if (!/^\d{12}$/.test(lrn || '')) {
+            setStudentLookupStatus('Enter a valid 12-digit LRN.', true);
+            document.getElementById('lrn')?.focus();
+            return;
+        }
+
+        if (!window.supabaseClient) {
+            setStudentLookupStatus('Database connection is unavailable.', true);
+            return;
+        }
+
+        btnLoadStudent.disabled = true;
+        setStudentLookupStatus('Loading student...');
+
+        try {
+            const { data: profile, error } = await window.supabaseClient
+                .from('student_id_profiles')
+                .select('lrn, first_name, middle_name, last_name, suffix_name, grade_level, section, address, parent_guardian_name, contact_number, photo_path')
+                .eq('lrn', lrn)
+                .single();
+
+            if (error) throw error;
+            if (!profile) throw new Error('Student profile not found.');
+
+            document.getElementById('firstname').value = profile.first_name || '';
+            document.getElementById('mi').value = profile.middle_name ? profile.middle_name.trim().charAt(0) : '';
+            document.getElementById('lastname').value = [profile.last_name, profile.suffix_name].filter(Boolean).join(' ');
+            document.getElementById('grade-level').value = profile.grade_level ? String(profile.grade_level) : '';
+            document.getElementById('grade-level').dispatchEvent(new Event('change'));
+            const selectedSection = document.getElementById('student-section');
+            if (profile.section && !Array.from(selectedSection.options).some(option => option.value === profile.section)) {
+                selectedSection.appendChild(new Option(profile.section, profile.section));
+            }
+            selectedSection.value = profile.section || '';
+            document.getElementById('guardian').value = profile.parent_guardian_name || '';
+            document.getElementById('parent-mobile').value = profile.contact_number || '';
+
+            if (profile.address) {
+                const matchingAddress = Array.from(addressSelect.options).find(option => option.value === profile.address);
+                if (matchingAddress) {
+                    addressSelect.value = profile.address;
+                    addressManual.value = '';
+                    addressManual.style.display = 'none';
+                    addressManual.required = false;
+                } else {
+                    addressSelect.value = 'others';
+                    addressManual.value = profile.address;
+                    addressManual.style.display = 'block';
+                    addressManual.required = true;
+                }
+            }
+
+            const rawPhotoPath = profile.photo_path || `profiles/${lrn}.webp`;
+            const storagePathMatch = rawPhotoPath.match(/(?:public|sign|authenticated)\/student-photos\/(.+?)(?:\?.*)?$/);
+            const photoPath = storagePathMatch ? decodeURIComponent(storagePathMatch[1]) : rawPhotoPath.replace(/^\/+/, '');
+            const { data: photoBlob, error: photoError } = await window.supabaseClient
+                .storage.from('student-photos').download(photoPath);
+
+            if (!photoError && photoBlob) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    capturedPhoto.src = reader.result;
+                    capturedPhoto.style.display = 'block';
+                    video.style.display = 'none';
+                    btnCapture.style.display = 'none';
+                    btnUpload.style.display = 'none';
+                    btnRetake.style.display = 'inline-block';
+                };
+                reader.readAsDataURL(photoBlob);
+            } else {
+                setStudentLookupStatus('Student loaded. Capture or upload the photo.', false);
+                return;
+            }
+
+            setStudentLookupStatus('Student loaded successfully.');
+        } catch (error) {
+            console.error('Student profile lookup failed:', error);
+            setStudentLookupStatus('Student profile not found or unavailable.', true);
+        } finally {
+            btnLoadStudent.disabled = false;
+        }
+    }
+
+    if (btnLoadStudent) {
+        btnLoadStudent.addEventListener('click', loadStudentProfile);
     }
 
     async function initWebcam(deviceIdOrFacingMode = null) {
@@ -4845,7 +4942,8 @@ async function initIDGenerator() {
             );
             // Display Grade & Section (centered, smaller)
             if (gradeLevel && section) {
-                const gradeSectionText = `Grade ${gradeLevel} - ${section}`;
+                const displaySection = section.replace(new RegExp(`^${gradeLevel}[-\\s]+`, 'i'), '').trim();
+                const gradeSectionText = `Grade ${gradeLevel} - ${displaySection}`;
                 ctxFront.fillStyle = colorGradeSection;
                 drawAutoScaledText(
                     ctxFront, 
