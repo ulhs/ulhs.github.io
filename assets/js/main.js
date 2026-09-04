@@ -4,6 +4,13 @@ const SYSTEM_CONFIG = {
     LAST_UPDATED: '2026-05-01'
 };
 
+const VISITOR_COUNTER_CONFIG = {
+    baseUrl: 'https://api.counterapi.dev/v2',
+    workspace: 'ulhs-website',
+    counter: 'ulhs-visits',
+    baseline: 2560
+};
+
 /* --- AUTHENTICATION LOGIC --- */
 document.addEventListener('DOMContentLoaded', () => {
     // Supabase is now the primary authentication source.
@@ -611,9 +618,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const sessionKey = 'ulhs_visited_session';
             const hasBeenCounted = sessionStorage.getItem(sessionKey);
-            const apiEndpoint = hasBeenCounted
-                ? 'https://api.counterapi.dev/v1/ulhs-website/visits'
-                : 'https://api.counterapi.dev/v1/ulhs-website/visits/up';
+            const counterPath = `${VISITOR_COUNTER_CONFIG.baseUrl}/${encodeURIComponent(VISITOR_COUNTER_CONFIG.workspace)}/${encodeURIComponent(VISITOR_COUNTER_CONFIG.counter)}`;
+            const apiEndpoint = hasBeenCounted ? counterPath : `${counterPath}/up`;
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -629,8 +635,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await response.json();
 
-            if (data && typeof data.count !== 'undefined') {
-                counterEl.textContent = data.count.toLocaleString();
+            const count = data?.data?.up_count ?? data?.data?.count ?? data?.count;
+            if (typeof count === 'number') {
+                counterEl.textContent = (VISITOR_COUNTER_CONFIG.baseline + count).toLocaleString();
                 if (!hasBeenCounted) sessionStorage.setItem(sessionKey, 'true');
             } else {
                 counterEl.textContent = '---';
