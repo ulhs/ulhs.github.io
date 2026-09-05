@@ -5,6 +5,7 @@ Welcome to the official website for **Upper Labay High School**. This project is
 ## 🌟 Key Features
 
 ### Public Features
+
 - **Academic Hub**: Detailed information for Junior and Senior High School programs.
 - **Blaan Heritage**: Integration of the School of Living Traditions (SLT) focusing on traditional beadwork.
 - **Interactive Dictionary**: A searchable Blaan language dictionary with audio pronunciations.
@@ -14,68 +15,77 @@ Welcome to the official website for **Upper Labay High School**. This project is
 - **Privacy Policy**: Complete transparency about data handling in compliance with RA 10173 (Data Privacy Act of 2012).
 
 ### Parent Portal Features
-- **Secure Messenger Registration**: Parent account linking is completed through the official ULHS registration flow, with secure confirmation codes and token validation instead of accepting raw LRN messages. Registration is only completed after the secure Messenger confirmation code is verified, and multiple guardians can link independently to the same child.
-- **Secure Login**: PIN-based authentication with server-side throttling and short-lived signed parent sessions.
-- **Student Selector**: Switch between multiple linked children with student photos.
-- **Grades Viewing**: Access term grades with color-coded performance indicators. Grade access can be temporarily restricted per parent/student relationship for cases such as a pending parent-teacher conference.
-- **Attendance History**: View detailed attendance logs.
-- **Achievements Tracking**: See student awards and recognitions.
-- **Secure Photo Access**: Student photos are served via relationship-checked, time-limited signed URLs using a dedicated Edge Function for enhanced privacy and security.
+
+- **Secure Parent Registration**: Parents can link their children through a verified registration process.
+- **Parent Access**: Securely view information for authorized linked students.
+- **Student Selector**: Switch between multiple linked children.
+- **Grades**: View available term grades and receive clear status updates when grades are temporarily unavailable.
+- **Grade Visibility Controls**: Authorized school personnel can temporarily hide or restore grades for specific parent/student relationships.
+- **Attendance History**: Review attendance records and daily summaries.
+- **Achievements**: View student awards and recognitions.
+- **Protected Student Photos**: Authorized parents can view photos of linked students through protected access.
+- **Responsive Design**: Use the Parent Portal on desktop and mobile devices.
 
 ### Admin/Personnel Features
-- **Attendance Scanner**: Real‑time attendance tracking with QR code scanning.
-- **Parent Messenger Alerts**: Automated Facebook Messenger notifications for student attendance.
-- **SF2 & SF4 Exports**: Official DepEd School Forms 2 and 4 report generation.
-- **Student ID Generator**: Digital student ID card creation with photo capture and QR codes.
-- **Role‑Based Access**: Secure authentication with Google OAuth and Role‑Based Access Control (RBAC).
-- **Hybrid Offline Support**: Works offline with local IndexedDB storage and syncs automatically when online.
-- **Grades Encoding**: Full-featured grade management system with edit/delete capabilities.
-- **Achievements Management**: Add and track student awards and achievements.
-- **SARDO Risk Dashboard**: Student At-Risk Dropout monitoring system with attendance-based risk scores, Critical/High/Medium/Low summaries, student filtering, assessment progress tracking, triggering factors, and recommended interventions.
-- **Access Control**: Manage personnel permissions and roles.
 
-### SARDO Operations
-- **Dashboard**: Authorized administrators, school heads, and guidance counselors can review student risk assessments and record interventions.
-- **Attendance Data Quality**: Attendance correction and duplicate-review pages support validation of the data used for risk scoring.
-- **Assessment Configuration**: Authorized staff can manage SARDO assessment settings and review the previous assessment history for each student.
-- **Calendar Validation**: Import school-day, holiday, examination, special-schedule, and suspended-day rows before they are used in risk calculations.
-- **Pilot Review**: Record verified risk levels, intervention outcomes, and notes for calibration and monitoring.
-- **Follow-up Alerts**: The `sardo-follow-up-alerts` Supabase Edge Function sends notifications for relevant intervention follow-ups.
-- **Privacy**: SARDO is restricted by role-based access and RLS policies; scores are intended to identify students who may need support, not to make automated decisions about them.
+- **Attendance Management**: Record, review, and monitor student attendance.
+- **Parent Notifications**: Send attendance updates to verified parent or guardian accounts.
+- **Grade Management**: Encode, update, and manage student grades.
+- **Parent Grade Access**: Temporarily hide or restore grades for selected parent/student relationships.
+- **Achievements Management**: Record and maintain student awards and recognitions.
+- **Student Records**: Manage authorized student information and related school records.
+- **Student ID Generation**: Create student and personnel identification cards.
+- **Reports and Exports**: Prepare supported school reports and administrative records.
+- **Personnel Access Control**: Manage roles and permissions for authorized users.
+- **Offline Support**: Continue selected workflows during temporary connectivity interruptions.
+
+### Student Support and Attendance Risk Operations
+
+- **Risk Monitoring**: Authorized personnel can review attendance patterns and identify learners who may need additional support.
+- **Support Planning**: Staff can record follow-up actions, interventions, and progress notes.
+- **Data Quality**: Attendance and school-calendar records can be reviewed and corrected before being used for assessment.
+- **Review and Configuration**: Authorized staff can manage assessment settings and review previous assessments.
+- **Privacy and Safeguards**: Access is restricted by role-based permissions and security policies. SARDO results support human review and are not used as automated decisions about students.
+
+### Student Portal Features
+
+- **Student Access**: Sign in with an approved school account.
+- **Learning Hub**: Access student learning resources and portal activities.
+- **Exam Activities**: View available exams and submit completed attempts.
+- **Progress Review**: Review available scores and learning progress.
+- **Protected Access**: Student content is restricted to authorized student accounts.
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: Clean HTML5, CSS3, and Vanilla JavaScript.
-- **Backend**: Supabase (PostgreSQL Database + Edge Functions + Auth)
-- **Real‑time**: Supabase Real‑time Database for live updates
-- **Storage**: Supabase Storage for student photos and documents
-- **Design**: Cultural-inspired theme using the traditional Blaan beadwork palette (Red, Yellow, Blue, Black, White).
-- **Hosting**: GitHub Pages for frontend, Supabase for backend.
-- **Security**: CryptoJS for PIN hashing, signed portal sessions, secure Messenger confirmation tokens, role-based access checks, and Facebook webhook signature validation.
+- **Frontend**: HTML5, CSS3, Tailwind CSS, and vanilla JavaScript.
+- **Backend Services**: Managed cloud services for authentication, data storage, and portal operations.
+- **Database**: Secure cloud database with role-based access controls and row-level security.
+- **Storage**: Protected cloud storage for student photos, school documents, and portal resources.
+- **Authentication**: Google authentication for personnel and students, plus secure PIN-based access for parents.
+- **Notifications**: Facebook Messenger integration for parent attendance alerts.
+- **Hosting**: GitHub Pages for the public website.
+- **Design**: Responsive, mobile-friendly interfaces inspired by the traditional Blaan beadwork palette.
+- **Privacy and Security**: Data protection controls aligned with the Data Privacy Act of 2012 (RA 10173).
 
 ## 🚀 Deployment
 
-The website is deployed on **GitHub Pages** with Supabase backend. SARDO requires the applicable SQL migrations in `supabase/migrations/`, including the risk-scoring function, process schema, calendar import, process improvements, pilot phase, and production risk-function migrations. Deploy the `sardo-follow-up-alerts` Edge Function from `supabase/functions/` and configure its `SARDO_ALERT_CRON_SECRET` when scheduled follow-up alerts are enabled.
-
-### Parent Grade Visibility
-
-Apply `supabase/migrations/20260905_parent_grade_visibility.sql` before deploying the updated `parent-data` Edge Function. Existing parent/student links remain visible by default. Authorized staff can hide individual or selected `parent_student_links` rows using a predefined `grades_hidden_reason_code`, provide an internal `grades_hidden_reason` when needed, and set `grades_visible_until` for automatic restoration. The reason is never returned to the parent portal. The staff control uses the existing admin authentication and records the operator and timestamp.
+The public website is hosted on **GitHub Pages**. Student, parent, and personnel portal services use a managed backend with authenticated access, database security policies, and protected storage.
 
 ## 🔒 Data Privacy & Security
 
 This system complies with the **Data Privacy Act of 2012 (RA 10173)**. Key security measures include:
-- Row Level Security (RLS) on all database tables
+
+- Row Level Security for protected student, parent, personnel, and portal data
 - Encrypted PIN storage (never stored in plaintext)
-- Encrypted session storage
+- Short-lived signed sessions for protected portal requests
+- Browser sessions treated as client-controlled
 - Secure Messenger registration with unique confirmation tokens and verification codes
 - Facebook webhook signature verification before processing Messenger events
-- Rate limiting on login attempts
-- Signed short-lived parent portal sessions
-- Server-side parent login throttling
+- Server-side throttling for repeated parent login attempts
 - Server-side attendance access policies for authorized personnel
 - Per-parent grade visibility controls with optional automatic restoration
 - Relationship-checked signed URLs for parent student photos
 - HTTPS for all data transfers
 - Role-Based Access Control (RBAC)
 
-*Rooted in Heritage, Aiming for Excellence.*
+*Maintained for the Upper Labay High School community.*
