@@ -17,7 +17,7 @@ Welcome to the official website for **Upper Labay High School**. This project is
 - **Secure Messenger Registration**: Parent account linking is completed through the official ULHS registration flow, with secure confirmation codes and token validation instead of accepting raw LRN messages. Registration is only completed after the secure Messenger confirmation code is verified, and multiple guardians can link independently to the same child.
 - **Secure Login**: PIN-based authentication with rate limiting and encrypted session storage.
 - **Student Selector**: Switch between multiple linked children with student photos.
-- **Grades Viewing**: Access term grades with color-coded performance indicators.
+- **Grades Viewing**: Access term grades with color-coded performance indicators. Grade access can be temporarily restricted per parent/student relationship for cases such as a pending parent-teacher conference.
 - **Attendance History**: View detailed attendance logs.
 - **Achievements Tracking**: See student awards and recognitions.
 - **Secure Photo Access**: Student photos are served via time-limited signed URLs using a dedicated Edge Function for enhanced privacy and security.
@@ -56,6 +56,10 @@ Welcome to the official website for **Upper Labay High School**. This project is
 ## 🚀 Deployment
 
 The website is deployed on **GitHub Pages** with Supabase backend. SARDO requires the applicable SQL migrations in `supabase/migrations/`, including the risk-scoring function, process schema, calendar import, process improvements, pilot phase, and production risk-function migrations. Deploy the `sardo-follow-up-alerts` Edge Function from `supabase/functions/` and configure its `SARDO_ALERT_CRON_SECRET` when scheduled follow-up alerts are enabled.
+
+### Parent Grade Visibility
+
+Apply `supabase/migrations/20260905_parent_grade_visibility.sql` before deploying the updated `parent-data` Edge Function. Existing parent/student links remain visible by default. Authorized staff can hide individual or selected `parent_student_links` rows using a predefined `grades_hidden_reason_code`, provide an internal `grades_hidden_reason` when needed, and set `grades_visible_until` for automatic restoration. The reason is never returned to the parent portal. The staff control uses the existing admin authentication and records the operator and timestamp.
 
 ## 🔒 Data Privacy & Security
 

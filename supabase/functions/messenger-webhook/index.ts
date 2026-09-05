@@ -327,7 +327,7 @@ serve(async (req) => {
                 }
 
                 console.log(`✅ Confirmed code ${parsedConfirm.code} for PSID ${psid} and student LRN ${studentData.lrn}`);
-                await sendResponse(psid, `✅ Confirmation successful! Your Messenger account is now linked to ${studentData.full_name} (${studentData.lrn}).\n\nYou can now use your secure PIN flow and receive attendance alerts.`);
+                await sendResponse(psid, `Confirmation successful! Naka-link na ang imong Messenger account kang ${studentData.full_name}.`);
               }
               
               // Handle NAME command: Set parent/guardian name

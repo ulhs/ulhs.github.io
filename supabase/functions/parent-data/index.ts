@@ -37,7 +37,7 @@ serve(async (req) => {
     // First, verify that the student belongs to this specific guardian.
     const { data: link, error: linkError } = await supabase
       .from('parent_student_links')
-      .select('id')
+      .select('id, grades_visible, grades_visible_until')
       .eq('student_lrn', studentLrn)
       .eq('parent_psid', parentPsid)
       .eq('notify_parent', true)
@@ -45,6 +45,22 @@ serve(async (req) => {
 
     if (linkError || !link) {
       throw new Error("Invalid student or parent.");
+    }
+
+    const visibilityExpiresAt = link.grades_visible_until
+      ? new Date(link.grades_visible_until).getTime()
+      : null;
+    const gradesAreVisible = link.grades_visible !== false
+      || Boolean(visibilityExpiresAt && visibilityExpiresAt <= Date.now());
+
+    if (type === 'grades' && !gradesAreVisible) {
+      return new Response(JSON.stringify({
+        error: 'Dili pa makita ang grades karon. Amoa kamong ginahangyo nga muadto sa eskwelahan.',
+        code: 'GRADES_TEMPORARILY_UNAVAILABLE'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403
+      });
     }
 
     let result = {};

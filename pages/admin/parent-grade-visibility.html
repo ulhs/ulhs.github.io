@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.supabase.net wss://*.supabase.co wss://*.supabase.net https://cdn.jsdelivr.net;">
+    <title>Parent Grade Visibility | Upper Labay High School</title>
+    <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../assets/vendor/font-awesome/css/all.min.css">
+    <script src="../../assets/lib/tailwind.min.js"></script>
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <link rel="stylesheet" href="../../assets/admin/attendance/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
+    <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/theme-manager.js"></script>
+    <script src="../../assets/js/admin-nav.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+    <script>
+        async function checkParentGradeVisibilityAccess() {
+            if (!window.supabaseClient) {
+                setTimeout(checkParentGradeVisibilityAccess, 100);
+                return;
+            }
+
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (!session) return;
+
+            const { data: profile } = await window.supabaseClient
+                .from('profiles')
+                .select('role, can_manage_grades')
+                .eq('id', session.user.id)
+                .single();
+
+            const hasAccess = window.isPermissionAllowed(profile, null, ['admin'], 'can_manage_grades');
+            if (!profile || !hasAccess) {
+                alert('ACCESS DENIED: You do not have permission to manage parent grade visibility.');
+                window.location.href = './admin-dashboard.html';
+            }
+        }
+        checkParentGradeVisibilityAccess();
+    </script>
+
+    <header>
+        <div class="branding">
+            <a href="../../index.html" class="logo-link">
+                <img src="../../assets/images/school-logo.webp" alt="Logo" id="main-logo">
+                <div class="name-container">
+                    <span class="school-name">UPPER LABAY</span>
+                    <span class="school-sub">HIGH SCHOOL</span>
+                </div>
+            </a>
+        </div>
+        <div class="user-greeting">
+            <script>
+                const userName = sessionStorage.getItem('userName');
+                if (userName) document.write('<span class="user-name">' + userName + '</span>');
+            </script>
+        </div>
+        <input type="checkbox" id="nav-toggle" class="nav-toggle">
+        <label for="nav-toggle" class="nav-toggle-label" aria-label="Toggle Navigation"><span></span></label>
+        <nav class="nav-links magic-nav">
+            <ul id="dynamic-nav-list">
+                <script>
+                    const role = sessionStorage.getItem('userRole');
+                    const access = JSON.parse(sessionStorage.getItem('userAccess') || '{}');
+                    let html = '';
+                    if (role === 'admin') html += `<li class="list" data-page="access.html"><a href="access.html"><span class="icon"><i class="fa-solid fa-users-gear"></i></span><span class="text">ACCESS</span></a></li>`;
+                    if (role === 'admin' || access.idGen) html += `<li class="list" data-page="id-gen.html"><a href="id-gen.html"><span class="icon"><i class="fa-solid fa-id-card"></i></span><span class="text">ID GENERATOR</span></a></li>`;
+                    if (role === 'admin' || access.attendance) html += `<li class="list" data-page="attendance.html"><a href="attendance.html"><span class="icon"><i class="fa-solid fa-clipboard-user"></i></span><span class="text">ATTENDANCE</span></a></li>`;
+                    if (window.hasAnyRole(role, window.SARDO_ALLOWED_ROLES) || access.sardo) html += `<li class="list" data-page="sardo-dashboard.html"><a href="sardo-dashboard.html"><span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span><span class="text">SARDO</span></a></li>`;
+                    if (role === 'admin' || access.grades) html += `<li class="list" data-page="grade-encoding.html"><a href="grade-encoding.html"><span class="icon"><i class="fa-solid fa-book-open-reader"></i></span><span class="text">GRADES</span></a></li>`;
+                    if (window.hasAnyRole(role, window.ADMIN_MANAGEMENT_ROLES) || access.exams || access.grades) html += `<li class="list" data-page="exam-manager.html"><a href="exam-manager.html"><span class="icon"><i class="fa-solid fa-file-circle-check"></i></span><span class="text">EXAMS</span></a></li>`;
+                    if (window.hasAnyRole(role, window.ADMIN_MANAGEMENT_ROLES) || access.suspended) html += `<li class="list" data-page="calendar-exceptions.html"><a href="calendar-exceptions.html"><span class="icon"><i class="fa-solid fa-calendar-times"></i></span><span class="text">CALENDAR EXCEPTIONS</span></a></li>`;
+                    if (window.hasAnyRole(role, window.ADMIN_MANAGEMENT_ROLES) || access.stats) html += `<li class="list" data-page="admin-dashboard.html"><a href="admin-dashboard.html"><span class="icon"><i class="fa-solid fa-chart-line"></i></span><span class="text">DASHBOARD</span></a></li>`;
+                    html += `<li class="list"><a href="./login.html" onclick="handleLogout(event)"><span class="icon"><i class="fa-solid fa-right-from-bracket"></i></span><span class="text">LOGOUT</span></a></li>`;
+                    html += '<div class="indicator"></div><div id="theme-toggle" class="theme-toggle" data-tooltip="Switch to Dark">🌙</div>';
+                    document.write(html);
+                </script>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 pb-12 max-w-7xl mt-8">
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            <div class="p-1 bg-deped-red"></div>
+            <div class="p-6">
+        <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-user-lock text-deped-red"></i>Parent Grade Visibility</h1>
+                <p class="mt-2 text-sm text-gray-600">Temporarily restrict grades for an individual parent and student relationship.</p>
+            </div>
+            <a href="grade-encoding.html" class="inline-flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-gray-700 border border-gray-200 shadow-sm transition-colors hover:bg-gray-200"><i class="fa-solid fa-arrow-left"></i>Back to Grades</a>
+        </div>
+
+                <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <label for="section-filter" class="text-[10px] font-black uppercase tracking-widest text-gray-400">Filter by Section</label>
+                    <select id="section-filter" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs font-bold text-gray-700 outline-none transition-all focus:ring-2 focus:ring-blue-500 sm:w-72">
+                        <option value="ALL">All Sections</option>
+                    </select>
+                </div>
+
+                <div class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 p-3">
+                    <label class="inline-flex items-center gap-2 text-xs font-bold text-blue-900">
+                        <input id="select-visible" type="checkbox" class="h-4 w-4 rounded border-blue-300 text-blue-600 focus:ring-blue-500">
+                        Select visible rows
+                    </label>
+                    <span id="selection-count" class="text-xs font-semibold text-blue-700">0 selected</span>
+                    <div class="ml-auto flex flex-wrap gap-2">
+                        <button id="bulk-hide" type="button" class="inline-flex items-center gap-2 rounded-lg bg-amber-100 px-3 py-2 text-xs font-black uppercase tracking-wider text-amber-800 hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50" disabled>
+                            <i class="fa-solid fa-eye-slash"></i> Hide selected
+                        </button>
+                        <button id="bulk-restore" type="button" class="inline-flex items-center gap-2 rounded-lg bg-green-100 px-3 py-2 text-xs font-black uppercase tracking-wider text-green-800 hover:bg-green-200 disabled:cursor-not-allowed disabled:opacity-50" disabled>
+                            <i class="fa-solid fa-eye"></i> Restore selected
+                        </button>
+                    </div>
+                </div>
+
+        <div id="status" class="mb-4 hidden rounded-lg px-4 py-3 text-sm font-semibold"></div>
+        <div class="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
+            <table class="min-w-full text-left text-sm">
+                <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
+                    <tr>
+                        <th class="px-4 py-3"><input id="select-all" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" aria-label="Select all visible rows"></th>
+                        <th class="px-4 py-3">Student</th>
+                        <th class="px-4 py-3">Parent</th>
+                        <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3">Restore at</th>
+                        <th class="px-4 py-3">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="links" class="divide-y divide-gray-100"></tbody>
+            </table>
+        </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="hide-dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/50 px-4" role="dialog" aria-modal="true" aria-labelledby="hide-dialog-title">
+        <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+            <div class="flex items-start justify-between border-b border-gray-100 p-5">
+                <div>
+                    <h2 id="hide-dialog-title" class="text-lg font-black text-gray-900">Hide Grades</h2>
+                    <p id="hide-dialog-summary" class="mt-1 text-xs font-semibold text-gray-500"></p>
+                </div>
+                <button id="close-hide-dialog" type="button" class="text-2xl leading-none text-gray-400 hover:text-gray-700" aria-label="Close">&times;</button>
+            </div>
+            <div class="space-y-4 p-5">
+                <div>
+                    <label for="reason-code" class="mb-2 block text-[10px] font-black uppercase tracking-widest text-gray-500">Reason</label>
+                    <select id="reason-code" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 focus:ring-2 focus:ring-amber-500">
+                        <option value="pending_parent_teacher_conference">Pending parent-teacher conference</option>
+                        <option value="grades_under_review">Grades under review</option>
+                        <option value="grade_record_correction">Grade record correction in progress</option>
+                        <option value="incomplete_subject_grades">Incomplete subject grades</option>
+                        <option value="awaiting_teacher_verification">Awaiting teacher verification</option>
+                        <option value="school_directed_restriction">School-directed temporary restriction</option>
+                        <option value="parent_student_verification">Parent/student record verification</option>
+                        <option value="other_authorized_reason">Other authorized reason</option>
+                    </select>
+                </div>
+                <div id="custom-reason-container" class="hidden">
+                    <label for="custom-reason" class="mb-2 block text-[10px] font-black uppercase tracking-widest text-gray-500">Custom internal reason</label>
+                    <textarea id="custom-reason" rows="3" minlength="10" maxlength="500" placeholder="Enter the authorized internal reason" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 focus:ring-2 focus:ring-amber-500"></textarea>
+                    <p class="mt-1 text-[10px] font-semibold text-gray-400">Use at least 10 characters. This detail is never shown to parents.</p>
+                </div>
+                <div>
+                    <label for="restore-option" class="mb-2 block text-[10px] font-black uppercase tracking-widest text-gray-500">Restore access</label>
+                    <select id="restore-option" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 focus:ring-2 focus:ring-amber-500">
+                        <option value="">No automatic restoration</option>
+                        <option value="24">After 24 hours</option>
+                        <option value="72">After 3 days</option>
+                        <option value="168">After 7 days</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button id="cancel-hide-dialog" type="button" class="rounded-xl bg-gray-100 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-gray-700 hover:bg-gray-200">Cancel</button>
+                    <button id="confirm-hide" type="button" class="rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-white hover:bg-amber-700">Hide grades</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const statusElement = document.getElementById('status');
+        const linksElement = document.getElementById('links');
+        const sectionFilter = document.getElementById('section-filter');
+        const selectAll = document.getElementById('select-all');
+        const selectVisible = document.getElementById('select-visible');
+        const selectionCount = document.getElementById('selection-count');
+        const bulkHideButton = document.getElementById('bulk-hide');
+        const bulkRestoreButton = document.getElementById('bulk-restore');
+        const hideDialog = document.getElementById('hide-dialog');
+        const hideDialogSummary = document.getElementById('hide-dialog-summary');
+        const reasonCode = document.getElementById('reason-code');
+        const customReasonContainer = document.getElementById('custom-reason-container');
+        const customReason = document.getElementById('custom-reason');
+        const restoreOption = document.getElementById('restore-option');
+        let pendingHideIds = [];
+        let links = [];
+        const selectedIds = new Set();
+
+        function showStatus(message, isError = false) {
+            statusElement.textContent = message;
+            statusElement.className = `mb-4 rounded-lg px-4 py-3 text-sm font-semibold ${isError ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`;
+        }
+
+        function isVisible(link) {
+            return link.grades_visible !== false
+                || (link.grades_visible_until && new Date(link.grades_visible_until) <= new Date());
+        }
+
+        function renderLinks() {
+            const selectedSection = sectionFilter.value;
+            const filteredLinks = selectedSection === 'ALL'
+                ? links
+                : links.filter(link => String(link.students?.section || 'N/A') === selectedSection);
+
+            linksElement.innerHTML = filteredLinks.map(link => {
+                const student = link.students || {};
+                const visible = isVisible(link);
+                const restoreValue = link.grades_visible_until
+                    ? new Date(link.grades_visible_until).toISOString().slice(0, 16)
+                    : '';
+                return `
+                    <tr>
+                        <td class="px-4 py-4"><input data-select="${link.id}" type="checkbox" class="row-select h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" ${selectedIds.has(link.id) ? 'checked' : ''} aria-label="Select ${student.full_name || link.student_lrn}"></td>
+                        <td class="px-4 py-4"><div class="font-bold">${student.full_name || link.student_lrn}</div><div class="text-xs text-gray-500">${student.section || ''} · Grade ${student.grade_level || 'N/A'}</div></td>
+                        <td class="px-4 py-4"><div class="font-semibold">${link.parent_guardian_name || 'Unnamed parent'}</div><div class="text-xs text-gray-500">${link.parent_psid}</div></td>
+                        <td class="px-4 py-4"><span class="rounded-full px-2 py-1 text-xs font-bold ${visible ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}">${visible ? 'VISIBLE' : 'HIDDEN'}</span></td>
+                        <td class="px-4 py-4"><input data-until="${link.id}" type="datetime-local" value="${restoreValue}" class="rounded border border-gray-300 px-2 py-1 text-xs"></td>
+                        <td class="px-4 py-4"><button data-action="${link.id}" class="rounded-lg px-3 py-2 text-xs font-bold ${visible ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}">${visible ? 'Hide grades' : 'Restore grades'}</button></td>
+                    </tr>
+                `;
+            }).join('');
+
+            linksElement.querySelectorAll('[data-action]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const id = Number(button.dataset.action);
+                    const link = links.find(item => item.id === id);
+                    if (isVisible(link)) openHideDialog([id]);
+                    else updateVisibility([id], false);
+                });
+            });
+            linksElement.querySelectorAll('[data-select]').forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    const id = Number(checkbox.dataset.select);
+                    if (checkbox.checked) selectedIds.add(id);
+                    else selectedIds.delete(id);
+                    updateSelectionControls(filteredLinks);
+                });
+            });
+            updateSelectionControls(filteredLinks);
+        }
+
+        function getFilteredLinks() {
+            const selectedSection = sectionFilter.value;
+            return selectedSection === 'ALL'
+                ? links
+                : links.filter(link => String(link.students?.section || 'N/A') === selectedSection);
+        }
+
+        function updateSelectionControls(filteredLinks = getFilteredLinks()) {
+            const selectedVisibleLinks = filteredLinks.filter(link => selectedIds.has(link.id));
+            const allSelected = filteredLinks.length > 0 && filteredLinks.every(link => selectedIds.has(link.id));
+            selectAll.checked = allSelected;
+            selectVisible.checked = filteredLinks.length > 0 && filteredLinks.every(link => !isVisible(link) || selectedIds.has(link.id));
+            selectionCount.textContent = `${selectedIds.size} selected`;
+            bulkHideButton.disabled = !selectedVisibleLinks.some(link => isVisible(link));
+            bulkRestoreButton.disabled = !selectedVisibleLinks.some(link => !isVisible(link));
+        }
+
+        function populateSectionFilter() {
+            const sections = [...new Set(links
+                .map(link => String(link.students?.section || 'N/A').trim())
+                .filter(Boolean))]
+                .sort((first, second) => first.localeCompare(second, undefined, { numeric: true }));
+
+            sectionFilter.innerHTML = '<option value="ALL">All Sections</option>'
+                + sections.map(section => `<option value="${section}">${section}</option>`).join('');
+        }
+
+        function openHideDialog(ids) {
+            pendingHideIds = ids.filter(id => {
+                const link = links.find(item => item.id === id);
+                return link && isVisible(link);
+            });
+            if (pendingHideIds.length === 0) return;
+            hideDialogSummary.textContent = `This will hide grades for ${pendingHideIds.length} selected relationship${pendingHideIds.length === 1 ? '' : 's'}.`;
+            reasonCode.value = 'pending_parent_teacher_conference';
+            customReason.value = '';
+            restoreOption.value = '';
+            customReasonContainer.classList.add('hidden');
+            hideDialog.classList.remove('hidden');
+            hideDialog.classList.add('flex');
+        }
+
+        function closeHideDialog() {
+            hideDialog.classList.add('hidden');
+            hideDialog.classList.remove('flex');
+            pendingHideIds = [];
+        }
+
+        async function updateVisibility(ids, makeVisible, details = {}) {
+            const { data: { user } } = await window.supabaseClient.auth.getUser();
+            const update = {
+                grades_visible: makeVisible,
+                grades_hidden_reason_code: makeVisible ? null : details.reasonCode,
+                grades_hidden_reason: makeVisible ? null : details.customReason,
+                grades_visible_until: makeVisible ? null : (details.restoreAt || null),
+                grades_visibility_updated_at: new Date().toISOString(),
+                grades_visibility_updated_by: user.id
+            };
+            const results = await Promise.all(ids.map(id => window.supabaseClient
+                .from('parent_student_links')
+                .update(update)
+                .eq('id', id)));
+            const failed = results.find(result => result.error);
+            if (failed) {
+                showStatus(failed.error.message, true);
+                return false;
+            }
+            ids.forEach(id => selectedIds.delete(id));
+            showStatus(makeVisible ? 'Selected grade access restored.' : 'Selected grades hidden.');
+            await loadLinks();
+            return true;
+        }
+
+        async function loadLinks() {
+            const { data, error } = await window.supabaseClient
+                .from('parent_student_links')
+                .select('id, parent_psid, parent_guardian_name, grades_visible, grades_hidden_reason_code, grades_visible_until, students(full_name, section, grade_level)')
+                .order('parent_guardian_name');
+            if (error) throw error;
+            links = data || [];
+            populateSectionFilter();
+            renderLinks();
+        }
+
+        async function init() {
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = 'login.html';
+                return;
+            }
+            const { data: profile } = await window.supabaseClient.from('profiles').select('role, can_manage_grades').eq('id', session.user.id).single();
+            if (!profile || (profile.role !== 'admin' && !profile.can_manage_grades)) {
+                showStatus('You do not have permission to manage parent grade visibility.', true);
+                return;
+            }
+            try {
+                await loadLinks();
+            } catch (error) {
+                showStatus(error.message, true);
+            }
+        }
+
+        reasonCode.addEventListener('change', () => {
+            customReasonContainer.classList.toggle('hidden', reasonCode.value !== 'other_authorized_reason');
+        });
+        document.getElementById('confirm-hide').addEventListener('click', async () => {
+            const detail = customReason.value.trim();
+            if (reasonCode.value === 'other_authorized_reason' && detail.length < 10) {
+                showStatus('Please provide a custom reason of at least 10 characters.', true);
+                return;
+            }
+            const hours = Number(restoreOption.value);
+            const restoreAt = hours ? new Date(Date.now() + hours * 60 * 60 * 1000).toISOString() : null;
+            const reasonLabel = reasonCode.options[reasonCode.selectedIndex].text;
+            const success = await updateVisibility(pendingHideIds, false, {
+                reasonCode: reasonCode.value,
+                customReason: detail || reasonLabel,
+                restoreAt
+            });
+            if (success) closeHideDialog();
+        });
+        document.getElementById('close-hide-dialog').addEventListener('click', closeHideDialog);
+        document.getElementById('cancel-hide-dialog').addEventListener('click', closeHideDialog);
+        bulkHideButton.addEventListener('click', () => openHideDialog([...selectedIds]));
+        bulkRestoreButton.addEventListener('click', () => updateVisibility(
+            [...selectedIds].filter(id => {
+                const link = links.find(item => item.id === id);
+                return link && !isVisible(link);
+            }),
+            true
+        ));
+        selectAll.addEventListener('change', () => {
+            getFilteredLinks().forEach(link => {
+                if (selectAll.checked) selectedIds.add(link.id);
+                else selectedIds.delete(link.id);
+            });
+            renderLinks();
+        });
+        selectVisible.addEventListener('change', () => {
+            getFilteredLinks().forEach(link => {
+                if (isVisible(link)) {
+                    if (selectVisible.checked) selectedIds.add(link.id);
+                    else selectedIds.delete(link.id);
+                }
+            });
+            renderLinks();
+        });
+        sectionFilter.addEventListener('change', renderLinks);
+        init();
+    </script>
+</body>
+</html>

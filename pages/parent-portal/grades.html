@@ -285,6 +285,11 @@
 
                 const result = await response.json();
 
+                if (response.status === 403 && result.code === 'GRADES_TEMPORARILY_UNAVAILABLE') {
+                    renderGradesUnavailable(result.error);
+                    return;
+                }
+
                 if (!response.ok) {
                     throw new Error(result.error);
                 }
@@ -296,8 +301,26 @@
                 }
             } catch (err) {
                 console.error('Error fetching grades:', err);
-                renderSampleGrades();
+                renderGradesUnavailable('Grades could not be loaded right now. Please try again later or contact the school.');
             }
+        }
+
+        function renderGradesUnavailable(message) {
+            const container = document.getElementById('grades-container');
+
+            container.innerHTML = `
+                <div class="bg-white rounded-2xl p-8 border border-amber-200 shadow-md">
+                    <div class="text-center">
+                        <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg class="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86l-7.82 13a2 2 0 001.71 3h15.64a2 2 0 001.71-3l-7.82-13a2 2 0 00-3.42 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xs font-bold text-amber-700 uppercase tracking-widest mb-2">Grades Temporarily Hidden</h3>
+                        <p class="text-[10px] text-gray-600 font-semibold">${message || 'Please contact the school for more information.'}</p>
+                    </div>
+                </div>
+            `;
         }
 
         function getGradeColor(grade) {
