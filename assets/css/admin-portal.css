@@ -1,0 +1,23 @@
+/* Shared dark-mode surfaces for focused personnel/admin controls. */
+body.dark-mode .sardo-recommended-intervention {
+    background: #34445a !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+body.dark-mode .sardo-recommended-intervention h4,
+body.dark-mode .sardo-recommended-intervention p {
+    color: #f3f4f6 !important;
+}
+
+body.dark-mode .grade-visibility-restore-input {
+    color-scheme: dark;
+    background-color: #263241 !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    color: #f3f4f6 !important;
+    caret-color: #93c5fd;
+}
+
+body.dark-mode .grade-visibility-restore-input::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1.5);
+    opacity: 0.85;
+}

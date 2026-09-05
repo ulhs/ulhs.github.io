@@ -62,6 +62,25 @@ body.dark-mode main .divide-gray-100 {
     border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
+body.dark-mode #parent-pin,
+body.dark-mode #confirm-pin,
+body.dark-mode #verify-pin,
+body.dark-mode #pin-input,
+body.dark-mode #confirm-pin-input {
+    background-color: #263241 !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
+    color: #f3f4f6 !important;
+    caret-color: #93c5fd;
+}
+
+body.dark-mode #parent-pin::placeholder,
+body.dark-mode #confirm-pin::placeholder,
+body.dark-mode #verify-pin::placeholder,
+body.dark-mode #pin-input::placeholder,
+body.dark-mode #confirm-pin-input::placeholder {
+    color: #94a3b8 !important;
+}
+
 /* Keep selected students and data cards readable in dark mode. */
 body.dark-mode .student-card,
 body.dark-mode .student-card.active {

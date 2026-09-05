@@ -15,6 +15,7 @@
     <script src="../../assets/js/theme-manager.js"></script>
     <link rel="stylesheet" href="../../assets/css/typography.css">
     <link rel="stylesheet" href="../../assets/css/style.css">
+    <link rel="stylesheet" href="../../assets/css/admin-portal.css?v=20260905-admin-theme">
     <script src="../../assets/js/admin-nav.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
@@ -438,7 +439,7 @@
                                     </ul>
                                 </div>
                             ` : ''}
-                            <div class="p-4 rounded-xl ${riskData.risk_level === 'Critical' ? 'bg-red-100' : riskData.risk_level === 'High' ? 'bg-orange-100' : 'bg-amber-100'}">
+                            <div class="sardo-recommended-intervention p-4 rounded-xl ${riskData.risk_level === 'Critical' ? 'bg-red-100' : riskData.risk_level === 'High' ? 'bg-orange-100' : 'bg-amber-100'}">
                                 <h4 class="text-xs font-black ${riskData.risk_level === 'Critical' ? 'text-red-800' : riskData.risk_level === 'High' ? 'text-orange-800' : 'text-amber-800'} uppercase tracking-widest mb-1">
                                     <i class="fa-solid fa-lightbulb mr-2"></i>
                                     Recommended Intervention:

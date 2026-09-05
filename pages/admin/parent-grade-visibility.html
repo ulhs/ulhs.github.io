@@ -11,6 +11,7 @@
     <script src="../../assets/lib/tailwind.min.js"></script>
     <link rel="stylesheet" href="../../assets/css/typography.css">
     <link rel="stylesheet" href="../../assets/css/style.css">
+    <link rel="stylesheet" href="../../assets/css/admin-portal.css?v=20260905-admin-theme">
     <link rel="stylesheet" href="../../assets/admin/attendance/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../../assets/js/supabase-config.js"></script>
@@ -237,7 +238,7 @@
                         <td class="px-4 py-4"><div class="font-bold">${escapeHtml(student.full_name || link.student_lrn)}</div><div class="text-xs text-gray-500">${escapeHtml(student.section || '')} · Grade ${escapeHtml(student.grade_level || 'N/A')}</div></td>
                         <td class="px-4 py-4"><div class="font-semibold">${escapeHtml(link.parent_guardian_name || 'Unnamed parent')}</div><div class="text-xs text-gray-500">${escapeHtml(link.parent_psid)}</div></td>
                         <td class="px-4 py-4"><span class="rounded-full px-2 py-1 text-xs font-bold ${visible ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}">${visible ? 'VISIBLE' : 'HIDDEN'}</span></td>
-                        <td class="px-4 py-4"><input data-until="${link.id}" type="datetime-local" value="${restoreValue}" class="rounded border border-gray-300 px-2 py-1 text-xs"></td>
+                        <td class="px-4 py-4"><input data-until="${link.id}" type="datetime-local" value="${restoreValue}" class="grade-visibility-restore-input rounded border border-gray-300 px-2 py-1 text-xs"></td>
                         <td class="px-4 py-4"><button data-action="${link.id}" class="rounded-lg px-3 py-2 text-xs font-bold ${visible ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}">${visible ? 'Hide grades' : 'Restore grades'}</button></td>
                     </tr>
                 `;
