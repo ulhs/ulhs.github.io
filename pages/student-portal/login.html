@@ -181,20 +181,7 @@
                     .single();
 
                 if (profileError || !profile) {
-                    statusText.textContent = 'Creating your student profile...';
-                    const profileData = {
-                        id: session.user.id,
-                        email: session.user.email.toLowerCase().trim(),
-                        full_name: session.user.user_metadata.full_name || session.user.email,
-                        avatar_url: session.user.user_metadata.avatar_url || null,
-                        role: 'student'
-                    };
-
-                    const { error: insertError } = await window.supabaseClient
-                        .from('profiles')
-                        .insert([profileData]);
-
-                    if (insertError) throw new Error('Profile setup failed: ' + insertError.message);
+                    throw new Error('Student account not found. Please contact the school administrator.');
                 } else {
                     statusText.textContent = 'Welcome back, ' + (profile.full_name || 'Student');
                 }

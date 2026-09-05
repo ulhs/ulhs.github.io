@@ -30,49 +30,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (window.location.pathname.includes('/parent-portal/')) {
             
             // Check for parent session
-            const parentPsid = secureSession.getItem('parentPsid');
+            const parentSessionToken = secureSession.getItem('parentSessionToken');
             const parentStudents = secureSession.getItem('parentStudents');
             
-            if (!parentPsid && !window.location.pathname.includes('login.html')) {
+            if (!parentSessionToken && !window.location.pathname.includes('login.html')) {
                 // No session and not on login page -> redirect
                 window.location.replace('./login.html');
                 return;
             }
             
-            // If we have a PSID but no students, fetch them
-            if (parentPsid && !parentStudents) {
-                await fetchParentStudents(parentPsid);
-            }
-
             // Start idle timer only on valid session
-            if (parentPsid && !window.location.pathname.includes('login.html')) {
+            if (parentSessionToken && !window.location.pathname.includes('login.html')) {
                 resetIdleTimer();
             }
-        }
-    }
-
-    // --- Fetch Students Linked to Parent ---
-    async function fetchParentStudents(psid) {
-        try {
-            const { data: students, error } = await window.supabaseClient
-                .from('students')
-                .select('lrn, full_name, section, grade_level, photo_url, student_id_number')
-                .eq('parent_messenger_id', psid);
-
-            if (error) throw error;
-
-            if (students && students.length > 0) {
-                secureSession.setItem('parentStudents', students);
-                // Set first student as active by default
-                if (!secureSession.getItem('activeStudentLrn')) {
-                    secureSession.setItem('activeStudentLrn', students[0].lrn);
-                }
-                return students;
-            }
-            return [];
-        } catch (err) {
-            console.error('Error fetching parent students:', err);
-            return [];
         }
     }
 
@@ -86,7 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         clearTimeout(idleLogoutTimeout);
         
         // Clear parent session data
-        secureSession.removeItem('parentPsid');
+        secureSession.removeItem('parentSessionToken');
         secureSession.removeItem('parentStudents');
         secureSession.removeItem('activeStudentLrn');
         secureSession.removeItem('parentName');

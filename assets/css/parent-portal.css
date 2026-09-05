@@ -1,0 +1,188 @@
+/* Parent portal theme control and responsive dark-mode surfaces. */
+.parent-theme-toggle {
+    position: fixed !important;
+    top: 1rem !important;
+    right: 1rem !important;
+    left: auto !important;
+    bottom: auto !important;
+    z-index: 1600 !important;
+    width: 2.75rem !important;
+    height: 2.75rem !important;
+    margin: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d1d5db;
+    border-radius: 9999px;
+    background: #ffffff;
+    color: #374151;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14);
+    cursor: pointer;
+}
+
+body.dark-mode .parent-theme-toggle {
+    border-color: rgba(255, 255, 255, 0.18);
+    background: #263241;
+    color: #fef3c7;
+}
+
+body.dark-mode .parent-portal-surface,
+body.dark-mode .parent-portal-surface .bg-white,
+body.dark-mode main .bg-white {
+    background-color: #263241 !important;
+}
+
+body.dark-mode main .bg-gray-50,
+body.dark-mode main .bg-gray-100,
+body.dark-mode main .bg-blue-50,
+body.dark-mode main .bg-purple-50,
+body.dark-mode main .bg-green-50,
+body.dark-mode main .bg-amber-50,
+body.dark-mode main .bg-orange-50,
+body.dark-mode main .bg-red-50 {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+body.dark-mode main .text-gray-900,
+body.dark-mode main .text-gray-800,
+body.dark-mode main .text-gray-700,
+body.dark-mode main .text-gray-600 {
+    color: #f3f4f6 !important;
+}
+
+body.dark-mode main .text-gray-500,
+body.dark-mode main .text-gray-400,
+body.dark-mode main .text-gray-300 {
+    color: #cbd5e1 !important;
+}
+
+body.dark-mode main .border-gray-100,
+body.dark-mode main .border-gray-200,
+body.dark-mode main .divide-gray-100 {
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Keep selected students and data cards readable in dark mode. */
+body.dark-mode .student-card,
+body.dark-mode .student-card.active {
+    background: #263241 !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    color: #f3f4f6 !important;
+}
+
+body.dark-mode .student-card.active {
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28) !important;
+}
+
+body.dark-mode .student-card .bg-gradient-to-br.from-blue-100,
+body.dark-mode .student-card .bg-gradient-to-br.from-purple-100 {
+    background: #34445a !important;
+}
+
+body.dark-mode #summary-cards > div {
+    background: #263241 !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+body.dark-mode #summary-cards p,
+body.dark-mode #summary-cards [id$="-logs"],
+body.dark-mode #summary-cards [id="total-logs"] {
+    color: #f3f4f6 !important;
+}
+
+body.dark-mode .grade-card {
+    background: #263241 !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
+    color: #f3f4f6 !important;
+}
+
+body.dark-mode .grade-card .bg-white {
+    background: #34445a !important;
+}
+
+body.dark-mode .grade-card .text-gray-900,
+body.dark-mode .grade-card .text-gray-800,
+body.dark-mode .grade-card .text-gray-600 {
+    color: #f3f4f6 !important;
+}
+
+body.dark-mode .parent-portal-attendance-records .bg-gradient-to-r,
+body.dark-mode .parent-portal-attendance-records thead {
+    background: #34445a !important;
+}
+
+body.dark-mode .parent-portal-attendance-records th,
+body.dark-mode .parent-portal-attendance-records td,
+body.dark-mode .parent-portal-attendance-records tbody,
+body.dark-mode .parent-portal-attendance-records tr {
+    color: #f3f4f6 !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body.dark-mode .parent-portal-attendance-records tbody tr:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+}
+
+body.dark-mode .parent-portal-achievements .bg-gradient-to-r {
+    background: #34445a !important;
+}
+
+body.dark-mode .privacy-policy-surface {
+    background: #263241 !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+body.dark-mode .privacy-policy-surface h1,
+body.dark-mode .privacy-policy-surface h2,
+body.dark-mode .privacy-policy-surface h3,
+body.dark-mode .privacy-policy-surface p,
+body.dark-mode .privacy-policy-surface li {
+    color: #f3f4f6 !important;
+}
+
+body.dark-mode .privacy-policy-surface .bg-gray-50 {
+    background: #34445a !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+body.dark-mode .privacy-policy-surface .text-blue-600,
+body.dark-mode .privacy-policy-surface .text-blue-800 {
+    color: #93c5fd !important;
+}
+
+body.dark-mode .privacy-policy-surface .text-gray-400 {
+    color: #cbd5e1 !important;
+}
+
+body.dark-mode .privacy-policy-surface code {
+    color: #fde68a;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 0.1rem 0.25rem;
+    border-radius: 0.25rem;
+}
+
+body.dark-mode .achievement-item {
+    background: #263241 !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+body.dark-mode .achievement-item .text-gray-900,
+body.dark-mode .achievement-item .text-gray-600,
+body.dark-mode .achievement-item .text-gray-500 {
+    color: #f3f4f6 !important;
+}
+
+body.dark-mode .achievement-item .bg-gradient-to-r {
+    background: #34445a !important;
+}
+
+body.dark-mode .achievement-item .bg-gradient-to-br {
+    background: #34445a !important;
+}
+
+@media (max-width: 640px) {
+    .parent-theme-toggle {
+        top: 0.75rem !important;
+        right: 0.75rem !important;
+    }
+}

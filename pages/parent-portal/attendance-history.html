@@ -12,9 +12,11 @@
     <script src="../../assets/js/secure-session.js"></script>
     <script src="../../assets/js/supabase-config.js"></script>
     <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/theme-manager.js"></script>
     <script src="../../assets/js/parent-nav.js"></script>
     <link rel="stylesheet" href="../../assets/css/typography.css">
-    <link rel="stylesheet" href="../../assets/css/style.css">
+    <link rel="stylesheet" href="../../assets/css/style.css?v=20260905-parent-theme">
+    <link rel="stylesheet" href="../../assets/css/parent-portal.css?v=20260905-parent-theme">
     <script src="../../assets/lib/tailwind.min.js"></script>
     <style>
         .student-card {
@@ -38,16 +40,10 @@
     <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-100">
         <div class="max-w-6xl mx-auto px-4 py-4">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h1 class="text-lg font-black text-gray-900 uppercase tracking-tight" style="font-family: 'Acme', sans-serif;">Attendance History</h1>
-                <div class="flex items-center gap-4">
-                    <button onclick="window.location.href='dashboard.html'" class="flex items-center gap-2 px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all text-xs font-black uppercase tracking-widest border border-gray-200 shadow-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                        </svg>
-                        Back
-                    </button>
-                    <button onclick="handleParentLogout(event)" class="flex items-center gap-2 px-5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all text-xs font-black uppercase tracking-widest border border-red-100 shadow-sm">
+                <div class="hidden">
+                    <button onclick="handleParentLogout(event)" class="flex shrink-0 items-center gap-2 px-3 py-2.5 sm:px-5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all text-[10px] sm:text-xs font-black uppercase tracking-widest border border-red-100 shadow-sm whitespace-nowrap">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                         </svg>
@@ -59,6 +55,20 @@
     </header>
 
     <main class="max-w-6xl mx-auto px-4 py-6">
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <button onclick="window.location.href='dashboard.html'" class="inline-flex items-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-all text-xs font-black uppercase tracking-widest border border-emerald-700 shadow-md hover:shadow-lg">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                Back to Parent Portal
+            </button>
+            <button onclick="handleParentLogout(event)" class="inline-flex items-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all text-xs font-black uppercase tracking-widest border border-red-700 shadow-md hover:shadow-lg">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                Logout
+            </button>
+        </div>
         <!-- Parent Welcome -->
         <div id="parent-welcome" class="mb-6"></div>
 
@@ -141,7 +151,7 @@
         </div>
 
         <!-- Attendance Logs -->
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-md overflow-hidden">
+        <div class="parent-portal-attendance-records bg-white rounded-2xl border border-gray-100 shadow-md overflow-hidden">
             <div class="p-5 bg-gradient-to-r from-gray-50 to-blue-50 border-b border-blue-100">
                 <h3 class="text-sm font-black text-gray-800 uppercase tracking-widest">Attendance Records</h3>
             </div>
@@ -167,16 +177,6 @@
             </div>
         </div>
 
-        <!-- Logout Button at Bottom -->
-        <div class="mt-8 flex justify-center">
-            <button onclick="handleParentLogout(event)" class="flex items-center gap-2 px-6 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all text-sm font-black uppercase tracking-widest border border-red-100 shadow-sm">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                </svg>
-                Logout
-            </button>
-        </div>
-        
         <!-- Privacy Policy Link -->
         <div class="mt-6 text-center">
             <a href="../privacy-policy.html" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">
@@ -193,8 +193,8 @@
         async function loadStudentPhotoSecurely(lrn, photoUrl, imgElement, placeholderSvg) {
             if (!imgElement) return;
 
-            const parentPsid = secureSession.getItem('parentPsid');
-            if (!parentPsid) {
+            const parentSessionToken = secureSession.getItem('parentSessionToken');
+            if (!parentSessionToken) {
                 imgElement.style.display = 'none';
                 return;
             }
@@ -207,7 +207,7 @@
                         'Content-Type': 'application/json',
                         'apikey': window.supabaseClient.supabaseKey
                     },
-                    body: JSON.stringify({ parentPsid, studentLrn: lrn })
+                    body: JSON.stringify({ parentSessionToken, studentLrn: lrn })
                 });
 
                 const result = await response.json();
@@ -332,7 +332,7 @@
         async function fetchAttendanceLogs() {
             const dateFrom = document.getElementById('date-from').value;
             const dateTo = document.getElementById('date-to').value;
-            const parentPsid = secureSession.getItem('parentPsid');
+            const parentSessionToken = secureSession.getItem('parentSessionToken');
 
             try {
                 const response = await fetch(`${window.supabaseClient.supabaseUrl}/functions/v1/parent-data`, {
@@ -342,7 +342,7 @@
                         'apikey': window.supabaseClient.supabaseKey
                     },
                     body: JSON.stringify({
-                        parentPsid,
+                        parentSessionToken,
                         studentLrn: activeStudent.lrn,
                         type: 'attendance',
                         dateFrom,

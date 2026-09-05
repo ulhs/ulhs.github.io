@@ -7,12 +7,16 @@
     <link rel="icon" type="image/webp" href="../assets/images/school-logo.webp">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
     <script src="../assets/lib/tailwind.min.js"></script>
+    <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/theme-manager.js"></script>
     <link rel="stylesheet" href="../assets/css/typography.css">
-    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/style.css?v=20260905-parent-theme">
+    <link rel="stylesheet" href="../assets/css/parent-portal.css?v=20260905-parent-theme">
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
+    <button type="button" class="parent-theme-toggle theme-toggle" aria-label="Toggle dark mode" data-tooltip="Switch theme">🌙</button>
     <div class="max-w-3xl mx-auto px-6 py-12">
-        <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 p-8 sm:p-12">
+        <div class="privacy-policy-surface bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 p-8 sm:p-12">
             <div class="flex items-center gap-4 mb-8">
                 <img src="../assets/images/school-logo.webp" alt="ULHS" class="w-12 h-12">
                 <div>
@@ -44,6 +48,7 @@
                             <li>Academic grades and term information</li>
                             <li>Achievements and awards</li>
                             <li>Attendance logs (time of arrival and departure)</li>
+                            <li>Student portal account email and role/profile information used for access control</li>
                         </ul>
                     </div>
                     <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 mb-4">
@@ -51,6 +56,7 @@
                         <ul class="list-disc pl-5 text-sm space-y-1">
                             <li>Name and Facebook Page Scoped ID (PSID) for attendance alerts</li>
                             <li>Hashed PIN for Parent Portal login (PIN is never stored in plaintext)</li>
+                            <li>Short-lived signed Parent Portal session token used to authorize portal requests</li>
                             <li>Secure confirmation tokens and Messenger verification codes used only to validate the parent registration process</li>
                         </ul>
                     </div>
@@ -59,6 +65,14 @@
                         <ul class="list-disc pl-5 text-sm space-y-1">
                             <li>Name and role for access to admin portals</li>
                             <li>Authentication credentials for login</li>
+                        </ul>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <h3 class="text-xs font-black text-gray-900 uppercase tracking-widest mb-2">D. Security and Access Metadata</h3>
+                        <ul class="list-disc pl-5 text-sm space-y-1">
+                            <li>Parent login-attempt records used to limit repeated failed login attempts</li>
+                            <li>Grade visibility status, internal restriction reason, restoration time, and authorized staff operator for parent/student relationships</li>
+                            <li>Administrative audit information needed to protect and operate the system</li>
                         </ul>
                     </div>
                 </section>
@@ -81,6 +95,7 @@
                     <ul class="list-disc pl-5 text-sm space-y-1">
                         <li>Notify parents/guardians about their child's school attendance in real-time</li>
                         <li>Provide parents/guardians access to their child's academic performance (grades, achievements)</li>
+                        <li>Temporarily restrict grade visibility for a specific parent/student relationship when authorized school procedures require it</li>
                         <li>Enable school personnel to manage, encode, and store student information, grades, and attendance</li>
                     </ul>
                     <p class="text-sm mt-2"><strong>We do not use this data for marketing, profiling, or third-party sharing without explicit consent.</strong></p>
@@ -92,8 +107,10 @@
                     <ul class="list-disc pl-5 text-sm space-y-1">
                         <li>Access restricted to authorized school personnel only</li>
                         <li>Password hashing and PIN encryption (no plaintext storage)</li>
-                        <li>Encrypted session storage for all portal sessions</li>
-                        <li>Rate limiting on login attempts to prevent brute-force attacks</li>
+                        <li>Short-lived signed sessions for Parent Portal requests; browser storage is treated as client-controlled</li>
+                        <li>Server-side throttling on parent login attempts to prevent brute-force attacks</li>
+                        <li>Relationship checks before returning parent student data or generating student photo URLs</li>
+                        <li>Role-based access controls and RLS policies for personnel and student records</li>
                         <li>Secure connections (HTTPS) for all data transfers</li>
                         <li>Webhook signature verification for Messenger events using the Facebook app secret</li>
                         <li>Regular security audits and updates</li>
@@ -112,7 +129,7 @@
                     </ul>
                     <p class="text-sm mb-2">To request data deletion or exercise other rights:</p>
                     <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm space-y-3">
-                        <p><strong>Method 1 (Instant PSID Removal):</strong> Send the message <code>UNLINK [LRN]</code> to our Messenger bot to remove your Facebook ID from the student record.</p>
+                        <p><strong>Method 1 (Messenger Link Removal):</strong> Send the message <code>UNLINK [LRN]</code> to our Messenger bot to remove your Messenger link from the student record.</p>
                         <p><strong>Method 2 (Formal Request):</strong> Contact the ULHS ICT Department or message our official Facebook Page with a formal request for data deletion, correction, or access.</p>
                     </div>
                 </section>
@@ -125,7 +142,7 @@
 
             <div class="mt-12 pt-8 border-t border-gray-100 flex justify-between items-center">
                 <a href="parent-registration.html" class="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:text-blue-800 transition-colors">&larr; Back to Registration</a>
-                <p class="text-[9px] text-gray-400 font-bold uppercase italic">Effective Date: July 13, 2026</p>
+                <p class="text-[9px] text-gray-400 font-bold uppercase italic">Effective Date: September 5, 2026</p>
             </div>
         </div>
     </div>

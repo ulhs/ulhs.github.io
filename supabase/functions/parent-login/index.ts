@@ -8,6 +8,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function base64UrlEncode(value) {
+  return btoa(value).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+async function createParentSession(parentPsid, secret) {
+  const header = base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = base64UrlEncode(JSON.stringify({ sub: parentPsid, exp: Math.floor(Date.now() / 1000) + 1800 }));
+  const signingInput = `${header}.${payload}`;
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signingInput));
+  return `${signingInput}.${base64UrlEncode(String.fromCharCode(...new Uint8Array(signature)))}`;
+}
+
 console.log("Parent Login Edge Function loaded and starting");
 
 serve(async (req) => {
@@ -20,7 +33,8 @@ serve(async (req) => {
 
   try {
     const { lrn, pin } = await req.json();
-    console.log("Login request for LRN:", lrn);
+    const normalizedLrn = String(lrn || '').trim();
+    const loginKey = `${normalizedLrn}:${req.headers.get('cf-connecting-ip') || req.headers.get('x-forwarded-for') || 'unknown'}`;
 
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -35,12 +49,22 @@ serve(async (req) => {
       }
     });
 
+    const windowStart = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const { count: recentAttempts, error: attemptsError } = await supabase
+      .from('parent_login_attempts')
+      .select('id', { count: 'exact', head: true })
+      .eq('login_key', loginKey)
+      .gte('attempted_at', windowStart);
+    if (attemptsError) throw new Error('Unable to verify login availability.');
+    if ((recentAttempts || 0) >= 5) throw new Error('Too many login attempts. Please try again later.');
+    await supabase.from('parent_login_attempts').insert({ login_key: loginKey });
+
     // 1. Fetch the student by LRN
     console.log("Fetching student by LRN...");
     const { data: student, error: studentError } = await supabase
       .from('students')
       .select('lrn, full_name, parent_messenger_id, parent_guardian_name, section, grade_level, photo_url, student_id_number, parent_pin')
-      .eq('lrn', lrn)
+      .eq('lrn', normalizedLrn)
       .single();
 
     if (studentError || !student) {
@@ -76,6 +100,11 @@ serve(async (req) => {
     }
 
     const parentPsid = matchingLink?.parent_psid || student.parent_messenger_id;
+    if (!parentPsid) {
+      throw new Error("Invalid login attempt.");
+    }
+    const parentSessionSecret = Deno.env.get('PARENT_SESSION_SECRET') || SUPABASE_SERVICE_ROLE_KEY;
+    const parentSessionToken = await createParentSession(parentPsid, parentSessionSecret);
 
     // 4. Fetch all students linked to this parent
     console.log("Fetching all linked students for parent PSID:", parentPsid);
@@ -95,7 +124,7 @@ serve(async (req) => {
     // 5. Return success response with all necessary data
     return new Response(JSON.stringify({
       success: true,
-      parentPsid,
+      parentSessionToken,
       parentName: matchingLink?.parent_guardian_name || student.parent_guardian_name,
       students: allStudents,
       activeStudentLrn: lrn

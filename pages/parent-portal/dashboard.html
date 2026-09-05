@@ -12,9 +12,11 @@
     <script src="../../assets/js/secure-session.js"></script>
     <script src="../../assets/js/supabase-config.js"></script>
     <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/theme-manager.js"></script>
     <script src="../../assets/js/parent-nav.js"></script>
     <link rel="stylesheet" href="../../assets/css/typography.css">
-    <link rel="stylesheet" href="../../assets/css/style.css">
+    <link rel="stylesheet" href="../../assets/css/style.css?v=20260905-parent-theme">
+    <link rel="stylesheet" href="../../assets/css/parent-portal.css?v=20260905-parent-theme">
     <script src="../../assets/lib/tailwind.min.js"></script>
     <style>
         .student-card {
@@ -45,7 +47,7 @@
     <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-100">
         <div class="max-w-6xl mx-auto px-4 py-4">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
                     <img src="../../assets/images/school-logo.webp" alt="ULHS" class="w-10 h-10">
                     <div>
@@ -53,7 +55,7 @@
                         <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Upper Labay High School</p>
                     </div>
                 </div>
-                <button onclick="handleParentLogout(event)" class="flex items-center gap-2 px-5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all text-xs font-black uppercase tracking-widest border border-red-100 shadow-sm">
+                <button onclick="handleParentLogout(event)" class="hidden">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                     </svg>
@@ -64,6 +66,14 @@
     </header>
 
     <main class="max-w-6xl mx-auto px-4 py-8">
+        <div class="mb-6 flex justify-end">
+            <button onclick="handleParentLogout(event)" class="inline-flex shrink-0 items-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all text-xs font-black uppercase tracking-widest border border-red-700 shadow-md hover:shadow-lg whitespace-nowrap">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 013 3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                Logout
+            </button>
+        </div>
         <!-- Parent Welcome -->
         <div id="parent-welcome" class="mb-8"></div>
 
@@ -88,8 +98,8 @@
         async function loadStudentPhotoSecurely(lrn, photoUrl, imgElement, placeholderSvg) {
             if (!imgElement) return;
 
-            const parentPsid = secureSession.getItem('parentPsid');
-            if (!parentPsid) {
+            const parentSessionToken = secureSession.getItem('parentSessionToken');
+            if (!parentSessionToken) {
                 imgElement.style.display = 'none';
                 return;
             }
@@ -102,7 +112,7 @@
                         'Content-Type': 'application/json',
                         'apikey': window.supabaseClient.supabaseKey
                     },
-                    body: JSON.stringify({ parentPsid, studentLrn: lrn })
+                    body: JSON.stringify({ parentSessionToken, studentLrn: lrn })
                 });
 
                 const result = await response.json();
@@ -320,16 +330,7 @@
                     </div>
                 </div>
 
-                <!-- Logout Button at Bottom -->
-                <div class="mt-8 flex justify-center">
-                    <button onclick="handleParentLogout(event)" class="flex items-center gap-2 px-6 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all text-sm font-black uppercase tracking-widest border border-red-100 shadow-sm">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                        </svg>
-                        Logout
-                    </button>
-                </div>
-                
+                <!-- Footer content follows the dashboard cards. -->
                 <!-- Privacy Policy Link -->
                 <div class="mt-6 text-center">
                     <a href="../privacy-policy.html" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">

@@ -12,11 +12,14 @@
     <script src="../../assets/js/secure-session.js"></script>
     <script src="../../assets/js/supabase-config.js"></script>
     <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/theme-manager.js"></script>
     <link rel="stylesheet" href="../../assets/css/typography.css">
-    <link rel="stylesheet" href="../../assets/css/style.css">
+    <link rel="stylesheet" href="../../assets/css/style.css?v=20260905-parent-theme">
+    <link rel="stylesheet" href="../../assets/css/parent-portal.css?v=20260905-parent-theme">
     <script src="../../assets/lib/tailwind.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
+    <button type="button" class="parent-theme-toggle theme-toggle" aria-label="Toggle dark mode" data-tooltip="Switch theme">🌙</button>
     <div class="max-w-md mx-auto px-6 py-12">
         <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
             <div class="p-1 bg-blue-600"></div>
@@ -216,7 +219,7 @@
 
                 // Success! Reset attempts and set up parent session using data from Edge Function
                 loginAttempts = 0;
-                secureSession.setItem('parentPsid', result.parentPsid);
+                secureSession.setItem('parentSessionToken', result.parentSessionToken);
                 if (result.parentName) {
                     secureSession.setItem('parentName', result.parentName);
                 }
@@ -258,8 +261,8 @@
                 return;
             }
 
-            const parentPsid = secureSession.getItem('parentPsid');
-            if (parentPsid) {
+            const parentSessionToken = secureSession.getItem('parentSessionToken');
+            if (parentSessionToken) {
                 window.location.replace('./dashboard.html');
             }
         }
