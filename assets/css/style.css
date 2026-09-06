@@ -4067,6 +4067,17 @@ body.dark-mode .early-birds-empty {
     gap: 10px;
     margin-top: 10px;
 }
+
+.signature-actions {
+    align-items: stretch;
+}
+
+.signature-actions .btn {
+    flex: 1 1 180px;
+    min-width: 0;
+    margin: 0;
+    text-align: center;
+}
 .bg-remove-toggle {
     margin-top: 10px;
 }
@@ -4315,6 +4326,20 @@ body.dark-mode .early-birds-empty {
 
     .id-gen-container .btn-group {
         width: 100%;
+    }
+
+    .signature-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+    }
+
+    .signature-actions .btn {
+        width: 100%;
+        min-height: 46px;
+        padding: 12px 14px;
+        white-space: normal;
+        overflow-wrap: anywhere;
     }
 }
 

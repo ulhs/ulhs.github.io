@@ -2556,12 +2556,13 @@ async function exportAllSF2(levelFilter = null) {
         const monthName = monthNames[targetMonth];
         
         // Parallel fetch for speed
-        const [logsRes, schoolRes, headRes, profilesRes, suspendedRes] = await Promise.all([
+        const [logsRes, schoolRes, headRes, profilesRes, suspendedRes, calendarRes] = await Promise.all([
             fetchAttendanceLogsForMonth(window.supabaseClient, startOfMonth, endOfMonth),
             window.supabaseClient.from('school_info').select('*'), // Fetch all to be safe
             window.supabaseClient.from('profiles').select('full_name').eq('role', 'school_head').maybeSingle(),
             window.supabaseClient.from('profiles').select('full_name, section_assigned'),
-            window.supabaseClient.from('suspended_days').select('date, reason, section').gte('date', startOfMonth).lte('date', endOfMonth)
+            window.supabaseClient.from('suspended_days').select('date, reason, section').gte('date', startOfMonth).lte('date', endOfMonth),
+            window.supabaseClient.from('school_calendar').select('calendar_date, is_school_day, expected_am, expected_pm, section').gte('calendar_date', startOfMonth).lte('calendar_date', endOfMonth)
         ]);
 
         logAttendanceLogsResponse('SF2 Export logs', logsRes, startOfMonth, endOfMonth);
@@ -2573,6 +2574,7 @@ async function exportAllSF2(levelFilter = null) {
         }
         
         const suspendedDayRows = (!suspendedRes.error && Array.isArray(suspendedRes.data)) ? suspendedRes.data : [];
+        const schoolCalendarRows = (!calendarRes.error && Array.isArray(calendarRes.data)) ? calendarRes.data : [];
         console.log("📛 Suspended day rows for export:", suspendedDayRows);
         const monthLogs = logsRes.data || [];
         const schoolInfo = (schoolRes.data && schoolRes.data.length > 0) ? schoolRes.data[0] : {};
@@ -2760,7 +2762,6 @@ async function exportAllSF2(levelFilter = null) {
 
             // Get weekday of the 1st day of the TARGET month (0=Sun, 1=Mon, ..., 6=Sat)
             const firstDayOfMonth = new Date(targetYear, targetMonth, 1);
-            const firstWeekday = firstDayOfMonth.getDay();
 
             // SF2 Column Mapping (F, H-L, N-R, T-V, X, Z, AB-AE, AF-AK)
             const SF2_ATT_COLS = [6, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 20, 21, 22, 24, 26, 28, 29, 30, 31, 32, 33, 35, 36, 37];
@@ -2768,6 +2769,29 @@ async function exportAllSF2(levelFilter = null) {
             // 4.1 Fill Date Headers & Weekdays (Row 6/5 for JHS, Row 10/9 for SHS)
             const weekdayInitialsMap = { 1: 'M', 2: 'T', 3: 'W', 4: 'TH', 5: 'F' };
             const lastDayInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+
+            // SF2 columns begin at the first school-calendar date in the month.
+            // This is essential for August, where the 2026 school year starts on August 13.
+            const calendarDatesInMonth = schoolCalendarRows
+                .filter(row => !row.section || String(row.section).trim().toLowerCase() === String(sectionName).trim().toLowerCase())
+                .map(row => String(row.calendar_date))
+                .filter(date => date >= startOfMonth && date <= endOfMonth)
+                .sort();
+            const defaultFirstMappedDate = targetMonth === 7
+                ? `${targetYear}-08-13`
+                : startOfMonth;
+            const firstMappedDate = calendarDatesInMonth[0] || defaultFirstMappedDate;
+            const firstMappedDay = parseInt(firstMappedDate.slice(-2), 10);
+            const sf2DateColumnMap = new Map();
+            let sf2ColumnOffset = 0;
+
+            for (let d = firstMappedDay; d <= lastDayInMonth; d++) {
+                const date = new Date(targetYear, targetMonth, d);
+                if (date.getDay() === 0 || date.getDay() === 6) continue;
+                if (sf2ColumnOffset >= SF2_ATT_COLS.length) break;
+                sf2DateColumnMap.set(d, SF2_ATT_COLS[sf2ColumnOffset]);
+                sf2ColumnOffset++;
+            }
             
             const dayRowNumber = level === 'SHS' ? 10 : 6;
             const initialRowNumber = level === 'SHS' ? 9 : 5;
@@ -2779,14 +2803,8 @@ async function exportAllSF2(levelFilter = null) {
                 const w = date.getDay();
                 if (w === 0 || w === 6) continue; // Skip weekends
 
-                // Use the same formula as the logs to find the correct column
-                const daysSinceGridStart = (d - 1) + (firstWeekday === 0 ? -1 : (firstWeekday === 6 ? -2 : firstWeekday - 1));
-                const fullWeeks = Math.floor(daysSinceGridStart / 7);
-                const remainingDays = daysSinceGridStart % 7;
-                const colOffset = (fullWeeks * 5) + remainingDays;
-
-                if (colOffset >= 0 && colOffset < SF2_ATT_COLS.length) {
-                    const colIndex = SF2_ATT_COLS[colOffset];
+                const colIndex = sf2DateColumnMap.get(d);
+                if (colIndex) {
                     
                     // 🛑 Protect merged cells containing "(1st row for date)" header
                     // JHS: F5:AL5 | SHS: F9:?9 - skip writing to initialRow for both
@@ -2812,7 +2830,7 @@ async function exportAllSF2(levelFilter = null) {
 
             // For summary calculations
             const schoolDays = [];
-            for (let d = 1; d <= lastDayInMonth; d++) {
+            for (let d = firstMappedDay; d <= lastDayInMonth; d++) {
                 const date = new Date(targetYear, targetMonth, d);
                 if (date.getDay() !== 0 && date.getDay() !== 6) schoolDays.push(d);
             }
@@ -2862,15 +2880,8 @@ async function exportAllSF2(levelFilter = null) {
                     
                     // 🛑 HOLIDAYS get marked as H; other suspended days remain empty
                     if (sectionHolidayDates.has(currentDayKey)) {
-                        const date = new Date(targetYear, targetMonth, day);
-                        const firstWeekday = new Date(targetYear, targetMonth, 1).getDay();
-                        const daysSinceGridStart = (day - 1) + (firstWeekday === 0 ? -1 : (firstWeekday === 6 ? -2 : firstWeekday - 1));
-                        const fullWeeks = Math.floor(daysSinceGridStart / 7);
-                        const remainingDays = daysSinceGridStart % 7;
-                        const colOffset = (fullWeeks * 5) + remainingDays;
-
-                        if (colOffset >= 0 && colOffset < SF2_ATT_COLS.length) {
-                            const colIndex = SF2_ATT_COLS[colOffset];
+                        const colIndex = sf2DateColumnMap.get(day);
+                        if (colIndex) {
                             const cell = row.getCell(colIndex);
                             cell.value = 'H';
                             cell.alignment = { horizontal: 'center' };
@@ -2881,15 +2892,8 @@ async function exportAllSF2(levelFilter = null) {
 
                     if (sectionSuspendedDates.has(currentDayKey)) {
                         // Calculate Column for this day
-                        const date = new Date(targetYear, targetMonth, day);
-                        const firstWeekday = new Date(targetYear, targetMonth, 1).getDay();
-                        const daysSinceGridStart = (day - 1) + (firstWeekday === 0 ? -1 : (firstWeekday === 6 ? -2 : firstWeekday - 1));
-                        const fullWeeks = Math.floor(daysSinceGridStart / 7);
-                        const remainingDays = daysSinceGridStart % 7;
-                        const colOffset = (fullWeeks * 5) + remainingDays;
-                        
-                        if (colOffset >= 0 && colOffset < SF2_ATT_COLS.length) {
-                            const colIndex = SF2_ATT_COLS[colOffset];
+                        const colIndex = sf2DateColumnMap.get(day);
+                        if (colIndex) {
                             row.getCell(colIndex).value = ''; // Leave suspended day empty
                         }
                         return; // Skip rest of logic for this day
@@ -2928,15 +2932,8 @@ async function exportAllSF2(levelFilter = null) {
                     }
 
                     // Calculate Column for this day
-                    const date = new Date(targetYear, targetMonth, day);
-                    const firstWeekday = new Date(targetYear, targetMonth, 1).getDay();
-                    const daysSinceGridStart = (day - 1) + (firstWeekday === 0 ? -1 : (firstWeekday === 6 ? -2 : firstWeekday - 1));
-                    const fullWeeks = Math.floor(daysSinceGridStart / 7);
-                    const remainingDays = daysSinceGridStart % 7;
-                    const colOffset = (fullWeeks * 5) + remainingDays;
-                    
-                    if (colOffset >= 0 && colOffset < SF2_ATT_COLS.length) {
-                        const colIndex = SF2_ATT_COLS[colOffset];
+                    const colIndex = sf2DateColumnMap.get(day);
+                    if (colIndex) {
                         const cell = row.getCell(colIndex);
                         cell.value = code;
                         cell.alignment = { horizontal: 'center' };
@@ -2967,14 +2964,6 @@ async function exportAllSF2(levelFilter = null) {
                 const data = dailySummary[day] || { male: 0, female: 0 };
                 totalMaleAttendance += data.male;
                 totalFemaleAttendance += data.female;
-
-                // Find the column for this day again
-                const firstWeekday = new Date(targetYear, targetMonth, 1).getDay();
-                const daysSinceGridStart = (day - 1) + (firstWeekday === 0 ? -1 : (firstWeekday === 6 ? -2 : firstWeekday - 1));
-                const fullWeeks = Math.floor(daysSinceGridStart / 7);
-                const remainingDays = daysSinceGridStart % 7;
-                const colOffset = (fullWeeks * 5) + remainingDays;
-
                 // Daily summary totals are calculated via template formulas - do not overwrite
             });
 
