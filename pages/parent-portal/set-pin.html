@@ -19,8 +19,16 @@
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
     <button type="button" class="parent-theme-toggle theme-toggle" aria-label="Toggle dark mode" data-tooltip="Switch theme">🌙</button>
-    <div class="max-w-md mx-auto px-6 py-12">
-        <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+    <div class="parent-language-control">
+        <label for="parent-language" data-i18n="languageLabel">Language</label>
+        <select id="parent-language" data-parent-language>
+            <option value="en" data-i18n="simpleEnglish">Simple English</option>
+            <option value="ceb-en" data-i18n="cebuanoBisaya">Cebuano / Bisaya</option>
+            <option value="fil" data-i18n="filipino">Filipino</option>
+        </select>
+    </div>
+    <div class="parent-auth-shell">
+        <div class="parent-auth-card bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
             <div class="p-1 bg-blue-600"></div>
             <div class="p-8">
                 <div class="flex justify-center mb-6">
@@ -37,7 +45,7 @@
                     <p class="text-[10px] text-green-700 font-semibold">Your PIN is encrypted and never stored in plaintext. By setting a PIN, you agree to our <a href="../privacy-policy.html" class="text-green-800 font-bold underline">Privacy Policy</a>.</p>
                 </div>
 
-                <div id="form-container" class="space-y-6">
+                <div id="form-container" class="parent-set-pin-fields space-y-6">
                     <div>
                         <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Student LRN</label>
                         <input type="text" id="lrn-input" maxlength="12" placeholder="Enter 12-digit LRN" 
@@ -228,5 +236,6 @@
             }
         });
     </script>
+    <script src="../../assets/js/parent-language.js"></script>
 </body>
 </html>

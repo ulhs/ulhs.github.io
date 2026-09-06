@@ -18,12 +18,20 @@
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
     <button type="button" class="parent-theme-toggle theme-toggle" aria-label="Toggle dark mode" data-tooltip="Switch theme">🌙</button>
+    <div class="parent-language-control">
+        <label for="parent-language" data-i18n="languageLabel">Language</label>
+        <select id="parent-language" data-parent-language>
+            <option value="en" data-i18n="simpleEnglish">Simple English</option>
+            <option value="ceb-en" data-i18n="cebuanoBisaya">Cebuano / Bisaya</option>
+            <option value="fil" data-i18n="filipino">Filipino</option>
+        </select>
+    </div>
     <!-- Facebook SDK for Messenger Button -->
     <div id="fb-root"></div>
     <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
 
-    <div class="max-w-md mx-auto px-6 py-12">
-        <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+    <div class="parent-auth-shell">
+        <div class="parent-auth-card bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
             <div class="p-1 bg-blue-600"></div>
             <div class="p-8">
                 <div class="flex justify-center mb-6">
@@ -33,7 +41,7 @@
                 <h2 class="text-2xl font-black text-center text-gray-900 uppercase tracking-tight mb-2">Parent Registration</h2>
                 <p class="text-center text-gray-500 text-sm mb-8">Complete the secure registration steps below to verify your Messenger account and receive attendance alerts for your child.</p>
 
-                <div id="registration-form" class="space-y-6">
+                <div id="registration-form" class="parent-registration-fields space-y-6">
                     <div class="bg-blue-50 rounded-2xl p-4 border border-blue-100">
                         <h4 class="text-xs font-black text-blue-800 uppercase mb-2 flex items-center gap-2">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z"></path></svg>
@@ -454,5 +462,6 @@
             }
         });
     </script>
+    <script src="../assets/js/parent-language.js"></script>
 </body>
 </html>

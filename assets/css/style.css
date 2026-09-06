@@ -4271,8 +4271,51 @@ body.dark-mode .early-birds-empty {
 }
 
 @media (max-width: 992px) {
-    .gen-grid { grid-template-columns: 1fr; }
-    .preview-section { position: static; }
+    .gen-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .gen-grid > * {
+        min-width: 0;
+    }
+
+    .preview-section {
+        position: static;
+    }
+
+    .form-row-three,
+    .form-row-two {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .id-gen-container .form-group input,
+    .id-gen-container .form-group select,
+    .id-gen-container .form-group textarea {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .id-gen-container {
+        padding-right: 16px;
+        padding-left: 16px;
+    }
+
+    .form-section {
+        padding: 20px 16px;
+    }
+
+    .id-type-toggle {
+        width: min(100%, 300px);
+    }
+
+    .preview-section {
+        width: 100%;
+    }
+
+    .id-gen-container .btn-group {
+        width: 100%;
+    }
 }
 
 .theme-toggle::after {

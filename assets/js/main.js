@@ -249,7 +249,8 @@ async function logAdminAction(action, targetLrn = null, details = null) {
     function addMsg(text, sender, links, container) {
         const div = document.createElement('div');
         div.className = `message ${sender}-message`;
-        div.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        const translatedText = window.parentTranslateText ? window.parentTranslateText(text) : text;
+        div.innerHTML = translatedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         
         if (links && links.length > 0) {
             const linksDiv = document.createElement('div');
@@ -258,7 +259,7 @@ async function logAdminAction(action, targetLrn = null, details = null) {
                 const a = document.createElement('a');
                 a.href = link.url.startsWith('http') ? link.url : root + link.url;
                 if (link.url.startsWith('http')) a.target = "_blank";
-                a.textContent = link.text;
+                a.textContent = window.parentTranslateText ? window.parentTranslateText(link.text) : link.text;
                 a.className = 'bot-link';
                 linksDiv.appendChild(a);
             });

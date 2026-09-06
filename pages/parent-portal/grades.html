@@ -51,6 +51,14 @@
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
+    <div class="parent-language-control">
+        <label for="parent-language" data-i18n="languageLabel">Language</label>
+        <select id="parent-language" data-parent-language>
+            <option value="en" data-i18n="simpleEnglish">Simple English</option>
+            <option value="ceb-en" data-i18n="cebuanoBisaya">Cebuano / Bisaya</option>
+            <option value="fil" data-i18n="filipino">Filipino</option>
+        </select>
+    </div>
     <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-100">
         <div class="max-w-6xl mx-auto px-4 py-4">
@@ -89,7 +97,7 @@
         <!-- Student Selector -->
         <div class="mb-6">
             <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Select Student</h2>
-            <div id="student-selector" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div id="student-selector" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
                 <!-- Student cards will be inserted here -->
             </div>
         </div>
@@ -382,5 +390,6 @@
 
         initPage();
     </script>
+    <script src="../../assets/js/parent-language.js"></script>
 </body>
 </html>
