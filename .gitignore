@@ -71,6 +71,10 @@ dist/
 # Ignore QR Batch Generator page
 pages/admin/qr-batch-generator.html
 
+# Ignore Unimportant scripts
+scripts/_inspect_JHS.txt
+scripts/_inspect_SHS.txt
+
 # Ignore Windows thumbnail cache files
 *.db
 

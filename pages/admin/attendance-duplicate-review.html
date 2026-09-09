@@ -20,12 +20,49 @@
     <script>
         function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[c]); }
         async function init() {
+            const rows = document.getElementById('rows');
             const { data: { session } } = await window.supabaseClient.auth.getSession();
             const { data: profile } = await window.supabaseClient.from('profiles').select('role').eq('id', session?.user?.id).single();
             if (!profile || !['admin', 'school_head'].includes(String(profile.role).toLowerCase())) { alert('Administrator or School Head permission is required.'); location.href = './admin-dashboard.html'; return; }
-            const { data, error } = await window.supabaseClient.from('attendance_duplicate_review').select('*').order('attendance_date', { ascending: false });
-            const rows = document.getElementById('rows');
-            if (error) { rows.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-600">${escapeHtml(error.message)}</td></tr>`; return; }
+            // Query attendance_logs directly for duplicate records (view was dropped for security)
+            const { data: duplicates, error: dupError } = await window.supabaseClient
+                .from('attendance_logs')
+                .select(`
+                    id,
+                    student_lrn,
+                    session,
+                    local_date,
+                    status,
+                    scanned_at,
+                    duplicate_of_id
+                `)
+                .not('duplicate_of_id', 'is', null)
+                .order('local_date', { ascending: false, nullsFirst: false })
+                .order('scanned_at', { ascending: false });
+            
+            if (dupError) {
+                rows.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-600">${escapeHtml(dupError.message)}</td></tr>`;
+                return;
+            }
+            
+            // Get canonical records for each duplicate
+            const data = [];
+            for (const dup of duplicates || []) {
+                const { data: canonical, error: canonError } = await window.supabaseClient
+                    .from('attendance_logs')
+                    .select('id, status, scanned_at')
+                    .eq('id', dup.duplicate_of_id)
+                    .single();
+                
+                if (!canonError && canonical) {
+                    data.push({
+                        ...dup,
+                        attendance_date: dup.local_date || new Date(dup.scanned_at).toLocaleDateString('en-CA'),
+                        canonical_status: canonical.status,
+                        canonical_scanned_at: canonical.scanned_at
+                    });
+                }
+            }
             rows.innerHTML = data?.length ? data.map(row => `<tr class="border-t"><td class="p-3 font-mono">${escapeHtml(row.student_lrn)}</td><td class="p-3">${escapeHtml(row.attendance_date)}</td><td class="p-3">${escapeHtml(row.session)}</td><td class="p-3">#${escapeHtml(row.id)} · ${escapeHtml(row.status)}</td><td class="p-3">#${escapeHtml(row.duplicate_of_id)} · ${escapeHtml(row.canonical_status)}</td><td class="p-3">${escapeHtml(row.scanned_at)}</td></tr>`).join('') : '<tr><td colspan="6" class="p-8 text-center text-green-600">No marked duplicates.</td></tr>';
         }
         window.addEventListener('load', () => window.supabaseClient ? init() : setTimeout(init, 100));

@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.gstatic.com https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.supabase.net wss://*.supabase.co wss://*.supabase.net https://cdn.jsdelivr.net https://api.counterapi.dev;">
+    <title>Attendance Summary | Upper Labay High School</title>
+    <link rel="icon" type="image/webp" href="../../assets/images/school-logo.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&family=Acme&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../assets/vendor/font-awesome/css/all.min.css">
+    <script src="../../assets/lib/tailwind.min.js"></script>
+    <script src="../../assets/lib/exceljs.min.js"></script>
+    <script src="../../assets/lib/FileSaver.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../assets/js/supabase-config.js"></script>
+    <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/theme-manager.js"></script>
+    <link rel="stylesheet" href="../../assets/css/typography.css">
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <link rel="stylesheet" href="../../assets/css/admin-portal.css?v=20260905-admin-theme">
+    <script src="../../assets/js/admin-nav.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+    <script>
+        const sardoAllowedRoles = window.SARDO_ALLOWED_ROLES || ['admin', 'school_head', 'guidance_counselor'];
+
+        function isAttendanceAccessAllowed(profile, roleOverride = null) {
+            const role = String(roleOverride || profile?.role || sessionStorage.getItem('userRole') || 'staff').trim().toLowerCase();
+            const access = JSON.parse(sessionStorage.getItem('userAccess') || '{}');
+            return Boolean(profile?.can_scan || access?.attendance || role === 'admin');
+        }
+
+        async function checkAccess() {
+            if (!window.supabaseClient) {
+                setTimeout(checkAccess, 100);
+                return;
+            }
+            try {
+                const { data: { session }, error } = await window.supabaseClient.auth.getSession();
+                if (error || !session) return;
+
+                const { data: profile, error: profileError } = await window.supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (profileError) throw profileError;
+
+                const userRole = String(profile?.role || 'staff').trim().toLowerCase();
+                const canAccess = isAttendanceAccessAllowed(profile, userRole);
+                
+                if (!canAccess) {
+                    alert("ACCESS DENIED: You do not have permission to use the Attendance Summary.");
+                    window.location.href = './admin-dashboard.html';
+                    return;
+                }
+
+                sessionStorage.setItem('userName', profile?.full_name || session.user.email);
+                sessionStorage.setItem('userRole', userRole);
+                sessionStorage.setItem('adminLoggedIn', 'true');
+                console.log("Attendance Summary Access granted to:", userRole);
+            } catch (e) {
+                console.error("Security Check Critical Error:", e);
+            }
+        }
+        checkAccess();
+    </script>
+
+    <header>
+        <div class="branding">
+            <a href="../../index.html" class="logo-link">
+                <img src="../../assets/images/school-logo.webp" alt="Logo" id="main-logo">
+                <div class="name-container">
+                    <span class="school-name">UPPER LABAY</span>
+                    <span class="school-sub">HIGH SCHOOL</span>
+                </div>
+            </a>
+        </div>
+        <div class="user-greeting">
+            <span class="user-name" id="user-greeting-name"></span>
+            <script>
+                const greetingElement = document.getElementById('user-greeting-name');
+                const storedUserName = sessionStorage.getItem('userName');
+                if (greetingElement && storedUserName) greetingElement.textContent = storedUserName;
+            </script>
+        </div>
+        <input type="checkbox" id="nav-toggle" class="nav-toggle">
+        <label for="nav-toggle" class="nav-toggle-label" aria-label="Toggle Navigation">
+            <span></span>
+        </label>
+        <nav class="nav-links magic-nav">
+            <ul id="dynamic-nav-list">
+                    <script>
+                        const role = sessionStorage.getItem('userRole');
+                        const access = JSON.parse(sessionStorage.getItem('userAccess') || '{}');
+                        const navList = document.getElementById('dynamic-nav-list');
+                        
+                        let html = '';
+                        
+                        if (role === 'admin') {
+                            html += `
+                                <li class="list" data-page="access.html">
+                                    <a href="access.html">
+                                        <span class="icon"><i class="fa-solid fa-users-gear"></i></span>
+                                        <span class="text">ACCESS</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        if (role === 'admin' || access.idGen) {
+                            html += `
+                                <li class="list" data-page="id-gen.html">
+                                    <a href="id-gen.html">
+                                        <span class="icon"><i class="fa-solid fa-id-card"></i></span>
+                                        <span class="text">ID GENERATOR</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        if (role === 'admin' || access.attendance) {
+                            html += `
+                                <li class="list" data-page="attendance.html">
+                                    <a href="attendance.html">
+                                        <span class="icon"><i class="fa-solid fa-clipboard-user"></i></span>
+                                        <span class="text">ATTENDANCE</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        if (sardoAllowedRoles.includes(String(role || '').toLowerCase()) || access.sardo || false) {
+                            html += `
+                                <li class="list" data-page="sardo-dashboard.html">
+                                    <a href="sardo-dashboard.html">
+                                        <span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                                        <span class="text">SARDO</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        if (role === 'admin' || access.grades || false) {
+                            html += `
+                                <li class="list" data-page="grade-encoding.html">
+                                    <a href="grade-encoding.html">
+                                        <span class="icon"><i class="fa-solid fa-book-open-reader"></i></span>
+                                        <span class="text">GRADES</span>
+                                    </a>
+                                </li>`;
+                        }
+
+                        if (role === 'admin' || role === 'school_head' || access.exams || access.grades || false) {
+                            html += `
+                                <li class="list" data-page="exam-manager.html">
+                                    <a href="exam-manager.html">
+                                        <span class="icon"><i class="fa-solid fa-file-circle-check"></i></span>
+                                        <span class="text">EXAMS</span>
+                                    </a>
+                                </li>`;
+                        }
+
+                        if (role === 'admin' || role === 'school_head' || access.suspended) {
+                            html += `
+                                <li class="list" data-page="calendar-exceptions.html">
+                                    <a href="calendar-exceptions.html">
+                                        <span class="icon"><i class="fa-solid fa-calendar-times"></i></span>
+                                        <span class="text">CALENDAR EXCEPTIONS</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        if (role === 'admin' || role === 'school_head' || access.stats) {
+                            html += `
+                                <li class="list" data-page="admin-dashboard.html">
+                                    <a href="admin-dashboard.html">
+                                        <span class="icon"><i class="fa-solid fa-chart-line"></i></span>
+                                        <span class="text">DASHBOARD</span>
+                                    </a>
+                                </li>`;
+                        }
+                        
+                        html += `
+                            <li class="list">
+                                <a href="./login.html" onclick="handleLogout(event)">
+                                    <span class="icon"><i class="fa-solid fa-right-from-bracket"></i></span>
+                                    <span class="text">LOGOUT</span>
+                                </a>
+                            </li>`;
+                        
+                        html += '<div class="indicator"></div>';
+                        html += '<div id="theme-toggle" class="theme-toggle" data-tooltip="Switch to Dark">🌙</div>';
+                        document.write(html);
+                    </script>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 pb-12 max-w-6xl mt-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-12 space-y-6">
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                    <div class="p-1 bg-deped-red"></div>
+                    <div class="p-6">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                    <svg class="w-6 h-6 text-deped-red" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                                    Attendance Summary
+                                </h2>
+                                <p class="text-xs text-gray-500 mt-1">View and download attendance reports by grade, section, and month</p>
+                            </div>
+                            <a href="attendance.html" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-black uppercase">
+                                <i class="fa-solid fa-arrow-left mr-2"></i>Back to Attendance
+                            </a>
+                        </div>
+
+                        <!-- Filter Controls -->
+                        <div class="bg-gray-50 rounded-xl p-4 mb-6">
+                            <div class="flex flex-col md:flex-row gap-4">
+                                <div class="flex-1">
+                                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Grade Level</label>
+                                    <select id="grade-filter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="all">All Grades</option>
+                                        <option value="7">Grade 7</option>
+                                        <option value="8">Grade 8</option>
+                                        <option value="9">Grade 9</option>
+                                        <option value="10">Grade 10</option>
+                                        <option value="11">Grade 11</option>
+                                        <option value="12">Grade 12</option>
+                                    </select>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Section</label>
+                                    <select id="section-filter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="all">All Sections</option>
+                                    </select>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Month</label>
+                                    <select id="month-filter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="0">January</option>
+                                        <option value="1">February</option>
+                                        <option value="2">March</option>
+                                        <option value="3">April</option>
+                                        <option value="4">May</option>
+                                        <option value="5">June</option>
+                                        <option value="6">July</option>
+                                        <option value="7">August</option>
+                                        <option value="8">September</option>
+                                        <option value="9">October</option>
+                                        <option value="10">November</option>
+                                        <option value="11">December</option>
+                                    </select>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Year</label>
+                                    <select id="year-filter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="2026" selected>2026</option>
+                                        <option value="2027">2027</option>
+                                        <option value="2028">2028</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-end">
+                                    <button id="apply-filters-btn" class="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all">
+                                        <i class="fa-solid fa-filter mr-2"></i>Apply Filters
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Summary Statistics -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Total Students</p>
+                                <p id="total-students" class="text-2xl font-black text-blue-800">0</p>
+                            </div>
+                            <div class="bg-green-50 p-4 rounded-xl border border-green-100">
+                                <p class="text-[10px] font-bold text-green-600 uppercase tracking-widest">Days Present</p>
+                                <p id="total-present" class="text-2xl font-black text-green-800">0</p>
+                            </div>
+                            <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                                <p class="text-[10px] font-bold text-red-600 uppercase tracking-widest">Days Absent</p>
+                                <p id="total-absent" class="text-2xl font-black text-red-800">0</p>
+                            </div>
+                            <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                                <p class="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Avg Attendance</p>
+                                <p id="avg-attendance" class="text-2xl font-black text-amber-800">0%</p>
+                            </div>
+                        </div>
+
+                        <!-- Download Button -->
+                        <div class="flex justify-end mb-6">
+                            <button id="download-excel-btn" class="px-6 py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition-all flex items-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                Download Excel
+                            </button>
+                        </div>
+
+                        <!-- Summary Table -->
+                        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                            <div class="p-4 bg-gray-50 border-b">
+                                <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Student Attendance Summary</h3>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-sm">
+                                    <thead>
+                                        <tr class="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest text-left">
+                                            <th class="px-4 py-3">LRN</th>
+                                            <th class="px-4 py-3">Student Name</th>
+                                            <th class="px-4 py-3">Grade</th>
+                                            <th class="px-4 py-3">Section</th>
+                                            <th class="px-4 py-3 text-center">Total Days</th>
+                                            <th class="px-4 py-3 text-center">Present</th>
+                                            <th class="px-4 py-3 text-center">Absent</th>
+                                            <th class="px-4 py-3 text-center">Tardy</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="summary-table-body" class="divide-y divide-gray-100">
+                                        <tr>
+                                            <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                                                <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+                                                <p class="text-xs font-bold uppercase tracking-widest">Loading attendance data...</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let allStudents = [];
+        let attendanceSummaryData = [];
+
+        const sectionsByGrade = {
+            '7': ['Salazar', 'Balunto'],
+            '8': ['Cuachon', 'Diama'],
+            '9': ['Aguas', 'Laogan'],
+            '10': ['Capili'],
+            '11': ['Academics', 'TechPro'],
+            '12': ['FCS', 'HUMSS']
+        };
+
+        function getMonthName(monthIndex) {
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+            return months[monthIndex];
+        }
+
+        function getDaysInMonth(year, month) {
+            return new Date(year, month + 1, 0).getDate();
+        }
+
+        function getAttendanceStatus(percentage) {
+            if (percentage >= 90) return { text: 'Excellent', class: 'bg-green-100 text-green-800' };
+            if (percentage >= 80) return { text: 'Good', class: 'bg-blue-100 text-blue-800' };
+            if (percentage >= 70) return { text: 'Warning', class: 'bg-amber-100 text-amber-800' };
+            return { text: 'Critical', class: 'bg-red-100 text-red-800' };
+        }
+
+        function updateSectionFilter() {
+            const gradeFilter = document.getElementById('grade-filter');
+            const sectionFilter = document.getElementById('section-filter');
+            const selectedGrade = gradeFilter.value;
+            
+            sectionFilter.innerHTML = '';
+            const allOption = document.createElement('option');
+            allOption.value = 'all';
+            allOption.textContent = 'All Sections';
+            sectionFilter.appendChild(allOption);
+
+            if (selectedGrade !== 'all' && sectionsByGrade[selectedGrade]) {
+                sectionsByGrade[selectedGrade].forEach(section => {
+                    const option = document.createElement('option');
+                    option.value = section;
+                    option.textContent = section;
+                    sectionFilter.appendChild(option);
+                });
+            }
+        }
+
+        async function loadAttendanceSummary() {
+            const gradeFilter = document.getElementById('grade-filter').value;
+            const sectionFilter = document.getElementById('section-filter').value;
+            const monthFilter = parseInt(document.getElementById('month-filter').value);
+            const yearFilter = parseInt(document.getElementById('year-filter').value);
+
+            const tableBody = document.getElementById('summary-table-body');
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                        <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+                        <p class="text-xs font-bold uppercase tracking-widest">Loading attendance data...</p>
+                    </td>
+                </tr>
+            `;
+
+            try {
+                // Load students with strict filters
+                let studentsQuery = window.supabaseClient.from('students').select('*');
+                
+                if (gradeFilter !== 'all') {
+                    studentsQuery = studentsQuery.eq('grade_level', gradeFilter);
+                }
+                if (sectionFilter !== 'all') {
+                    studentsQuery = studentsQuery.eq('section', sectionFilter);
+                }
+                
+                const { data: students, error: studentsError } = await studentsQuery;
+                if (studentsError) throw studentsError;
+                allStudents = students || [];
+
+                // Calculate date range for the selected month
+                const startDate = new Date(yearFilter, monthFilter, 1);
+                const endDate = new Date(yearFilter, monthFilter + 1, 0);
+                const startDateStr = startDate.toISOString().split('T')[0];
+                const endDateStr = endDate.toISOString().split('T')[0];
+
+                // Load attendance logs for the month, filtered by student LRNs
+                const studentLrns = allStudents.map(s => s.lrn);
+                let logsQuery = window.supabaseClient
+                    .from('attendance_logs')
+                    .select('*')
+                    .in('student_lrn', studentLrns)
+                    .gte('local_date', startDateStr)
+                    .lte('local_date', endDateStr);
+
+                const { data: attendanceLogs, error: logsError } = await logsQuery;
+                if (logsError) throw logsError;
+
+                // Calculate summary for each student
+                const summaryData = allStudents.map(student => {
+                    const studentLogs = attendanceLogs.filter(log => log.student_lrn === student.lrn);
+                    const totalDays = getDaysInMonth(yearFilter, monthFilter);
+                    
+                    // Count different statuses
+                    const presentDays = new Set();
+                    const absentDays = new Set();
+                    const tardyDays = new Set();
+
+                    studentLogs.forEach(log => {
+                        const date = log.local_date || new Date(log.scanned_at).toISOString().split('T')[0];
+                        if (log.status === 'PRESENT') {
+                            presentDays.add(date);
+                        } else if (log.status === 'ABSENT') {
+                            absentDays.add(date);
+                        } else if (log.status === 'TARDY') {
+                            tardyDays.add(date);
+                        }
+                    });
+
+                    const presentCount = presentDays.size;
+                    const absentCount = absentDays.size;
+                    const tardyCount = tardyDays.size;
+                    const totalAttended = presentCount + tardyCount;
+                    const attendancePercentage = totalDays > 0 ? Math.round((totalAttended / totalDays) * 100) : 0;
+
+                    return {
+                        lrn: student.lrn,
+                        name: student.full_name,
+                        grade: student.grade_level,
+                        section: student.section,
+                        totalDays: totalDays,
+                        present: presentCount,
+                        absent: absentCount,
+                        tardy: tardyCount,
+                        attendancePercentage: attendancePercentage
+                    };
+                });
+
+                attendanceSummaryData = summaryData;
+
+                // Update statistics
+                const totalStudents = summaryData.length;
+                const totalPresent = summaryData.reduce((sum, s) => sum + s.present, 0);
+                const totalAbsent = summaryData.reduce((sum, s) => sum + s.absent, 0);
+                const avgAttendance = totalStudents > 0 
+                    ? Math.round(summaryData.reduce((sum, s) => sum + s.attendancePercentage, 0) / totalStudents) 
+                    : 0;
+
+                document.getElementById('total-students').textContent = totalStudents;
+                document.getElementById('total-present').textContent = totalPresent;
+                document.getElementById('total-absent').textContent = totalAbsent;
+                document.getElementById('avg-attendance').textContent = avgAttendance + '%';
+
+                // Render table
+                renderSummaryTable(summaryData);
+
+            } catch (error) {
+                console.error('Error loading attendance summary:', error);
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-4 py-8 text-center text-red-500">
+                            <i class="fa-solid fa-exclamation-triangle text-2xl mb-2"></i>
+                            <p class="text-xs font-bold uppercase tracking-widest">Error loading data: ${error.message}</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function renderSummaryTable(data) {
+            const tableBody = document.getElementById('summary-table-body');
+            
+            if (data.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                            <i class="fa-solid fa-inbox text-2xl mb-2"></i>
+                            <p class="text-xs font-bold uppercase tracking-widest">No attendance data found</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // Sort by attendance percentage (lowest first)
+            const sortedData = [...data].sort((a, b) => a.attendancePercentage - b.attendancePercentage);
+
+            tableBody.innerHTML = sortedData.map(student => {
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 font-mono text-xs">${student.lrn}</td>
+                        <td class="px-4 py-3 font-bold text-xs">${student.name}</td>
+                        <td class="px-4 py-3 text-xs">${student.grade}</td>
+                        <td class="px-4 py-3 text-xs">${student.section}</td>
+                        <td class="px-4 py-3 text-center text-xs font-bold">${student.totalDays}</td>
+                        <td class="px-4 py-3 text-center text-xs font-bold text-green-600">${student.present}</td>
+                        <td class="px-4 py-3 text-center text-xs font-bold text-red-600">${student.absent}</td>
+                        <td class="px-4 py-3 text-center text-xs font-bold text-amber-600">${student.tardy}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function downloadExcel() {
+            if (attendanceSummaryData.length === 0) {
+                alert('No data to export. Please load attendance data first.');
+                return;
+            }
+
+            try {
+                const month = parseInt(document.getElementById('month-filter').value);
+                const year = parseInt(document.getElementById('year-filter').value);
+                const grade = document.getElementById('grade-filter').value;
+                const section = document.getElementById('section-filter').value;
+
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet('Attendance Summary');
+
+                // Set column widths
+                worksheet.columns = [
+                    { header: 'LRN', key: 'lrn', width: 15 },
+                    { header: 'Student Name', key: 'name', width: 30 },
+                    { header: 'Grade', key: 'grade', width: 10 },
+                    { header: 'Section', key: 'section', width: 15 },
+                    { header: 'Total Days', key: 'totalDays', width: 12 },
+                    { header: 'Days Present', key: 'present', width: 12 },
+                    { header: 'Days Absent', key: 'absent', width: 12 },
+                    { header: 'Days Tardy', key: 'tardy', width: 12 }
+                ];
+
+                // Add header styling
+                const headerRow = worksheet.getRow(1);
+                headerRow.font = { bold: true, size: 12 };
+                headerRow.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FF4472C4' }
+                };
+                headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+
+                // Add data
+                const sortedData = [...attendanceSummaryData].sort((a, b) => a.attendancePercentage - b.attendancePercentage);
+                sortedData.forEach(student => {
+                    worksheet.addRow({
+                        lrn: student.lrn,
+                        name: student.name,
+                        grade: student.grade,
+                        section: student.section,
+                        totalDays: student.totalDays,
+                        present: student.present,
+                        absent: student.absent,
+                        tardy: student.tardy
+                    });
+                });
+
+                // Generate filename
+                const gradeText = grade === 'all' ? 'All Grades' : `Grade ${grade}`;
+                const sectionText = section === 'all' ? 'All Sections' : section;
+                const filename = `Attendance_Summary_${gradeText}_${sectionText}_${getMonthName(month)}_${year}.xlsx`;
+
+                // Generate and download
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                saveAs(blob, filename);
+
+            } catch (error) {
+                console.error('Error downloading Excel:', error);
+                alert('Error downloading Excel file. Please try again.');
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set current month and year
+            const now = new Date();
+            document.getElementById('month-filter').value = now.getMonth();
+            document.getElementById('year-filter').value = now.getFullYear();
+
+            // Initialize section filter
+            updateSectionFilter();
+
+            // Load initial data
+            loadAttendanceSummary();
+
+            // Event listeners
+            document.getElementById('grade-filter').addEventListener('change', updateSectionFilter);
+            document.getElementById('apply-filters-btn').addEventListener('click', loadAttendanceSummary);
+            document.getElementById('download-excel-btn').addEventListener('click', downloadExcel);
+        });
+    </script>
+</body>
+</html>

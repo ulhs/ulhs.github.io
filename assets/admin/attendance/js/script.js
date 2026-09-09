@@ -924,16 +924,16 @@ const totalPhotosCount = document.getElementById('total-photos-count');
 // Time Windows Configuration (Updated for 3-scan logic)
 let TIME_CONFIG = {
     AM: {
-        late: "07:45",     // Marked LATE after 7:45 (7:30 start + 15m grace)
-        absent: "11:45"    // End of AM window
+        late: "07:46",     // Marked LATE after 7:46 (7:30 start + 15m grace)
+        absent: "11:46"    // End of AM window
     },
     PM: {
         start: "12:00",    // PM session starts at 12:00
-        late: "13:15",     // Marked LATE after 13:15
+        late: "13:16",     // Marked LATE after 13:16
         threshold: "15:00" // PM session ends at 2:59 PM. 3:00 PM starts Departure.
     },
     DEPARTURE: {
-        start: "15:00"     // Departure window starts at 3:00 PM
+        start: "15:30"     // Departure window starts at 3:30 PM
     }
 };
 let customDepartureTime = null; // Holds today's custom departure time string (HH:MM)

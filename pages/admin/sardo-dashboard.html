@@ -250,6 +250,10 @@
                                         <option value="all">All Sections</option>
                                     </select>
                                 </div>
+                                <button id="start-assessment-btn" class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-green-200">
+                                    <i class="fa-solid fa-play mr-2"></i>
+                                    Start Assessment
+                                </button>
                                 <button id="refresh-btn" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-200">
                                     <i class="fa-solid fa-sync-alt mr-2"></i>
                                     Refresh
@@ -285,9 +289,18 @@
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                     <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
                         <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider">At-Risk Students</h3>
+                        <div id="cache-status" class="text-xs font-semibold text-gray-500">
+                            <span class="hidden" id="cached-indicator"><i class="fa-solid fa-database mr-1"></i>Cached data</span>
+                            <span class="hidden" id="fresh-indicator"><i class="fa-solid fa-check-circle mr-1"></i>Fresh data</span>
+                        </div>
                     </div>
                     <div id="students-list" class="p-6 space-y-4">
-                        <div class="max-w-md mx-auto py-10 text-gray-600" role="status" aria-live="polite">
+                        <div id="initial-prompt" class="max-w-md mx-auto py-10 text-center text-gray-600">
+                            <i class="fa-solid fa-chart-line text-4xl mb-4 text-blue-500"></i>
+                            <p class="text-sm font-bold mb-2">No assessment data available</p>
+                            <p class="text-xs text-gray-500 mb-4">Click "Start Assessment" to begin risk analysis for all students</p>
+                        </div>
+                        <div id="assessment-progress" class="max-w-md mx-auto py-10 text-gray-600 hidden" role="status" aria-live="polite">
                             <div class="flex items-center justify-between gap-4 mb-3">
                                 <p id="assessment-progress-status" class="text-sm font-bold">Preparing risk assessments...</p>
                                 <span id="assessment-progress-percent" class="text-sm font-black text-blue-700">0%</span>
@@ -343,6 +356,9 @@
         let allStudents = [];
         let allRiskAssessments = [];
 
+        const CACHE_KEY = 'sardo_assessment_cache';
+        const CACHE_DURATION_MS = 60 * 60 * 1000; // 1 hour cache duration
+
         const sectionsByGrade = {
             '7': ['Salazar', 'Balunto'],
             '8': ['Cuachon', 'Diama'],
@@ -351,6 +367,94 @@
             '11': ['Academics', 'TechPro'],
             '12': ['FCS', 'HUMSS']
         };
+
+        function saveAssessmentCache(riskAssessments, students) {
+            const cacheData = {
+                timestamp: Date.now(),
+                riskAssessments: riskAssessments,
+                students: students,
+                counts: {
+                    critical: riskAssessments.filter(a => a.riskData.risk_level === 'Critical').length,
+                    high: riskAssessments.filter(a => a.riskData.risk_level === 'High').length,
+                    medium: riskAssessments.filter(a => a.riskData.risk_level === 'Medium').length,
+                    low: riskAssessments.filter(a => a.riskData.risk_level === 'Low').length
+                }
+            };
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+        }
+
+        function loadAssessmentCache() {
+            try {
+                const cached = sessionStorage.getItem(CACHE_KEY);
+                if (!cached) return null;
+
+                const cacheData = JSON.parse(cached);
+                const age = Date.now() - cacheData.timestamp;
+
+                if (age > CACHE_DURATION_MS) {
+                    sessionStorage.removeItem(CACHE_KEY);
+                    return null;
+                }
+
+                return cacheData;
+            } catch (e) {
+                console.error('Error loading cache:', e);
+                sessionStorage.removeItem(CACHE_KEY);
+                return null;
+            }
+        }
+
+        function clearAssessmentCache() {
+            sessionStorage.removeItem(CACHE_KEY);
+        }
+
+        function isCacheFresh() {
+            const cached = loadAssessmentCache();
+            if (!cached) return false;
+
+            const age = Date.now() - cached.timestamp;
+            return age < CACHE_DURATION_MS;
+        }
+
+        function getCacheAgeText() {
+            const cached = loadAssessmentCache();
+            if (!cached) return '';
+
+            const age = Date.now() - cached.timestamp;
+            const minutes = Math.floor(age / (60 * 1000));
+            const hours = Math.floor(age / (60 * 60 * 1000));
+
+            if (minutes < 1) return 'Just now';
+            if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+            return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+        }
+
+        function showInitialPrompt() {
+            console.log('Showing initial prompt');
+            const initialPrompt = document.getElementById('initial-prompt');
+            const assessmentProgress = document.getElementById('assessment-progress');
+            if (initialPrompt) initialPrompt.classList.remove('hidden');
+            if (assessmentProgress) assessmentProgress.classList.add('hidden');
+        }
+
+        function hideInitialPrompt() {
+            const initialPrompt = document.getElementById('initial-prompt');
+            if (initialPrompt) initialPrompt.classList.add('hidden');
+        }
+
+        function showAssessmentProgress() {
+            const initialPrompt = document.getElementById('initial-prompt');
+            const assessmentProgress = document.getElementById('assessment-progress');
+            if (initialPrompt) initialPrompt.classList.add('hidden');
+            if (assessmentProgress) assessmentProgress.classList.remove('hidden');
+        }
+
+        function hideAssessmentProgress() {
+            const assessmentProgress = document.getElementById('assessment-progress');
+            if (assessmentProgress) assessmentProgress.classList.add('hidden');
+        }
+
+
 
         function getRiskLevelClass(riskLevel) {
             switch (riskLevel.toLowerCase()) {
@@ -490,27 +594,66 @@
             `;
         }
 
-        async function loadRiskDashboard() {
+        async function loadRiskDashboard(forceRefresh = false) {
             const studentsList = document.getElementById('students-list');
-            const progressBar = studentsList.querySelector('[role="progressbar"]');
-            const progressFill = document.getElementById('assessment-progress-bar');
+            const initialPrompt = document.getElementById('initial-prompt');
+            const assessmentProgress = document.getElementById('assessment-progress');
+            const progressBar = document.getElementById('assessment-progress-bar');
             const progressPercent = document.getElementById('assessment-progress-percent');
             const progressStatus = document.getElementById('assessment-progress-status');
+            const cachedIndicator = document.getElementById('cached-indicator');
+            const freshIndicator = document.getElementById('fresh-indicator');
 
             function updateAssessmentProgress(assessedCount, totalStudents, statusText) {
                 const percent = totalStudents ? Math.round((assessedCount / totalStudents) * 100) : 100;
-                progressBar?.setAttribute('aria-valuenow', String(percent));
-                if (progressFill) progressFill.value = percent;
+                if (progressBar) progressBar.value = percent;
                 if (progressPercent) progressPercent.textContent = `${percent}%`;
                 if (progressStatus && statusText) progressStatus.textContent = statusText;
             }
+
+            function showProgress() {
+                showAssessmentProgress();
+            }
+
+            function hideProgress() {
+                hideAssessmentProgress();
+            }
+
+            function updateCacheStatus(isCached) {
+                if (cachedIndicator) cachedIndicator.classList.toggle('hidden', !isCached);
+                if (freshIndicator) freshIndicator.classList.toggle('hidden', isCached);
+            }
+
+            // Check for cached data first (unless force refresh)
+            if (!forceRefresh) {
+                const cachedData = loadAssessmentCache();
+                if (cachedData) {
+                    console.log('Loading cached assessment data from', getCacheAgeText());
+                    allStudents = cachedData.students;
+                    allRiskAssessments = cachedData.riskAssessments;
+
+                    document.getElementById('critical-count').textContent = cachedData.counts.critical;
+                    document.getElementById('high-count').textContent = cachedData.counts.high;
+                    document.getElementById('medium-count').textContent = cachedData.counts.medium;
+                    document.getElementById('low-count').textContent = cachedData.counts.low;
+
+                    updateCacheStatus(true);
+                    hideInitialPrompt();
+                    updateStudentsList(allRiskAssessments);
+                    return;
+                }
+            }
+
+            // No cache or force refresh - run full assessment
+            showProgress();
+            updateCacheStatus(false);
 
             try {
                 const { data: students, error: studentsError } = await window.supabaseClient
                     .from('students')
                     .select('*')
                     .order('grade_level, section, full_name');
-                
+
                 if (studentsError) throw studentsError;
                 allStudents = students;
                 updateAssessmentProgress(0, students.length, students.length ? 'Assessing student risk...' : 'No students found');
@@ -523,7 +666,7 @@
                         const studentLrn = String(student.lrn ?? '');
                         const { data: riskResult, error: riskError } = await window.supabaseClient
                             .rpc('calculate_sardo_risk_score', { student_lrn_param: studentLrn });
-                        
+
                         if (riskError) throw riskError;
 
                         const normalized = Array.isArray(riskResult)
@@ -554,7 +697,7 @@
                                 assessed_by: assessmentSession.user.id
                             }, { onConflict: 'student_lrn,assessment_date,assessment_version', ignoreDuplicates: true });
                         }
-                        
+
                         riskAssessments.push({
                             student,
                             riskData,
@@ -613,10 +756,18 @@
                 document.getElementById('low-count').textContent = counts.low;
 
                 allRiskAssessments = riskAssessments;
+
+                // Save to cache
+                saveAssessmentCache(riskAssessments, students);
+                updateCacheStatus(false); // Fresh data now
+
+                hideProgress();
                 updateStudentsList(riskAssessments);
             } catch (err) {
                 console.error('Dashboard load error:', err);
-                studentsList.textContent = '';
+                hideProgress();
+                showInitialPrompt();
+                studentsList.innerHTML = '';
                 const errorPanel = document.createElement('div');
                 errorPanel.className = 'text-center py-12 text-red-600';
                 const errorIcon = document.createElement('i');
@@ -735,14 +886,7 @@
             updateStudentsList(allRiskAssessments);
         }
 
-        document.getElementById('refresh-btn').addEventListener('click', loadRiskDashboard);
-        document.getElementById('clear-filters-btn').addEventListener('click', clearFilters);
-        document.getElementById('risk-filter').addEventListener('change', () => updateStudentsList(allRiskAssessments));
-        document.getElementById('grade-filter').addEventListener('change', () => {
-            updateSectionFilter();
-            updateStudentsList(allRiskAssessments);
-        });
-        document.getElementById('section-filter').addEventListener('change', () => updateStudentsList(allRiskAssessments));
+
 
         document.addEventListener('click', async (event) => {
             const button = event.target.closest('.sardo-pilot-btn');
@@ -879,8 +1023,36 @@
         });
 
         document.addEventListener('DOMContentLoaded', () => {
-            loadRiskDashboard();
+            // Check for cached data on page load
+            const cachedData = loadAssessmentCache();
+            if (cachedData) {
+                // Load cached data automatically
+                loadRiskDashboard(false);
+            } else {
+                // Show initial prompt to start assessment
+                showInitialPrompt();
+            }
             updateSectionFilter();
+
+            // Add event listeners after DOM is ready
+            document.getElementById('start-assessment-btn').addEventListener('click', () => {
+                console.log('Start Assessment button clicked');
+                clearAssessmentCache();
+                loadRiskDashboard(true);
+            });
+
+            document.getElementById('refresh-btn').addEventListener('click', () => {
+                clearAssessmentCache();
+                loadRiskDashboard(true);
+            });
+
+            document.getElementById('clear-filters-btn').addEventListener('click', clearFilters);
+            document.getElementById('risk-filter').addEventListener('change', () => updateStudentsList(allRiskAssessments));
+            document.getElementById('grade-filter').addEventListener('change', () => {
+                updateSectionFilter();
+                updateStudentsList(allRiskAssessments);
+            });
+            document.getElementById('section-filter').addEventListener('change', () => updateStudentsList(allRiskAssessments));
         });
     </script>
 </body>
