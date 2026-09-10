@@ -6,7 +6,7 @@
     "stats_cards": [
         {
             "icon": "🎓",
-            "title": "Gumnè Fgalad",
+            "title": "Gnarè",
             "description": "Academic Excellence: A curriculum that blends DepEd standards with deep Indigenous Knowledge (IKSP).",
             "link": "pages/academics-gnare.html",
             "link_text": "Our Programs →"
@@ -19,8 +19,7 @@
             "link_text": "Explore SLT →"
         },
         {
-            "icon": "🪘",
-            "title": "Kaye Dad Tagu",
+            "icon": "Gnare Dad Tuam",
             "description": "Elders' Wisdom: Preserving our Flalok (oral stories) to ensure our ancestral voice guides the next generation.",
             "link": "pages/blaan-dictionary.html",
             "link_text": "Learn Blaan Terms →"
