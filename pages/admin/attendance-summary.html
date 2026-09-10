@@ -497,30 +497,12 @@
 
                 const summaryData = allStudents.map(student => {
                     const studentLogs = logs.filter(log => String(log.student_lrn) === String(student.lrn));
-                    const presentDays = new Set();
-                    const absentDays = new Set();
-                    const tardyDays = new Set();
 
-                    studentLogs.forEach(log => {
-                        const status = String(log.status || '').toUpperCase();
-                        const date = log.local_date || (
-                            log.scanned_at ? new Date(log.scanned_at).toISOString().split('T')[0] : ''
-                        );
+                    const presentCount = studentLogs.filter(log => String(log.status || '').toUpperCase() === 'PRESENT').length;
+                    const absentCount = studentLogs.filter(log => String(log.status || '').toUpperCase() === 'ABSENT').length;
+                    const tardyCount = studentLogs.filter(log => String(log.status || '').toUpperCase() === 'TARDY').length;
 
-                        if (!date) return;
-
-                        if (status === 'PRESENT') {
-                            presentDays.add(date);
-                        } else if (status === 'ABSENT') {
-                            absentDays.add(date);
-                        } else if (status === 'TARDY') {
-                            tardyDays.add(date);
-                        }
-                    });
-
-                    const presentCount = presentDays.size;
-                    const absentCount = absentDays.size;
-                    const tardyCount = tardyDays.size;
+                    // Compute an attendance percentage from the accurate per-log counts, not from date uniqueness sets.
                     const totalAttended = presentCount + tardyCount;
                     const attendancePercentage = totalDays > 0 ? Math.round((totalAttended / totalDays) * 100) : 0;
 
