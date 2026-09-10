@@ -355,6 +355,13 @@
             return new Date(year, month + 1, 0).getDate();
         }
 
+        function formatLocalDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         function getAttendanceStatus(percentage) {
             if (percentage >= 90) return { text: 'Excellent', class: 'bg-green-100 text-green-800' };
             if (percentage >= 80) return { text: 'Good', class: 'bg-blue-100 text-blue-800' };
@@ -362,24 +369,55 @@
             return { text: 'Critical', class: 'bg-red-100 text-red-800' };
         }
 
-        function updateSectionFilter() {
+        async function updateSectionFilter() {
             const gradeFilter = document.getElementById('grade-filter');
             const sectionFilter = document.getElementById('section-filter');
             const selectedGrade = gradeFilter.value;
-            
+            const previousSection = sectionFilter.value || 'all';
+
             sectionFilter.innerHTML = '';
             const allOption = document.createElement('option');
             allOption.value = 'all';
             allOption.textContent = 'All Sections';
             sectionFilter.appendChild(allOption);
 
-            if (selectedGrade !== 'all' && sectionsByGrade[selectedGrade]) {
-                sectionsByGrade[selectedGrade].forEach(section => {
-                    const option = document.createElement('option');
-                    option.value = section;
-                    option.textContent = section;
-                    sectionFilter.appendChild(option);
-                });
+            let sections = [];
+
+            try {
+                if (window.supabaseClient) {
+                    let query = window.supabaseClient.from('students').select('section');
+                    if (selectedGrade !== 'all') {
+                        query = query.eq('grade_level', selectedGrade);
+                    }
+
+                    const { data, error } = await query;
+                    if (!error && data) {
+                        sections = [...new Set(data.map(row => row.section).filter(Boolean))].sort();
+                    }
+                }
+            } catch (err) {
+                console.warn('Unable to load sections from students table; using fallback section map.', err);
+            }
+
+            if (sections.length === 0) {
+                if (selectedGrade !== 'all' && sectionsByGrade[selectedGrade]) {
+                    sections = [...sectionsByGrade[selectedGrade]];
+                } else {
+                    sections = Object.values(sectionsByGrade).flat();
+                }
+            }
+
+            sections.forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = section;
+                sectionFilter.appendChild(option);
+            });
+
+            if (sections.includes(previousSection)) {
+                sectionFilter.value = previousSection;
+            } else {
+                sectionFilter.value = 'all';
             }
         }
 
@@ -400,28 +438,50 @@
             `;
 
             try {
-                // Load students with strict filters
+                if (!window.supabaseClient) {
+                    throw new Error('Supabase client is not available.');
+                }
+
                 let studentsQuery = window.supabaseClient.from('students').select('*');
-                
+
                 if (gradeFilter !== 'all') {
                     studentsQuery = studentsQuery.eq('grade_level', gradeFilter);
                 }
                 if (sectionFilter !== 'all') {
                     studentsQuery = studentsQuery.eq('section', sectionFilter);
                 }
-                
+
                 const { data: students, error: studentsError } = await studentsQuery;
                 if (studentsError) throw studentsError;
+
                 allStudents = students || [];
 
-                // Calculate date range for the selected month
+                if (allStudents.length === 0) {
+                    attendanceSummaryData = [];
+                    document.getElementById('total-students').textContent = '0';
+                    document.getElementById('total-present').textContent = '0';
+                    document.getElementById('total-absent').textContent = '0';
+                    document.getElementById('avg-attendance').textContent = '0%';
+                    renderSummaryTable([]);
+                    return;
+                }
+
                 const startDate = new Date(yearFilter, monthFilter, 1);
                 const endDate = new Date(yearFilter, monthFilter + 1, 0);
-                const startDateStr = startDate.toISOString().split('T')[0];
-                const endDateStr = endDate.toISOString().split('T')[0];
+                const startDateStr = formatLocalDate(startDate);
+                const endDateStr = formatLocalDate(endDate);
 
-                // Load attendance logs for the month, filtered by student LRNs
-                const studentLrns = allStudents.map(s => s.lrn);
+                const studentLrns = allStudents.map(s => s.lrn).filter(Boolean);
+                if (studentLrns.length === 0) {
+                    attendanceSummaryData = [];
+                    document.getElementById('total-students').textContent = '0';
+                    document.getElementById('total-present').textContent = '0';
+                    document.getElementById('total-absent').textContent = '0';
+                    document.getElementById('avg-attendance').textContent = '0%';
+                    renderSummaryTable([]);
+                    return;
+                }
+
                 let logsQuery = window.supabaseClient
                     .from('attendance_logs')
                     .select('*')
@@ -432,23 +492,28 @@
                 const { data: attendanceLogs, error: logsError } = await logsQuery;
                 if (logsError) throw logsError;
 
-                // Calculate summary for each student
+                const logs = attendanceLogs || [];
+                const totalDays = getDaysInMonth(yearFilter, monthFilter);
+
                 const summaryData = allStudents.map(student => {
-                    const studentLogs = attendanceLogs.filter(log => log.student_lrn === student.lrn);
-                    const totalDays = getDaysInMonth(yearFilter, monthFilter);
-                    
-                    // Count different statuses
+                    const studentLogs = logs.filter(log => String(log.student_lrn) === String(student.lrn));
                     const presentDays = new Set();
                     const absentDays = new Set();
                     const tardyDays = new Set();
 
                     studentLogs.forEach(log => {
-                        const date = log.local_date || new Date(log.scanned_at).toISOString().split('T')[0];
-                        if (log.status === 'PRESENT') {
+                        const status = String(log.status || '').toUpperCase();
+                        const date = log.local_date || (
+                            log.scanned_at ? new Date(log.scanned_at).toISOString().split('T')[0] : ''
+                        );
+
+                        if (!date) return;
+
+                        if (status === 'PRESENT') {
                             presentDays.add(date);
-                        } else if (log.status === 'ABSENT') {
+                        } else if (status === 'ABSENT') {
                             absentDays.add(date);
-                        } else if (log.status === 'TARDY') {
+                        } else if (status === 'TARDY') {
                             tardyDays.add(date);
                         }
                     });
@@ -474,12 +539,11 @@
 
                 attendanceSummaryData = summaryData;
 
-                // Update statistics
                 const totalStudents = summaryData.length;
                 const totalPresent = summaryData.reduce((sum, s) => sum + s.present, 0);
                 const totalAbsent = summaryData.reduce((sum, s) => sum + s.absent, 0);
-                const avgAttendance = totalStudents > 0 
-                    ? Math.round(summaryData.reduce((sum, s) => sum + s.attendancePercentage, 0) / totalStudents) 
+                const avgAttendance = totalStudents > 0
+                    ? Math.round(summaryData.reduce((sum, s) => sum + s.attendancePercentage, 0) / totalStudents)
                     : 0;
 
                 document.getElementById('total-students').textContent = totalStudents;
@@ -487,7 +551,6 @@
                 document.getElementById('total-absent').textContent = totalAbsent;
                 document.getElementById('avg-attendance').textContent = avgAttendance + '%';
 
-                // Render table
                 renderSummaryTable(summaryData);
 
             } catch (error) {
