@@ -6,8 +6,8 @@
     },
     "knowledge_base": [
         {
-            "keywords": ["enroll", "enrollment", "register", "admission", "kmasut"],
-            "response": "Enrollment (**Kmasut**) is open for JHS and SHS! You can apply online or visit our campus. Check our 'Enrollment' page for the checklist of requirements like SF9 and Birth Certificate.",
+            "keywords": ["enroll", "enrollment", "register", "admission", "fusuk"],
+            "response": "Enrollment (**Fusuk**) is open for JHS and SHS! You can apply online or visit our campus. Check our 'Enrollment' page for the checklist of requirements like SF9 and Birth Certificate.",
             "links": [
                 { "text": "Enrollment Hub", "url": "pages/enrollment.html" }
             ]
