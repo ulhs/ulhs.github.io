@@ -1,21 +1,28 @@
 {
     "terms": [
-        { "word": "Flehew", "pronunciation": "[fle-hew]", "meaning": "Welcome / Joyful. A warm greeting used to welcome visitors.", "audio": "../assets/audio/dictionary/flehew.mp3" },
-        { "word": "Bong sàlamàt", "pronunciation": "[bong sa-la-mat]", "meaning": "Thank you very much. Expressing deep gratitude.", "audio": "../assets/audio/dictionary/bong-salamat.mp3" },
-        { "word": "Sànfilà", "pronunciation": "[san-fi-là]", "meaning": "Home of the Future / School. Literally \"a place of learning/fencing.\"", "audio": "../assets/audio/dictionary/sanfilà.mp3" },
-        { "word": "Gumdà", "pronunciation": "[gum-da]", "meaning": "Companion / About. Representing our shared journey.", "audio": "../assets/audio/dictionary/gumda.mp3" },
-        { "word": "Gnarè", "pronunciation": "[gna-re]", "meaning": "Knowledge / Academics. The pursuit of learning.", "audio": "../assets/audio/dictionary/gnare.mp3" },
-        { "word": "Bànwe", "pronunciation": "[ban-we]", "meaning": "Community / Village. Our digital and physical gathering place.", "audio": "../assets/audio/dictionary/banwe.mp3" },
-        { "word": "Fusuk", "pronunciation": "[fu-suk]", "meaning": "Enrollment / To Enter. The beginning of the student journey.", "audio": "../assets/audio/dictionary/fusuk.mp3" },
-        { "word": "Gnàgum", "pronunciation": "[gna-gum]", "meaning": "History / Story. Honoring our past narratives.", "audio": "../assets/audio/dictionary/gnagum.mp3" },
-        { "word": "Mafe", "pronunciation": "[ma-fe]", "meaning": "Respect. A core value in Blaan culture and our school community.", "audio": "../assets/audio/dictionary/mafe.mp3" },
-        { "word": "Fàfles", "pronunciation": "[fa-fles]", "meaning": "Perseverance / Endurance. The spirit of our learners in pursuing their dreams.", "audio": "../assets/audio/dictionary/fafles.mp3" },
-        { "word": "Blaan", "pronunciation": "[bla-an]", "meaning": "The indigenous people of the region. Our school is proud to be on Blaan ancestral land.", "audio": "../assets/audio/dictionary/blaan.mp3" },
-        { "word": "Stàbeng", "pronunciation": "[sta-beng]", "meaning": "To help each other / Cooperation. Reflecting the spirit of community (Bayanihan).", "audio": "../assets/audio/dictionary/stabeng.mp3" },
-        { "word": "Dadngà Sfila", "pronunciation": "[dad-ngà sfi-la]", "meaning": "Student / Learner. Person who is formally enrolled in an educational institution or dedicated to learning a specific subject.", "audio": "../assets/audio/dictionary/dadnga-sfila.mp3" }
+        { "word": "Flehew", "pronunciation": "[fle-hew]", "meaning": "Welcome / Joyful. A warm greeting used to welcome visitors.", "audio": "../assets/audio/dictionary/flehew.m4a", "audio_contributor": "Yan-yan Malandi" },
+        { "word": "Bong sàlamàt", "pronunciation": "[bong sa-la-mat]", "meaning": "Thank you very much. Expressing deep gratitude.", "audio": "../assets/audio/dictionary/bong-salamat.m4a", "audio_contributor": "Yan-yan Malandi" },
+        { "word": "Sànfilà", "pronunciation": "[san-fi-là]", "meaning": "Home of the Future / School. Literally \"a place of learning/fencing.\"", "audio": "../assets/audio/dictionary/sanfila.m4a", "audio_contributor": "Yan-yan Malandi" },
+        { "word": "Gumdà", "pronunciation": "[gum-da]", "meaning": "Companion / About. Representing our shared journey.", "audio": "../assets/audio/dictionary/gumda.m4a", "audio_contributor": "Yan-yan Malandi" },
+        { "word": "Gnarè", "pronunciation": "[gna-re]", "meaning": "Knowledge / Academics. The pursuit of learning.", "audio": "../assets/audio/dictionary/gnare.m4a", "audio_contributor": "Yan-yan Malandi" },
+        { "word": "Bànwe", "pronunciation": "[ban-we]", "meaning": "Community / Village. Our digital and physical gathering place.", "audio": "../assets/audio/dictionary/banwe.m4a", "audio_contributor": "Yan-yan Malandi" },
+        { "word": "Fusuk", "pronunciation": "[fu-suk]", "meaning": "Enrollment / To Enter. The beginning of the student journey.", "audio": "../assets/audio/dictionary/fusuk.m4a", "audio_contributor": "Yan-yan Malandi" },
+        { "word": "Gnàgum", "pronunciation": "[gna-gum]", "meaning": "History / Story. Honoring our past narratives.", "audio": "../assets/audio/dictionary/gnagum.m4a", "audio_contributor": "Yan-yan Malandi" },
+        { "word": "Mafe", "pronunciation": "[ma-fe]", "meaning": "Respect. A core value in Blaan culture and our school community.", "audio": "../assets/audio/dictionary/mafe.m4a", "audio_contributor": "Yan-yan Malandi" },
+        { "word": "Fàfles", "pronunciation": "[fa-fles]", "meaning": "Perseverance / Endurance. The spirit of our learners in pursuing their dreams.", "audio": "../assets/audio/dictionary/fafles.m4a", "audio_contributor": "Yan-yan Malandi" },
+        { "word": "Blaan", "pronunciation": "[bla-an]", "meaning": "The indigenous people of the region. Our school is proud to be on Blaan ancestral land.", "audio": "../assets/audio/dictionary/blaan.m4a", "audio_contributor": "Yan-yan Malandi" },
+        { "word": "Stàbeng", "pronunciation": "[sta-beng]", "meaning": "To help each other / Cooperation. Reflecting the spirit of community (Bayanihan).", "audio": "../assets/audio/dictionary/stabeng.m4a", "audio_contributor": "Yan-yan Malandi" },
+        { "word": "Dadngà Sfila", "pronunciation": "[dad-ngà sfi-la]", "meaning": "Student / Learner. Person who is formally enrolled in an educational institution or dedicated to learning a specific subject.", "audio": "../assets/audio/dictionary/dadnga-sfila.m4a", "audio_contributor": "Yan-yan Malandi" }
     ],
     "search_config": {
         "placeholder": "Try Flehew, Fusuk, welcome, or enrollment",
         "label": "Search by word, pronunciation, or meaning"
+    },
+    "contribution": {
+        "title": "Contribute to the Blaan Mini-Dictionary",
+        "intro": "Help improve our Blaan dictionary by suggesting a new term, correcting a meaning, or sharing an audio pronunciation. If you need to contact the school ICT or the developer team for review, use the contact page.",
+        "contact_label": "Contact School ICT / Developer",
+        "contact_url": "contact.html",
+        "contact_note": "Public attribution is shown only after contributor consent."
     }
 }

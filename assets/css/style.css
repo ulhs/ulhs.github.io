@@ -317,6 +317,7 @@ header {
     max-width: 800px; 
     padding: 40px; 
     background: rgba(0, 0, 0, 0.3); /* Subtle dark box for text pop */
+    -webkit-backdrop-filter: blur(2px); /* Safari/iOS support */
     backdrop-filter: blur(2px); /* Soft focus on the background behind text */
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1547,6 +1548,7 @@ footer h4, footer h5 {
     color: var(--white);
     border: 3px solid var(--accent-gold);
     box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+    -webkit-backdrop-filter: blur(3px); /* Safari/iOS support */
     backdrop-filter: blur(3px); /* Adds a modern soft-focus effect */
 }
 
@@ -2303,6 +2305,41 @@ body.at-footer #backToTop {
     color: var(--text-gray);
 }
 
+.dictionary-contribution-panel {
+    max-width: 900px;
+    margin: 20px auto 24px;
+    padding: 22px 26px;
+    background: var(--soft-abaca);
+    border-radius: 12px;
+    border-left: 5px solid var(--accent-gold);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+    text-align: left;
+}
+
+.dictionary-contribution-panel .section-title {
+    font-size: clamp(1.4rem, 2vw, 2rem);
+    margin-bottom: 8px;
+}
+
+.dictionary-contribution-copy {
+    color: var(--text-gray);
+    line-height: 1.7;
+    margin: 0 0 16px;
+}
+
+.dictionary-contribution-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.dictionary-contact-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 210px;
+}
+
 .dictionary-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -2362,6 +2399,12 @@ body.at-footer #backToTop {
 
 .dict-card.is-hidden {
     display: none;
+}
+
+.dict-contributor {
+    margin-top: 14px;
+    font-size: 0.76rem;
+    color: var(--text-gray);
 }
 
 .dictionary-empty-state {
@@ -2683,7 +2726,7 @@ body.at-footer #backToTop {
 
 @media screen and (max-width: 768px) {
     .split-grid { grid-template-columns: 1fr; }
-    .split-card { min-height: auto; }
+    .split-card { min-height: 280px; }
 }
 
 /* --- ENROLLMENT MODULE (SY 2026-2027) --- */
@@ -3799,8 +3842,8 @@ body.dark-mode .early-birds-empty {
 .announcement-banner {
     position: relative;
     background: var(--bead-blue);/*  rgba(148, 21, 21, 0.95); Nearly solid black for maximum readability */
-    backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
     color: var(--white);
     padding: 15px 5%;
     display: flex;

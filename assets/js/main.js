@@ -1140,22 +1140,26 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(`${dataPath}pages/dictionary.json`);
             const data = await res.json();
             const terms = Array.isArray(data.terms) ? data.terms : [];
+            const contribution = data.contribution || {};
 
             const dictGrid = document.getElementById('dictionary-grid');
             const dictionaryResultsCount = document.getElementById('dictionary-results-count');
             const dictionaryEmptyState = document.getElementById('dictionary-empty-state');
+            const dictionaryContactLink = document.querySelector('.dictionary-contribution-panel .dictionary-contact-link');
 
             if (dictGrid) {
-                dictGrid.innerHTML = terms.map((term, i) => `
-                    <div class="dict-card reveal reveal-bottom delay-${(i % 6) + 3}">
+                dictGrid.innerHTML = terms.map((term, i) => {
+                    const contributor = term.audio_contributor || term.contributor || 'Community review';
+                    return `<div class="dict-card reveal reveal-bottom delay-${(i % 6) + 3}">
                         <div class="dict-word-row">
                             <div class="dict-word">${term.word}</div>
                             ${term.audio ? `<button class="audio-btn" data-src="${term.audio}" aria-label="Play pronunciation">▶</button>` : ''}
                         </div>
                         <div class="dict-pronunciation">${term.pronunciation}</div>
                         <div class="dict-meaning">${term.meaning}</div>
-                    </div>
-                `).join('');
+                        ${term.audio ? `<div class="dict-contributor">Pronunciation source: ${contributor}</div>` : ''}
+                    </div>`;
+                }).join('');
 
                 const audio = new Audio();
                 const buttons = dictGrid.querySelectorAll('.audio-btn');
@@ -1173,6 +1177,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (dictionaryResultsCount) {
                 dictionaryResultsCount.textContent = `${terms.length} ${terms.length === 1 ? 'term' : 'terms'} available`;
+            }
+
+            if (dictionaryContactLink && contribution.contact_url) {
+                dictionaryContactLink.href = contribution.contact_url || 'contact.html';
+                dictionaryContactLink.textContent = contribution.contact_label || 'Contact School ICT / Developer';
             }
 
             const searchInput = document.getElementById('dictionary-search');

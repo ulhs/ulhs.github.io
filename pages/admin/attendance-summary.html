@@ -218,8 +218,8 @@
                         <div class="bg-gray-50 rounded-xl p-4 mb-6">
                             <div class="flex flex-col md:flex-row gap-4">
                                 <div class="flex-1">
-                                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Grade Level</label>
-                                    <select id="grade-filter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
+                                    <label for="grade-filter" class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Grade Level</label>
+                                    <select id="grade-filter" name="grade-filter" title="Select grade level to filter the attendance summary" aria-label="Select grade level to filter the attendance summary" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
                                         <option value="all">All Grades</option>
                                         <option value="7">Grade 7</option>
                                         <option value="8">Grade 8</option>
@@ -230,14 +230,14 @@
                                     </select>
                                 </div>
                                 <div class="flex-1">
-                                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Section</label>
-                                    <select id="section-filter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
+                                    <label for="section-filter" class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Section</label>
+                                    <select id="section-filter" name="section-filter" title="Select classroom section to filter the attendance summary" aria-label="Select classroom section to filter the attendance summary" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
                                         <option value="all">All Sections</option>
                                     </select>
                                 </div>
                                 <div class="flex-1">
-                                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Month</label>
-                                    <select id="month-filter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
+                                    <label for="month-filter" class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Month</label>
+                                    <select id="month-filter" name="month-filter" title="Select month to filter the attendance summary" aria-label="Select month to filter the attendance summary" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
                                         <option value="0">January</option>
                                         <option value="1">February</option>
                                         <option value="2">March</option>
@@ -253,8 +253,8 @@
                                     </select>
                                 </div>
                                 <div class="flex-1">
-                                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Year</label>
-                                    <select id="year-filter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
+                                    <label for="year-filter" class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Year</label>
+                                    <select id="year-filter" name="year-filter" title="Select year to filter the attendance summary" aria-label="Select year to filter the attendance summary" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
                                         <option value="2026" selected>2026</option>
                                         <option value="2027">2027</option>
                                         <option value="2028">2028</option>
@@ -497,12 +497,30 @@
 
                 const summaryData = allStudents.map(student => {
                     const studentLogs = logs.filter(log => String(log.student_lrn) === String(student.lrn));
+                    const presentDays = new Set();
+                    const absentDays = new Set();
+                    const tardyDays = new Set();
 
-                    const presentCount = studentLogs.filter(log => String(log.status || '').toUpperCase() === 'PRESENT').length;
-                    const absentCount = studentLogs.filter(log => String(log.status || '').toUpperCase() === 'ABSENT').length;
-                    const tardyCount = studentLogs.filter(log => String(log.status || '').toUpperCase() === 'TARDY').length;
+                    studentLogs.forEach(log => {
+                        const status = String(log.status || '').toUpperCase();
+                        const date = log.local_date || (
+                            log.scanned_at ? new Date(log.scanned_at).toISOString().split('T')[0] : ''
+                        );
 
-                    // Compute an attendance percentage from the accurate per-log counts, not from date uniqueness sets.
+                        if (!date) return;
+
+                        if (status === 'PRESENT') {
+                            presentDays.add(date);
+                        } else if (status === 'ABSENT') {
+                            absentDays.add(date);
+                        } else if (status === 'TARDY') {
+                            tardyDays.add(date);
+                        }
+                    });
+
+                    const presentCount = presentDays.size;
+                    const absentCount = absentDays.size;
+                    const tardyCount = tardyDays.size;
                     const totalAttended = presentCount + tardyCount;
                     const attendancePercentage = totalDays > 0 ? Math.round((totalAttended / totalDays) * 100) : 0;
 
