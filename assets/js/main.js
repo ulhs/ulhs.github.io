@@ -1139,10 +1139,14 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const res = await fetch(`${dataPath}pages/dictionary.json`);
             const data = await res.json();
+            const terms = Array.isArray(data.terms) ? data.terms : [];
 
             const dictGrid = document.getElementById('dictionary-grid');
+            const dictionaryResultsCount = document.getElementById('dictionary-results-count');
+            const dictionaryEmptyState = document.getElementById('dictionary-empty-state');
+
             if (dictGrid) {
-                dictGrid.innerHTML = data.terms.map((term, i) => `
+                dictGrid.innerHTML = terms.map((term, i) => `
                     <div class="dict-card reveal reveal-bottom delay-${(i % 6) + 3}">
                         <div class="dict-word-row">
                             <div class="dict-word">${term.word}</div>
@@ -1167,10 +1171,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
+            if (dictionaryResultsCount) {
+                dictionaryResultsCount.textContent = `${terms.length} ${terms.length === 1 ? 'term' : 'terms'} available`;
+            }
+
             const searchInput = document.getElementById('dictionary-search');
             if (searchInput) {
                 searchInput.placeholder = data.search_config.placeholder;
-                document.querySelector('.dictionary-search-label').textContent = data.search_config.label;
+                const label = document.querySelector('.dictionary-search-label');
+                if (label) label.textContent = data.search_config.label;
+
+                const cards = Array.from(document.querySelectorAll('#dictionary-grid .dict-card'));
+                const updateDictionaryResults = () => {
+                    const query = searchInput.value.trim().toLowerCase();
+                    let visibleCount = 0;
+
+                    cards.forEach(card => {
+                        const searchableText = card.textContent.toLowerCase();
+                        const isMatch = searchableText.includes(query);
+                        card.classList.toggle('is-hidden', !isMatch);
+
+                        if (isMatch) {
+                            visibleCount += 1;
+                        }
+                    });
+
+                    if (dictionaryResultsCount) {
+                        dictionaryResultsCount.textContent = query
+                            ? `${visibleCount} ${visibleCount === 1 ? 'term' : 'terms'} found`
+                            : `${terms.length} ${terms.length === 1 ? 'term' : 'terms'} available`;
+                    }
+
+                    if (dictionaryEmptyState) {
+                        dictionaryEmptyState.classList.toggle('visible', visibleCount === 0);
+                    }
+                };
+
+                if (!searchInput.dataset.dictionaryBound) {
+                    searchInput.addEventListener('input', updateDictionaryResults);
+                    searchInput.dataset.dictionaryBound = 'true';
+                }
+                updateDictionaryResults();
             }
 
             initScrollReveal();
