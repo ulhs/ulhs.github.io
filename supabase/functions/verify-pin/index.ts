@@ -10,6 +10,26 @@ const corsHeaders = {
 
 console.log("Edge function loaded and starting");
 
+function buildLrnLookupCandidates(value) {
+  const raw = String(value ?? '').trim();
+  const digits = raw.replace(/\D+/g, '');
+  const candidates = new Set();
+
+  if (raw) candidates.add(raw);
+  if (digits) {
+    candidates.add(digits);
+    candidates.add(digits.replace(/^0+/, ''));
+    if (digits.length < 12) {
+      candidates.add(digits.padStart(12, '0'));
+    }
+    if (digits.length === 12) {
+      candidates.add(String(Number(digits)));
+    }
+  }
+
+  return Array.from(candidates).filter(Boolean);
+}
+
 serve(async (req) => {
   console.log("Edge function received request:", req.method, req.url);
 
@@ -36,17 +56,23 @@ serve(async (req) => {
     });
 
     // First get the student to get parent PSID
-    console.log(`🔍 Fetching student with LRN ${lrn}...`);
-    const { data: student, error: studentError } = await supabase
+    const lookupCandidates = buildLrnLookupCandidates(lrn);
+    console.log(`🔍 Fetching student with LRN ${lrn}...`, lookupCandidates);
+    const { data: studentRows, error: studentError } = await supabase
       .from('students')
       .select('lrn, parent_messenger_id')
-      .eq('lrn', lrn)
-      .single();
+      .in('lrn', lookupCandidates)
+      .limit(20);
 
     if (studentError) {
       console.error(`❌ Error fetching student:`, studentError);
     }
-    
+
+    const student = (studentRows || []).find(row => {
+      const stored = String(row.lrn ?? '').trim();
+      return stored === String(lrn ?? '').trim() || stored === String(lrn ?? '').trim().replace(/^0+/, '') || stored === String(lrn ?? '').trim().padStart(12, '0');
+    }) || studentRows?.[0] || null;
+
     if (!student) {
       throw new Error('Invalid LRN or student not found');
     }

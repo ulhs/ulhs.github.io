@@ -244,6 +244,52 @@
             }).join(' ');
         }
 
+        function buildLrnLookupCandidates(value) {
+            const raw = String(value ?? '').trim();
+            const digits = raw.replace(/\D+/g, '');
+            const candidates = new Set();
+
+            if (raw) candidates.add(raw);
+            if (digits) {
+                candidates.add(digits);
+                candidates.add(digits.replace(/^0+/, ''));
+                if (digits.length < 12) {
+                    candidates.add(digits.padStart(12, '0'));
+                }
+                if (digits.length === 12) {
+                    candidates.add(String(Number(digits)));
+                }
+            }
+
+            return Array.from(candidates).filter(Boolean);
+        }
+
+        async function findStudentByLrn(lrn) {
+            const candidates = buildLrnLookupCandidates(lrn);
+            if (!candidates.length) return null;
+
+            const { data, error } = await window.supabaseClient
+                .from('students')
+                .select('full_name, lrn')
+                .in('lrn', candidates)
+                .limit(20);
+
+            if (error) {
+                console.error('Student lookup failed:', error);
+                throw error;
+            }
+
+            if (!data || !data.length) return null;
+
+            const normalizedInput = String(lrn ?? '').trim();
+            const bestMatch = data.find(row => {
+                const stored = String(row.lrn ?? '').trim();
+                return stored === normalizedInput || stored === normalizedInput.replace(/^0+/, '') || stored === normalizedInput.padStart(12, '0');
+            }) || data[0];
+
+            return bestMatch || null;
+        }
+
         function generateRegistrationToken() {
             const token = Math.random().toString(36).toUpperCase().slice(2, 10);
             return token.padEnd(8, 'X');
@@ -284,13 +330,9 @@
             verifyBtn.textContent = 'Verifying...';
 
             try {
-                const { data: student, error } = await window.supabaseClient
-                    .from('students')
-                    .select('full_name, lrn')
-                    .eq('lrn', lrn)
-                    .single();
+                const student = await findStudentByLrn(lrn);
 
-                if (error || !student) {
+                if (!student) {
                     // Record failed attempt
                     const state = getSecurityState();
                     state.attempts++;

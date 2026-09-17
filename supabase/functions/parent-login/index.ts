@@ -23,6 +23,26 @@ async function createParentSession(parentPsid, secret) {
 
 console.log("Parent Login Edge Function loaded and starting");
 
+function buildLrnLookupCandidates(value) {
+  const raw = String(value ?? '').trim();
+  const digits = raw.replace(/\D+/g, '');
+  const candidates = new Set();
+
+  if (raw) candidates.add(raw);
+  if (digits) {
+    candidates.add(digits);
+    candidates.add(digits.replace(/^0+/, ''));
+    if (digits.length < 12) {
+      candidates.add(digits.padStart(12, '0'));
+    }
+    if (digits.length === 12) {
+      candidates.add(String(Number(digits)));
+    }
+  }
+
+  return Array.from(candidates).filter(Boolean);
+}
+
 serve(async (req) => {
   console.log("Parent Login received request:", req.method, req.url);
 
@@ -60,12 +80,18 @@ serve(async (req) => {
     await supabase.from('parent_login_attempts').insert({ login_key: loginKey });
 
     // 1. Fetch the student by LRN
-    console.log("Fetching student by LRN...");
-    const { data: student, error: studentError } = await supabase
+    const lookupCandidates = buildLrnLookupCandidates(normalizedLrn);
+    console.log("Fetching student by LRN...", lookupCandidates);
+    const { data: studentRows, error: studentError } = await supabase
       .from('students')
       .select('lrn, full_name, parent_messenger_id, parent_guardian_name, section, grade_level, photo_url, student_id_number, parent_pin')
-      .eq('lrn', normalizedLrn)
-      .single();
+      .in('lrn', lookupCandidates)
+      .limit(20);
+
+    const student = (studentRows || []).find(row => {
+      const stored = String(row.lrn ?? '').trim();
+      return stored === normalizedLrn || stored === normalizedLrn.replace(/^0+/, '') || stored === normalizedLrn.padStart(12, '0');
+    }) || studentRows?.[0] || null;
 
     if (studentError || !student) {
       console.error("Student not found or error:", studentError);
