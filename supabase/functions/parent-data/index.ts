@@ -93,17 +93,13 @@ serve(async (req) => {
           .from('attendance_logs')
           .select('*, modality')
           .eq('student_lrn', studentLrn)
-          .order('scanned_at', { ascending: false });
+          .order('scanned_at_local', { ascending: false });
 
         if (dateFrom) {
-          const fromDate = new Date(dateFrom);
-          fromDate.setHours(0, 0, 0, 0);
-          attendanceQuery = attendanceQuery.gte('scanned_at', fromDate.toISOString());
+          attendanceQuery = attendanceQuery.gte('scanned_at_local', `${dateFrom} 00:00:00`);
         }
         if (dateTo) {
-          const toDate = new Date(dateTo);
-          toDate.setHours(23, 59, 59, 999);
-          attendanceQuery = attendanceQuery.lte('scanned_at', toDate.toISOString());
+          attendanceQuery = attendanceQuery.lte('scanned_at_local', `${dateTo} 23:59:59.999`);
         }
         const { data: attendance, error: attendanceError } = await attendanceQuery;
         if (attendanceError) throw attendanceError;

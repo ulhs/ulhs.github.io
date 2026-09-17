@@ -34,6 +34,7 @@
                     local_date,
                     status,
                     scanned_at,
+                    scanned_at_local,
                     duplicate_of_id
                 `)
                 .not('duplicate_of_id', 'is', null)
@@ -50,20 +51,21 @@
             for (const dup of duplicates || []) {
                 const { data: canonical, error: canonError } = await window.supabaseClient
                     .from('attendance_logs')
-                    .select('id, status, scanned_at')
+                    .select('id, status, scanned_at, scanned_at_local')
                     .eq('id', dup.duplicate_of_id)
                     .single();
                 
                 if (!canonError && canonical) {
                     data.push({
                         ...dup,
-                        attendance_date: dup.local_date || new Date(dup.scanned_at).toLocaleDateString('en-CA'),
+                        attendance_date: dup.local_date || String(dup.scanned_at_local || '').slice(0, 10),
                         canonical_status: canonical.status,
-                        canonical_scanned_at: canonical.scanned_at
+                        canonical_scanned_at: canonical.scanned_at,
+                        canonical_scanned_at_local: canonical.scanned_at_local
                     });
                 }
             }
-            rows.innerHTML = data?.length ? data.map(row => `<tr class="border-t"><td class="p-3 font-mono">${escapeHtml(row.student_lrn)}</td><td class="p-3">${escapeHtml(row.attendance_date)}</td><td class="p-3">${escapeHtml(row.session)}</td><td class="p-3">#${escapeHtml(row.id)} · ${escapeHtml(row.status)}</td><td class="p-3">#${escapeHtml(row.duplicate_of_id)} · ${escapeHtml(row.canonical_status)}</td><td class="p-3">${escapeHtml(row.scanned_at)}</td></tr>`).join('') : '<tr><td colspan="6" class="p-8 text-center text-green-600">No marked duplicates.</td></tr>';
+            rows.innerHTML = data?.length ? data.map(row => `<tr class="border-t"><td class="p-3 font-mono">${escapeHtml(row.student_lrn)}</td><td class="p-3">${escapeHtml(row.attendance_date)}</td><td class="p-3">${escapeHtml(row.session)}</td><td class="p-3">#${escapeHtml(row.id)} · ${escapeHtml(row.status)}</td><td class="p-3">#${escapeHtml(row.duplicate_of_id)} · ${escapeHtml(row.canonical_status)}</td><td class="p-3">${escapeHtml(row.scanned_at_local || row.scanned_at)}</td></tr>`).join('') : '<tr><td colspan="6" class="p-8 text-center text-green-600">No marked duplicates.</td></tr>';
         }
         window.addEventListener('load', () => window.supabaseClient ? init() : setTimeout(init, 100));
     </script>

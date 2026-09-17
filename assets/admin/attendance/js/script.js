@@ -36,6 +36,7 @@ function getDayRangeForLocalDate(localDate) {
 
 function getLogLocalDate(log) {
     if (log?.local_date) return String(log.local_date);
+    if (log?.scanned_at_local) return String(log.scanned_at_local).slice(0, 10);
     if (log?.scanned_at) {
         const parsed = new Date(log.scanned_at);
         if (!Number.isNaN(parsed.getTime())) return getLocalDateKey(parsed);
@@ -43,30 +44,163 @@ function getLogLocalDate(log) {
     return '';
 }
 
-async function fetchAttendanceLogsForMonth(supabaseClient, startOfMonth, endOfMonth) {
-    const selectFields = 'student_lrn, session, status, local_date, scanned_at';
-    const startIso = `${startOfMonth}T00:00:00.000Z`;
-    const endIso = `${endOfMonth}T23:59:59.999Z`;
+function formatLocalTime12(value) {
+    if (!value) return '';
 
-    const filteredRes = await supabaseClient
+    const time = String(value).replace('T', ' ').slice(11, 19);
+    const [hours, minutes, seconds] = time.split(':').map(Number);
+    if ([hours, minutes, seconds].some(Number.isNaN)) return '';
+
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hour12 = hours % 12 || 12;
+    return `${hour12}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')} ${period}`;
+}
+
+function normalizeLrnKey(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    const cleaned = raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    return cleaned.replace(/^0+(?=\d)/, '');
+}
+
+function normalizeSession(value) {
+    const session = String(value || '').trim().toUpperCase();
+    if (session === 'AM' || session === 'MORNING') return 'AM';
+    if (session === 'PM' || session === 'AFTERNOON') return 'PM';
+    if (session.includes('DEPART') || session.includes('OUT')) return 'DEPARTURE';
+    if (session.includes('BREAK') || session.includes('WAIT')) return 'BREAK';
+    return session;
+}
+
+function normalizeStatus(value) {
+    const status = String(value || '').trim().toUpperCase();
+
+    if (
+        status.includes('TARDY') ||
+        status.includes('LATE') ||
+        status.includes('DELAY') ||
+        status.includes('ARRIVE_LATE') ||
+        status === 'T'
+    ) return 'TARDY';
+
+    if (
+        status.includes('PRESENT') ||
+        status.includes('ARRIVE') ||
+        status.includes('ARRIVED') ||
+        status.includes('ON_TIME') ||
+        status.includes('PRESENT_AM') ||
+        status.includes('PRESENT_PM') ||
+        status.includes('LEAVING') ||
+        status.includes('OUT') ||
+        status === 'P'
+    ) return 'PRESENT';
+
+    if (status.includes('ABSENT') || status.includes('UNEXCUSED') || status.includes('NO_SHOW') || status === 'A') return 'ABSENT';
+    return status;
+}
+
+function normalizeAttendanceLog(log) {
+    if (!log || typeof log !== 'object') return log;
+    return {
+        ...log,
+        student_lrn: normalizeLrnKey(log.student_lrn),
+        session: normalizeSession(log.session),
+        status: normalizeStatus(log.status),
+        local_date: log.local_date || getLogLocalDate(log)
+    };
+}
+
+function statusPriority(status) {
+    const canonical = String(status || '').trim().toUpperCase();
+    if (canonical === 'ABSENT') return 3;
+    if (canonical === 'TARDY' || canonical === 'LATE') return 2;
+    if (canonical === 'PRESENT') return 1;
+    return 0;
+}
+
+function buildStudentDayEvidenceMap(monthLogs) {
+    const evidenceMap = new Map();
+
+    (monthLogs || []).forEach((rawLog) => {
+        const log = normalizeAttendanceLog(rawLog);
+        const lrnKey = normalizeLrnKey(log.student_lrn);
+        const dateKey = getLogLocalDate(log) || log.local_date;
+        const session = normalizeSession(log.session);
+        const status = normalizeStatus(log.status);
+
+        // Only real AM and PM attendance sessions are relevant to the SF2 cell.
+        if (!lrnKey || !dateKey || !['AM', 'PM'].includes(session)) {
+            return;
+        }
+
+        const key = `${lrnKey}|${dateKey}`;
+        const bucket = evidenceMap.get(key) || {
+            am: null,
+            pm: null
+        };
+
+        const stamp = String(log.scanned_at_local || log.scanned_at || dateKey || '1970-01-01');
+        const event = { status, stamp };
+
+        if (session === 'AM') {
+            if (!bucket.am || statusPriority(status) > statusPriority(bucket.am.status) || (statusPriority(status) === statusPriority(bucket.am.status) && stamp >= bucket.am.stamp)) {
+                bucket.am = event;
+            }
+        } else if (session === 'PM') {
+            if (!bucket.pm || statusPriority(status) > statusPriority(bucket.pm.status) || (statusPriority(status) === statusPriority(bucket.pm.status) && stamp >= bucket.pm.stamp)) {
+                bucket.pm = event;
+            }
+        }
+
+        evidenceMap.set(key, bucket);
+    });
+
+    return evidenceMap;
+}
+
+async function fetchAttendanceLogsForMonth(supabaseClient, startOfMonth, endOfMonth) {
+    const selectFields = 'student_lrn, session, status, local_date, scanned_at, scanned_at_local';
+    const startLocal = `${startOfMonth} 00:00:00`;
+    const endLocal = `${endOfMonth} 23:59:59.999`;
+    const pageSize = 1000;
+
+    async function fetchAllPages(buildQuery) {
+        const rows = [];
+        let page = 0;
+
+        while (true) {
+            const from = page * pageSize;
+            const to = from + pageSize - 1;
+            const response = await buildQuery().range(from, to);
+
+            if (response.error) return { ...response, data: rows };
+            rows.push(...(Array.isArray(response.data) ? response.data : []));
+
+            if (!response.data || response.data.length < pageSize) {
+                return { ...response, data: rows, count: rows.length };
+            }
+
+            page++;
+        }
+    }
+
+    const filteredRes = await fetchAllPages(() => supabaseClient
         .from('attendance_logs')
         .select(selectFields, { count: 'exact' })
         .gte('local_date', startOfMonth)
         .lte('local_date', endOfMonth)
         .order('local_date', { ascending: true })
-        .order('scanned_at', { ascending: true })
-        .range(0, 50000);
+        .order('scanned_at_local', { ascending: true }));
 
     if (!filteredRes.error && Array.isArray(filteredRes.data) && filteredRes.data.length > 0) {
         return filteredRes;
     }
 
-    const fallbackRes = await supabaseClient
+    const fallbackRes = await fetchAllPages(() => supabaseClient
         .from('attendance_logs')
         .select(selectFields, { count: 'exact' })
         .order('local_date', { ascending: true })
-        .order('scanned_at', { ascending: true })
-        .range(0, 50000);
+        .order('scanned_at_local', { ascending: true }));
 
     if (fallbackRes.error) {
         return fallbackRes;
@@ -76,7 +210,7 @@ async function fetchAttendanceLogsForMonth(supabaseClient, startOfMonth, endOfMo
     const filteredData = fallbackData.filter(log => {
         const logDate = getLogLocalDate(log);
         const matchesLocalDate = logDate >= startOfMonth && logDate <= endOfMonth;
-        const matchesScannedAt = Boolean(log?.scanned_at && log.scanned_at >= startIso && log.scanned_at <= endIso);
+        const matchesScannedAt = Boolean(log?.scanned_at_local && log.scanned_at_local >= startLocal && log.scanned_at_local <= endLocal);
         return matchesLocalDate || matchesScannedAt;
     });
 
@@ -101,6 +235,7 @@ function logAttendanceLogsResponse(prefix, logsRes, startOfMonth, endOfMonth) {
         student_lrn: log?.student_lrn,
         local_date: log?.local_date,
         scanned_at: log?.scanned_at,
+        scanned_at_local: log?.scanned_at_local,
         status: log?.status,
         session: log?.session
     }));
@@ -111,7 +246,7 @@ function logAttendanceLogsResponse(prefix, logsRes, startOfMonth, endOfMonth) {
     console.log(`${prefix} - Missing or empty student_lrn count:`, missingLrnCount);
 
     const countsByDate = logs.reduce((agg, log) => {
-        const date = log?.local_date || (log?.scanned_at ? getLocalDateKey(new Date(log.scanned_at)) : 'unknown');
+        const date = log?.local_date || (log?.scanned_at_local ? String(log.scanned_at_local).slice(0, 10) : 'unknown');
         agg[date] = (agg[date] || 0) + 1;
         return agg;
     }, {});
@@ -178,8 +313,56 @@ function mapLogStatusToSessionCode(status) {
     return 'P';
 }
 
+function deriveSf2CodeFromEvidence(amStatus, pmStatus) {
+    const am = normalizeStatus(amStatus);
+    const pm = normalizeStatus(pmStatus);
+
+    const amIsTardy = am === 'TARDY';
+    const pmIsTardy = pm === 'TARDY';
+    const amIsAbsent = am === 'ABSENT';
+    const pmIsAbsent = pm === 'ABSENT';
+    const amIsPresent = am === 'PRESENT';
+    const pmIsPresent = pm === 'PRESENT';
+
+    if (amIsAbsent && pmIsAbsent) {
+        return 'X';
+    }
+
+    if (amIsAbsent && (pmIsPresent || pmIsTardy)) {
+        return '/';
+    }
+
+    if (pmIsAbsent && (amIsPresent || amIsTardy)) {
+        return '\\';
+    }
+
+    if (amIsTardy && pmIsTardy) {
+        return '/\\';
+    }
+
+    if (amIsTardy) {
+        return '/';
+    }
+
+    if (pmIsTardy) {
+        return '\\';
+    }
+
+    // A single valid session is still attendance evidence. Use the
+    // corresponding DepEd session mark instead of leaving the cell blank.
+    if (amIsPresent && !pmStatus) {
+        return '/';
+    }
+
+    if (pmIsPresent && !amStatus) {
+        return '\\';
+    }
+
+    return '';
+}
+
 function buildLogIdentityKey(log) {
-    const localDate = log.local_date || getLocalDateKey(new Date(log.scanned_at));
+    const localDate = log.local_date || getLogLocalDate(log);
     return `${String(log.student_lrn)}|${log.session}|${localDate}`;
 }
 
@@ -190,7 +373,7 @@ function mergeLogsByIdentity(logs) {
         const normalizedLog = {
             ...log,
             student_lrn: String(log.student_lrn),
-            local_date: log.local_date || getLocalDateKey(new Date(log.scanned_at)),
+            local_date: log.local_date || getLogLocalDate(log),
             sync_status: log.sync_status || 'synced'
         };
         const key = buildLogIdentityKey(normalizedLog);
@@ -209,12 +392,12 @@ function mergeLogsByIdentity(logs) {
             return;
         }
 
-        if (incomingPriority === existingPriority && new Date(normalizedLog.scanned_at) > new Date(existing.scanned_at)) {
+        if (incomingPriority === existingPriority && String(normalizedLog.scanned_at_local || normalizedLog.scanned_at) > String(existing.scanned_at_local || existing.scanned_at)) {
             merged.set(key, normalizedLog);
         }
     });
 
-    return Array.from(merged.values()).sort((a, b) => new Date(b.scanned_at) - new Date(a.scanned_at));
+    return Array.from(merged.values()).sort((a, b) => String(b.scanned_at_local || b.scanned_at).localeCompare(String(a.scanned_at_local || a.scanned_at)));
 }
 
 function applySessionStateFromLogs(logs) {
@@ -237,10 +420,10 @@ function applySessionStateFromLogs(logs) {
     renderLogTableFromSession(currentSessionLogs);
 
     if (currentSessionLogs.length > 0) {
-        const lastLog = [...currentSessionLogs].sort((a, b) => new Date(b.scanned_at) - new Date(a.scanned_at))[0];
+        const lastLog = [...currentSessionLogs].sort((a, b) => String(b.scanned_at_local || b.scanned_at).localeCompare(String(a.scanned_at_local || a.scanned_at)))[0];
         const lastStudent = masterStudentDatabase.find(s => String(s.lrn) === String(lastLog.student_lrn));
         if (lastStudent) {
-            updateDashboard(lastStudent, lastLog.scanned_at);
+            updateDashboard(lastStudent, lastLog.scanned_at_local || lastLog.scanned_at);
         }
     }
 }
@@ -409,7 +592,7 @@ async function restoreAttendanceSession() {
                 const normalizedCloudLogs = logs.map(log => ({
                     ...log,
                     scan_id: `cloud:${log.student_lrn}:${log.session}:${log.scanned_at}`,
-                    local_date: log.local_date || getLocalDateKey(new Date(log.scanned_at)),
+                    local_date: log.local_date || getLogLocalDate(log),
                     sync_status: 'synced'
                 }));
 
@@ -510,7 +693,7 @@ function renderLogTableFromSession(logs) {
     if (logCount) logCount.textContent = `${attendanceSession.size} STUDENTS`;
 
     // Map logs to table rows, sorted by time descending
-    const sortedLogs = [...logs].sort((a, b) => new Date(b.scanned_at) - new Date(a.scanned_at));
+    const sortedLogs = [...logs].sort((a, b) => String(b.scanned_at_local || b.scanned_at).localeCompare(String(a.scanned_at_local || a.scanned_at)));
     
     // Determine which logs to show
     const LOG_LIMIT = 5;
@@ -560,7 +743,7 @@ function renderLogTableFromSession(logs) {
                 </td>
                 <td class="px-4 py-3 text-right">
                     <div class="flex flex-col items-end">
-                        <span class="text-xs font-bold text-gray-500">${new Date(log.scanned_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}</span>
+                        <span class="text-xs font-bold text-gray-500">${formatLocalTime12(log.scanned_at_local || log.scanned_at)}</span>
                         <span class="text-[8px] font-black uppercase tracking-widest ${log.session === 'AM' ? 'text-blue-500' : 'text-orange-500'}">${log.session} SESSION</span>
                     </div>
                 </td>
@@ -2576,7 +2759,13 @@ async function exportAllSF2(levelFilter = null) {
         const suspendedDayRows = (!suspendedRes.error && Array.isArray(suspendedRes.data)) ? suspendedRes.data : [];
         const schoolCalendarRows = (!calendarRes.error && Array.isArray(calendarRes.data)) ? calendarRes.data : [];
         console.log("📛 Suspended day rows for export:", suspendedDayRows);
-        const monthLogs = logsRes.data || [];
+        const monthLogs = Array.isArray(logsRes.data) ? logsRes.data.map(normalizeAttendanceLog) : [];
+        const studentDayEvidenceMap = buildStudentDayEvidenceMap(monthLogs);
+        const tardyTardySamples = Array.from(studentDayEvidenceMap.entries())
+            .filter(([, bucket]) => bucket.am?.status === 'TARDY' && bucket.pm?.status === 'TARDY')
+            .slice(0, 5)
+            .map(([key, bucket]) => ({ key, am: bucket.am, pm: bucket.pm }));
+        console.log('🔍 SF2 Evidence Map - tardy/tardy sample buckets:', tardyTardySamples);
         const schoolInfo = (schoolRes.data && schoolRes.data.length > 0) ? schoolRes.data[0] : {};
         const schoolHead = headRes.data?.full_name || schoolInfo.school_head || schoolInfo.schoolHead || '';
         
@@ -2770,22 +2959,13 @@ async function exportAllSF2(levelFilter = null) {
             const weekdayInitialsMap = { 1: 'M', 2: 'T', 3: 'W', 4: 'TH', 5: 'F' };
             const lastDayInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
 
-            // SF2 columns begin at the first school-calendar date in the month.
-            // This is essential for August, where the 2026 school year starts on August 13.
-            const calendarDatesInMonth = schoolCalendarRows
-                .filter(row => !row.section || String(row.section).trim().toLowerCase() === String(sectionName).trim().toLowerCase())
-                .map(row => String(row.calendar_date))
-                .filter(date => date >= startOfMonth && date <= endOfMonth)
-                .sort();
-            const defaultFirstMappedDate = targetMonth === 7
-                ? `${targetYear}-08-13`
-                : startOfMonth;
-            const firstMappedDate = calendarDatesInMonth[0] || defaultFirstMappedDate;
-            const firstMappedDay = parseInt(firstMappedDate.slice(-2), 10);
+            // Keep the SF2 date header aligned to the actual month sequence.
+            // Do not compress the header by dropping every date before the first calendar row.
+            // That would make later day headers shift to the wrong date numbers.
             const sf2DateColumnMap = new Map();
             let sf2ColumnOffset = 0;
 
-            for (let d = firstMappedDay; d <= lastDayInMonth; d++) {
+            for (let d = 1; d <= lastDayInMonth; d++) {
                 const date = new Date(targetYear, targetMonth, d);
                 if (date.getDay() === 0 || date.getDay() === 6) continue;
                 if (sf2ColumnOffset >= SF2_ATT_COLS.length) break;
@@ -2828,11 +3008,14 @@ async function exportAllSF2(levelFilter = null) {
             let maleIdx = 0;
             let femaleIdx = 0;
 
-            // For summary calculations
+            // Every weekday is eligible for attendance marking. Calendar rows are
+            // supplemental metadata for holidays and suspended days, not the source
+            // of the month's date range.
             const schoolDays = [];
-            for (let d = firstMappedDay; d <= lastDayInMonth; d++) {
+            for (let d = 1; d <= lastDayInMonth; d++) {
                 const date = new Date(targetYear, targetMonth, d);
-                if (date.getDay() !== 0 && date.getDay() !== 6) schoolDays.push(d);
+                if (date.getDay() === 0 || date.getDay() === 6) continue;
+                schoolDays.push(d);
             }
 
             const consecutiveAbsences = { male: 0, female: 0 };
@@ -2856,15 +3039,12 @@ async function exportAllSF2(levelFilter = null) {
                 const row = worksheet.getRow(currentRow);
                 row.getCell(mapping.nameCol).value = student.excelName;
 
-                // Fill Logs for this student
-                const studentLogs = monthLogs.filter(l => String(l.student_lrn) === String(student.lrn));
-                
                 // DEBUG: Log LRN matching for first few students of each gender
                 if ((maleIdx <= 2 && student.gender === 'male') || (femaleIdx <= 2 && student.gender === 'female')) {
                     console.log(`🔍 LRN Match Debug - ${student.excelName}:`, {
                         studentLrn: student.lrn,
                         studentLrnType: typeof student.lrn,
-                        matchedLogs: studentLogs.length,
+                        matchedLogs: monthLogs.filter(l => normalizeLrnKey(l.student_lrn) === normalizeLrnKey(student.lrn)).length,
                         sampleMonthLogLrns: monthLogs.slice(0, 3).map(l => ({ lrn: l.student_lrn, type: typeof l.student_lrn, date: getLogLocalDate(l) }))
                     });
                 }
@@ -2877,7 +3057,9 @@ async function exportAllSF2(levelFilter = null) {
 
                 schoolDays.forEach(day => {
                     const currentDayKey = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                    
+                    const studentLrnKey = normalizeLrnKey(student.lrn);
+                    const dayEvidence = studentDayEvidenceMap.get(`${studentLrnKey}|${currentDayKey}`) || { am: null, pm: null };
+
                     // 🛑 HOLIDAYS get marked as H; other suspended days remain empty
                     if (sectionHolidayDates.has(currentDayKey)) {
                         const colIndex = sf2DateColumnMap.get(day);
@@ -2898,34 +3080,48 @@ async function exportAllSF2(levelFilter = null) {
                         }
                         return; // Skip rest of logic for this day
                     }
-                    
-                    // Find AM and PM logs for this day using local_date if available
-                    const dayLogs = studentLogs.filter(l => getLogLocalDate(l) === currentDayKey);
-                    const amLog = dayLogs.find(l => l.session === 'AM');
-                    const pmLog = dayLogs.find(l => l.session === 'PM');
-                    
-                    let code = '';
-                    const isAbsent = !amLog && !pmLog;
 
-                    if (isAbsent) {
-                        code = 'X';
+                    const amStatus = normalizeStatus(dayEvidence.am?.status || '');
+                    const pmStatus = normalizeStatus(dayEvidence.pm?.status || '');
+                    const code = deriveSf2CodeFromEvidence(amStatus, pmStatus);
+                    const hasAttendanceEvidence = Boolean(dayEvidence.am || dayEvidence.pm);
+
+                    if (idx < 2) {
+                        console.log('🔍 SF2 Evidence Bucket:', {
+                            student: student.excelName,
+                            lrn: student.lrn,
+                            date: currentDayKey,
+                            key: `${studentLrnKey}|${currentDayKey}`,
+                            rawAm: dayEvidence.am,
+                            rawPm: dayEvidence.pm,
+                            amStatus,
+                            pmStatus,
+                            derivedCode: code
+                        });
+                    }
+
+                    if (code === 'X') {
                         studentAbsentDays++;
                         currentConsecutive++;
                         if (currentConsecutive > maxConsecutive) maxConsecutive = currentConsecutive;
-                    } else {
+                    } else if (hasAttendanceEvidence && (code === '/' || code === '\\' || code === '/\\' || code === '')) {
                         studentPresentDays++;
                         currentConsecutive = 0;
+                    }
 
-                        // Tardy Morning: Late in AM OR Missing AM but has PM
-                        if ((amLog && amLog.status !== 'PRESENT') || (!amLog && pmLog)) {
-                            code += '/';
-                        }
-                        // Tardy Afternoon: Late in PM OR Has AM but missing PM
-                        if ((pmLog && pmLog.status !== 'PRESENT') || (amLog && !pmLog)) {
-                            code += '\\';
-                        }
+                    if (idx < 2) {
+                        console.log("🔎 SF2 Debug:", {
+                            student: student.excelName,
+                            lrn: student.lrn,
+                            date: currentDayKey,
+                            amStatus,
+                            pmStatus,
+                            code,
+                            schoolDaysCount: schoolDays.length
+                        });
+                    }
 
-                        // Track daily summary (if student is not absent)
+                    if (hasAttendanceEvidence && code !== 'X') {
                         if (!dailySummary[day]) dailySummary[day] = { male: 0, female: 0 };
                         if (student.gender === 'male') dailySummary[day].male++;
                         else dailySummary[day].female++;

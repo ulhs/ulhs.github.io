@@ -450,20 +450,27 @@
         }
 
         function getArrivalMinutes(log) {
-            const timeParts = new Intl.DateTimeFormat('en-GB', {
-                timeZone: 'Asia/Manila',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hourCycle: 'h23'
-            }).formatToParts(new Date(log.scanned_at));
-            const values = Object.fromEntries(timeParts.map(part => [part.type, part.value]));
-            return Number(values.hour) * 60 + Number(values.minute) + Number(values.second) / 60;
+            const timePart = String(log.scanned_at_local || log.scanned_at || '').replace('T', ' ').slice(11, 19);
+            const [hours, minutes, seconds] = timePart.split(':').map(Number);
+            return hours * 60 + minutes + seconds / 60;
         }
 
         function getLogLocalDate(log) {
             if (log.local_date) return String(log.local_date);
+            if (log.scanned_at_local) return String(log.scanned_at_local).slice(0, 10);
             return getLocalDateKey(new Date(log.scanned_at));
+        }
+
+        function formatLocalTime12(value) {
+            if (!value) return '';
+
+            const time = String(value).replace('T', ' ').slice(11, 19);
+            const [hours, minutes, seconds] = time.split(':').map(Number);
+            if ([hours, minutes, seconds].some(Number.isNaN)) return '';
+
+            const period = hours >= 12 ? 'PM' : 'AM';
+            const hour12 = hours % 12 || 12;
+            return `${hour12}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')} ${period}`;
         }
 
         function escapeHtml(value) {
@@ -482,7 +489,7 @@
                 const localDate = getLogLocalDate(log);
                 const key = `${log.student_lrn}:${localDate}`;
                 const current = firstLogs.get(key);
-                if (!current || new Date(log.scanned_at) < new Date(current.scanned_at)) firstLogs.set(key, log);
+                if (!current || String(log.scanned_at_local || log.scanned_at) < String(current.scanned_at_local || current.scanned_at)) firstLogs.set(key, log);
             });
             return [...firstLogs.values()];
         }
@@ -607,17 +614,17 @@
             }
 
             try {
-                const selectFields = 'student_lrn, scanned_at, local_date, session, section, students (full_name, section, photo_url)';
-                const periodStart = getManilaDayStart(getPeriodStart(dashboardData.earlyBirdPeriod));
-                const periodEnd = getManilaDayStart(getPeriodEnd(dashboardData.earlyBirdPeriod));
-                const startOfNextPeriod = new Date(periodEnd.getTime() + 24 * 60 * 60 * 1000);
+                const selectFields = 'student_lrn, scanned_at, scanned_at_local, local_date, session, section, students (full_name, section, photo_url)';
+                const periodStart = `${getPeriodStart(dashboardData.earlyBirdPeriod)} 00:00:00`;
+                const endDate = addDays(getPeriodEnd(dashboardData.earlyBirdPeriod), 1);
+                const startOfNextPeriod = `${endDate} 00:00:00`;
                 const { data, error } = await window.supabaseClient
                     .from('attendance_logs')
                     .select(selectFields)
                     .eq('session', 'AM')
-                    .gte('scanned_at', periodStart.toISOString())
-                    .lt('scanned_at', startOfNextPeriod.toISOString())
-                    .order('scanned_at', { ascending: true });
+                    .gte('scanned_at_local', periodStart)
+                    .lt('scanned_at_local', startOfNextPeriod)
+                    .order('scanned_at_local', { ascending: true });
 
                 if (requestId !== dashboardData.earlyBirdRequestId) return;
                 if (error) throw error;
@@ -720,8 +727,9 @@
                 await fetchLifetimeCount();
 
                 // 3. Fetch Today's Logs
-                const now = new Date();
-                const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+                const todayKey = getLocalDateKey();
+                const startOfToday = `${todayKey} 00:00:00`;
+                const startOfTomorrow = `${addDays(todayKey, 1)} 00:00:00`;
                 
                 console.log("Fetching logs since:", startOfToday);
 
@@ -731,8 +739,9 @@
                         *,
                         students (full_name, section, photo_url, notify_parent, student_id_number, lrn)
                     `)
-                    .gte('scanned_at', startOfToday)
-                    .order('scanned_at', { ascending: false });
+                    .gte('scanned_at_local', startOfToday)
+                    .lt('scanned_at_local', startOfTomorrow)
+                    .order('scanned_at_local', { ascending: false });
 
                 if (logsError) {
                     console.error("Logs Fetch Error:", logsError.message);
@@ -927,7 +936,7 @@
                 
                 if (lastName) lastName.textContent = student?.full_name || 'Unknown';
                 if (lastSection) lastSection.textContent = student?.section || 'N/A';
-                const timeStr = new Date(log.scanned_at).toLocaleTimeString();
+                const timeStr = formatLocalTime12(log.scanned_at_local || log.scanned_at);
                 if (lastTime) lastTime.textContent = timeStr;
 
                 // Photo logic
@@ -961,7 +970,7 @@
                 tableBody.innerHTML = logsToShow.map(log => {
                     const student = log.students;
                     const lrn = log.student_lrn;
-                    const time = new Date(log.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const time = formatLocalTime12(log.scanned_at_local || log.scanned_at);
                     const hasNotif = student?.notify_parent;
                     
                     return `

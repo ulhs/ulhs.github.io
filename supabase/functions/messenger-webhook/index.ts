@@ -327,7 +327,7 @@ serve(async (req) => {
                 }
 
                 console.log(`✅ Confirmed code ${parsedConfirm.code} for PSID ${psid} and student LRN ${studentData.lrn}`);
-                await sendResponse(psid, `Confirmation successful! Naka-link na ang imong Messenger account kang ${studentData.full_name}.`);
+                await sendResponse(psid, `✅ Confirmation successful! Naka-link na ang imong Messenger account kay ${studentData.full_name}.`);
               }
               
               // Handle NAME command: Set parent/guardian name
@@ -472,7 +472,7 @@ serve(async (req) => {
                   await sendResponse(psid, `📋 Nagadawat ka ug alerts ni:\n\n${studentList}\n\n💡 Tip: I-send ang 'PING' kada adlaw o kada semana aron magpabilin ka active ug makadawat gihapon ug alerts! (Facebook nagablock ug messages kung walay interaction sulod sa 24 oras)\n\nCommands:\n• LIST - See linked students\n• NAME [Your Name] - Para i-set o i-update ang imong name\n• LINK [LRN] - Link another student\n• UNLINK [LRN] - Stop receiving alerts\n• RESET - Get a verification code to set/reset your PIN\n• PING - Test connection`);
                 } else {
                   console.warn(`⚠️ No students found for PSID ${psid}`);
-                  await sendResponse(psid, `👋 Flehew! Wala pa kay estudyante nga naka-link sa imong account.\n\nPara ma-link ang estudyante, i-send ang: LINK [12-digit LRN]`);
+                  await sendResponse(psid, `👋 Flehew! Wala pa kay estudyante nga naka-link sa imong account.\n\nPara ma-link ang estudyante, please use the official ULHS Parent Registration page. Follow this link to get started: https://ulhs.github.io/pages/parent-registration.html`);
                 }
               } else if (text === 'PING') {
                 console.log(`🏓 PING received from PSID ${psid}`);

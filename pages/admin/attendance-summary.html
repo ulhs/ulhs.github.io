@@ -504,7 +504,7 @@
                     studentLogs.forEach(log => {
                         const status = String(log.status || '').toUpperCase();
                         const date = log.local_date || (
-                            log.scanned_at ? new Date(log.scanned_at).toISOString().split('T')[0] : ''
+                            log.scanned_at_local ? String(log.scanned_at_local).slice(0, 10) : ''
                         );
 
                         if (!date) return;
