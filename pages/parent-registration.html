@@ -257,35 +257,63 @@
                     candidates.add(digits.padStart(12, '0'));
                 }
                 if (digits.length === 12) {
-                    candidates.add(String(Number(digits)));
+                    const asNumber = Number(digits);
+                    if (Number.isFinite(asNumber)) {
+                        candidates.add(String(asNumber));
+                    }
                 }
             }
 
             return Array.from(candidates).filter(Boolean);
         }
 
+        function normalizeLrnForComparison(value) {
+            if (value === null || value === undefined) return '';
+            return String(value).trim().replace(/^0+/, '').replace(/\D+/g, '');
+        }
+
         async function findStudentByLrn(lrn) {
             const candidates = buildLrnLookupCandidates(lrn);
             if (!candidates.length) return null;
 
+            const normalizedInput = normalizeLrnForComparison(lrn);
+            const normalizedCandidates = candidates.map(candidate => normalizeLrnForComparison(candidate));
+
             const { data, error } = await window.supabaseClient
                 .from('students')
                 .select('full_name, lrn')
-                .in('lrn', candidates)
-                .limit(20);
+                .limit(5000);
 
             if (error) {
                 console.error('Student lookup failed:', error);
                 throw error;
             }
 
-            if (!data || !data.length) return null;
+            if (!Array.isArray(data) || !data.length) return null;
 
-            const normalizedInput = String(lrn ?? '').trim();
             const bestMatch = data.find(row => {
-                const stored = String(row.lrn ?? '').trim();
-                return stored === normalizedInput || stored === normalizedInput.replace(/^0+/, '') || stored === normalizedInput.padStart(12, '0');
-            }) || data[0];
+                const storedRaw = String(row.lrn ?? '').trim();
+                const stored = normalizeLrnForComparison(storedRaw);
+
+                if (!stored || !normalizedInput) return false;
+
+                const exactMatches = (
+                    storedRaw === String(lrn ?? '').trim() ||
+                    storedRaw === String(lrn ?? '').trim().replace(/^0+/, '') ||
+                    storedRaw === String(lrn ?? '').trim().padStart(12, '0') ||
+                    stored === normalizedInput ||
+                    stored === normalizedInput.replace(/^0+/, '') ||
+                    stored === String(lrn ?? '').trim().padStart(12, '0').replace(/^0+/, '')
+                );
+
+                if (exactMatches) return true;
+
+                return normalizedCandidates.includes(stored) || normalizedCandidates.includes(String(storedRaw).trim());
+            }) || data.find(row => {
+                const storedRaw = String(row.lrn ?? '').trim();
+                const stored = normalizeLrnForComparison(storedRaw);
+                return stored === normalizedInput || stored === normalizedInput.replace(/^0+/, '');
+            }) || null;
 
             return bestMatch || null;
         }
