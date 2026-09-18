@@ -997,6 +997,26 @@ const SF2_MAPPINGS = {
     }
 };
 
+// SF2 weekday columns with the template spacer columns preserved.
+const SF2_ATT_COLS = [6, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 20, 21, 22, 24, 26, 28, 29, 30, 31, 32, 33, 35, 36, 37];
+
+function getSf2DateColumn(year, month, day) {
+    const date = new Date(year, month, day);
+    const weekday = date.getDay();
+    if (weekday === 0 || weekday === 6) return null;
+
+    const firstWeekday = new Date(year, month, 1).getDay();
+    const leadingWeekdayCount = firstWeekday === 0 || firstWeekday === 6
+        ? 0
+        : firstWeekday - 1;
+    const calendarOffset = (day - 1) + leadingWeekdayCount;
+    const weekIndex = Math.floor(calendarOffset / 7);
+    const weekdayIndex = weekday - 1;
+    const columnIndex = (weekIndex * 5) + weekdayIndex;
+
+    return SF2_ATT_COLS[columnIndex] || null;
+}
+
 // SF4 Mapping Configuration per Level (Indices converted for ExcelJS - 1-based)
 const SF4_MAPPINGS = {
     'JHS': {
@@ -1035,7 +1055,7 @@ const SF4_MAPPINGS = {
             schoolYear: 'AF6',
             month: 'AW6',
             schoolName: 'C4',
-            schoolHead: 'AS22'
+            schoolHead: 'AS23'
         },
         sections: {
             sectionCol: 2,  // B
@@ -1046,7 +1066,7 @@ const SF4_MAPPINGS = {
             malePercentCol: 9,  // I
             femalePercentCol: 10,  // J
             grade11Rows: [12, 13],
-            grade12Rows: [15, 16]
+            grade12Rows: [15, 16, 17]
         }
     }
 };
@@ -1833,12 +1853,15 @@ function markAttendanceInExcel(student, timeData) {
         return;
     }
 
-    const mapping = SF2_MAPPINGS[student.level] || SF2_MAPPINGS['JHS'];
     const worksheet = sectionObj.workbook.getWorksheet(sectionObj.sheetName);
     const today = new Date();
     const dayOfMonth = today.getDate();
 
-    const targetColIndex = mapping.attStartCol + (dayOfMonth - 1);
+    const targetColIndex = getSf2DateColumn(today.getFullYear(), today.getMonth(), dayOfMonth);
+    if (!targetColIndex) {
+        console.info(`Skipping SF2 update for ${today.toISOString().slice(0, 10)} because it is not a weekday slot.`);
+        return;
+    }
     const studentRow = worksheet.getRow(student.rowIndex);
     const cell = studentRow.getCell(targetColIndex);
     
@@ -2803,7 +2826,13 @@ async function exportAllSF2(levelFilter = null) {
         const adviserMap = {};
         if (profilesRes.data) {
             profilesRes.data.forEach(p => {
-                if (p.section_assigned) adviserMap[p.section_assigned.toUpperCase()] = p.full_name;
+                if (p.section_assigned) {
+                    p.section_assigned
+                        .split(/[,;]+/)
+                        .map(section => section.trim().toUpperCase())
+                        .filter(Boolean)
+                        .forEach(section => { adviserMap[section] = p.full_name; });
+                }
             });
         } else if (profilesRes.error) {
             console.warn("⚠️ Could not fetch Adviser mappings. Ensure 'section_assigned' column exists in 'profiles' table.", profilesRes.error);
@@ -2952,25 +2981,18 @@ async function exportAllSF2(levelFilter = null) {
             // Get weekday of the 1st day of the TARGET month (0=Sun, 1=Mon, ..., 6=Sat)
             const firstDayOfMonth = new Date(targetYear, targetMonth, 1);
 
-            // SF2 Column Mapping (F, H-L, N-R, T-V, X, Z, AB-AE, AF-AK)
-            const SF2_ATT_COLS = [6, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 20, 21, 22, 24, 26, 28, 29, 30, 31, 32, 33, 35, 36, 37];
-
             // 4.1 Fill Date Headers & Weekdays (Row 6/5 for JHS, Row 10/9 for SHS)
             const weekdayInitialsMap = { 1: 'M', 2: 'T', 3: 'W', 4: 'TH', 5: 'F' };
             const lastDayInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
 
-            // Keep the SF2 date header aligned to the actual month sequence.
-            // Do not compress the header by dropping every date before the first calendar row.
-            // That would make later day headers shift to the wrong date numbers.
             const sf2DateColumnMap = new Map();
-            let sf2ColumnOffset = 0;
 
             for (let d = 1; d <= lastDayInMonth; d++) {
                 const date = new Date(targetYear, targetMonth, d);
-                if (date.getDay() === 0 || date.getDay() === 6) continue;
-                if (sf2ColumnOffset >= SF2_ATT_COLS.length) break;
-                sf2DateColumnMap.set(d, SF2_ATT_COLS[sf2ColumnOffset]);
-                sf2ColumnOffset++;
+                const weekday = date.getDay();
+                if (weekday === 0 || weekday === 6) continue;
+                const colIndex = getSf2DateColumn(targetYear, targetMonth, d);
+                if (colIndex) sf2DateColumnMap.set(d, colIndex);
             }
             
             const dayRowNumber = level === 'SHS' ? 10 : 6;
@@ -3083,8 +3105,11 @@ async function exportAllSF2(levelFilter = null) {
 
                     const amStatus = normalizeStatus(dayEvidence.am?.status || '');
                     const pmStatus = normalizeStatus(dayEvidence.pm?.status || '');
-                    const code = deriveSf2CodeFromEvidence(amStatus, pmStatus);
                     const hasAttendanceEvidence = Boolean(dayEvidence.am || dayEvidence.pm);
+                    // A weekday with no AM or PM record is an absence in SF2.
+                    const code = hasAttendanceEvidence
+                        ? deriveSf2CodeFromEvidence(amStatus, pmStatus)
+                        : 'X';
 
                     if (idx < 2) {
                         console.log('🔍 SF2 Evidence Bucket:', {
@@ -3322,9 +3347,14 @@ async function exportAllSF4(levelFilter = null) {
         if (profilesRes.data) {
             profilesRes.data.forEach(p => {
                 if (p.section_assigned) {
-                    const key = p.section_assigned.toUpperCase();
-                    adviserMap[key] = p.full_name;
-                    console.log(`  Added to SF4 adviserMap: ${key} → ${p.full_name}`);
+                    p.section_assigned
+                        .split(/[,;]+/)
+                        .map(section => section.trim().toUpperCase())
+                        .filter(Boolean)
+                        .forEach(section => {
+                            adviserMap[section] = p.full_name;
+                            console.log(`  Added to SF4 adviserMap: ${section} → ${p.full_name}`);
+                        });
                 }
             });
         } else if (profilesRes.error) {

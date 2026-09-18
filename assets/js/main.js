@@ -4753,7 +4753,7 @@ async function initIDGenerator() {
         '9': ['Aguas', 'Laogan'],
         '10': ['Capili'],
         '11': ['Academics', 'TechPro'],
-        '12': ['FCS', 'HUMSS']
+        '12': ['12-FCS', '12-HUMSS', '12-CSS']
     };
     
     if (gradeLevelSelect && sectionSelect) {

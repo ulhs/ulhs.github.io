@@ -179,8 +179,6 @@
         // --- PRIVACY & SECURITY HARDENING ---
         const MAX_ATTEMPTS = 5;
         const COOLDOWN_TIME = 15 * 60 * 1000; // 15 minutes
-        let tempHashedPin = null;
-
         function validatePins() {
             const pin = pinInput.value.trim();
             const confirmPin = confirmPinInput.value.trim();
@@ -244,52 +242,6 @@
             }).join(' ');
         }
 
-        function buildLrnLookupCandidates(value) {
-            const raw = String(value ?? '').trim();
-            const digits = raw.replace(/\D+/g, '');
-            const candidates = new Set();
-
-            if (raw) candidates.add(raw);
-            if (digits) {
-                candidates.add(digits);
-                candidates.add(digits.replace(/^0+/, ''));
-                if (digits.length < 12) {
-                    candidates.add(digits.padStart(12, '0'));
-                }
-                if (digits.length === 12) {
-                    const asNumber = Number(digits);
-                    if (Number.isFinite(asNumber)) {
-                        candidates.add(String(asNumber));
-                    }
-                }
-            }
-
-            return Array.from(candidates).filter(Boolean);
-        }
-
-        function normalizeLrnForComparison(value) {
-            if (value === null || value === undefined) return '';
-            return String(value).trim().replace(/^0+/, '').replace(/\D+/g, '');
-        }
-
-        async function findStudentByLrn(lrn) {
-            const { data, error } = await window.supabaseClient.functions.invoke('parent-registration-lookup', {
-                body: { lrn: String(lrn ?? '').trim() }
-            });
-
-            if (error) {
-                console.error('Student lookup failed:', error);
-                throw error;
-            }
-
-            return data?.student || null;
-        }
-
-        function generateRegistrationToken() {
-            const token = Math.random().toString(36).toUpperCase().slice(2, 10);
-            return token.padEnd(8, 'X');
-        }
-
         // Initialize security check
         updateButtonState();
 
@@ -325,7 +277,12 @@
             verifyBtn.textContent = 'Verifying...';
 
             try {
-                const student = await findStudentByLrn(lrn);
+                const { data: registration, error: registrationError } = await window.supabaseClient.functions.invoke('parent-registration-start', {
+                    body: { lrn, pin }
+                });
+
+                if (registrationError) throw registrationError;
+                const student = registration?.student;
 
                 if (!student) {
                     // Record failed attempt
@@ -348,29 +305,11 @@
                 messengerSection.classList.remove('hidden');
 
                 // Secure registration flow: require a unique confirmation code tied to this registration attempt.
-                const registrationToken = generateRegistrationToken();
+                const registrationToken = registration.registrationToken;
                 const pageName = "ulhsofficial";
                 const referralCode = `reg_${lrn}_${registrationToken}`;
                 const messengerLink = `https://m.me/${pageName}?ref=${referralCode}`;
-                const pendingParentPsid = `PENDING_${Date.now()}_${lrn}`;
 
-                const { error: codeInsertError } = await window.supabaseClient
-                    .from('verification_codes')
-                    .insert({
-                        parent_psid: pendingParentPsid,
-                        student_lrn: lrn,
-                        code: registrationToken,
-                        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-                        used: false
-                    });
-
-                if (codeInsertError) {
-                    console.error('⚠️ Failed to store registration confirmation code:', codeInsertError);
-                    alert('Unable to create the secure confirmation code. Please try again.');
-                    location.reload();
-                    return;
-                }
-                
                 const container = document.getElementById('messenger-button-container');
                 const copyCodeText = document.getElementById('copy-code-text');
                 const copyBtn = document.getElementById('copy-btn');

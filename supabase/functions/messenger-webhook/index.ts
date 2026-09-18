@@ -290,7 +290,8 @@ serve(async (req) => {
                   .upsert({
                     student_lrn: studentData.lrn,
                     parent_psid: psid,
-                    notify_parent: true
+                    notify_parent: true,
+                    ...(validCode.parent_pin ? { parent_pin: validCode.parent_pin } : {})
                   }, { onConflict: 'student_lrn,parent_psid' })
                   .select();
 
