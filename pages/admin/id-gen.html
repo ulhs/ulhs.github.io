@@ -11,8 +11,332 @@
     <link rel="stylesheet" href="../../assets/vendor/font-awesome/css/all.min.css">
     <link rel="stylesheet" href="../../assets/css/typography.css">
     <link rel="stylesheet" href="../../assets/css/style.css">
+    <style>
+        .batch-qr-panel {
+            --batch-panel-bg: var(--white);
+            --batch-panel-surface: rgba(15, 23, 42, 0.015);
+            --batch-panel-border: rgba(15, 23, 42, 0.08);
+            --batch-panel-strong: var(--text-main);
+            --batch-panel-muted: var(--text-gray);
+            --batch-panel-item: var(--white);
+            --batch-panel-item-hover: rgba(37, 99, 235, 0.03);
+            --batch-panel-alt: rgba(15, 23, 42, 0.06);
+            --batch-panel-preview: #ffffff;
+            margin-top: 36px;
+            background: var(--batch-panel-bg);
+            border: 1px solid var(--batch-panel-border);
+            border-radius: 18px;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.05);
+            overflow: hidden;
+        }
+
+        body.dark-mode .batch-qr-panel {
+            --batch-panel-bg: var(--card-dark, #1a1a1a);
+            --batch-panel-surface: rgba(255, 255, 255, 0.02);
+            --batch-panel-border: rgba(255, 255, 255, 0.12);
+            --batch-panel-strong: var(--text-dark, #f0f0f0);
+            --batch-panel-muted: #d5d9e0;
+            --batch-panel-item: #202124;
+            --batch-panel-item-hover: rgba(96, 165, 250, 0.1);
+            --batch-panel-alt: rgba(255, 255, 255, 0.06);
+            --batch-panel-preview: #111827;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .batch-qr-header {
+            background: linear-gradient(135deg, rgba(206, 32, 41, 0.12), rgba(17, 24, 39, 0.03));
+            border-bottom: 1px solid var(--batch-panel-border);
+            padding: 18px 20px;
+        }
+
+        body.dark-mode .batch-qr-header {
+            background: linear-gradient(135deg, rgba(206, 32, 41, 0.18), rgba(148, 163, 184, 0.08));
+        }
+
+        .batch-qr-header h3 {
+            margin: 0;
+            color: var(--batch-panel-strong);
+            font-size: 1rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            font-weight: 900;
+        }
+
+        .batch-qr-body {
+            padding: 20px;
+        }
+
+        .batch-filter-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            align-items: end;
+        }
+
+        .batch-filter-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .batch-filter-wrapper label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--batch-panel-muted);
+            font-weight: 800;
+        }
+
+        .batch-filter-wrapper input,
+        .batch-filter-wrapper select,
+        .batch-action-btn,
+        .batch-export-btn {
+            border-radius: 12px;
+            border: 1px solid var(--batch-panel-border);
+            background: var(--batch-panel-bg);
+            color: var(--batch-panel-strong);
+            min-height: 44px;
+            padding: 10px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            width: 100%;
+        }
+
+        .batch-filter-wrapper input::placeholder,
+        .batch-filter-wrapper select::placeholder {
+            color: var(--batch-panel-muted);
+            opacity: 0.9;
+        }
+
+        .batch-filter-wrapper input:focus,
+        .batch-filter-wrapper select:focus {
+            outline: none;
+            border-color: rgba(37, 99, 235, 0.6);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .batch-action-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: flex-end;
+            justify-content: flex-start;
+        }
+
+        .batch-action-btn,
+        .batch-export-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 150px;
+            cursor: pointer;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            font-size: 10px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-weight: 900;
+        }
+
+        .batch-action-btn:hover,
+        .batch-export-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .batch-action-btn.secondary {
+            background: var(--batch-panel-alt);
+            color: var(--batch-panel-strong);
+        }
+
+        .batch-action-btn.primary {
+            background: #0038A8;
+            color: #fff;
+        }
+
+        .batch-action-btn.warn {
+            background: rgba(245, 158, 11, 0.16);
+            color: var(--batch-panel-strong);
+        }
+
+        .batch-action-btn.danger {
+            background: rgba(220, 38, 38, 0.12);
+            color: var(--batch-panel-strong);
+        }
+
+        .batch-export-btn.pdf {
+            background: rgba(16, 185, 129, 0.14);
+            color: var(--batch-panel-strong);
+        }
+
+        .batch-export-btn.jpg {
+            background: rgba(168, 85, 247, 0.12);
+            color: var(--batch-panel-strong);
+        }
+
+        .batch-export-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .batch-summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 18px;
+            margin-bottom: 14px;
+        }
+
+        .batch-summary-row p {
+            margin: 0;
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-weight: 900;
+            color: var(--batch-panel-muted);
+        }
+
+        .batch-badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .batch-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 8px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .batch-badge.primary {
+            background: rgba(37, 99, 235, 0.12);
+            color: #2563eb;
+        }
+
+        body.dark-mode .batch-badge.primary {
+            color: #93c5fd;
+        }
+
+        .batch-badge.secondary {
+            background: var(--batch-panel-alt);
+            color: var(--batch-panel-strong);
+        }
+
+        .batch-checklist {
+            max-height: 260px;
+            overflow-y: auto;
+            border: 1px solid var(--batch-panel-border);
+            background: var(--batch-panel-surface);
+            border-radius: 12px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .batch-student-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            background: var(--batch-panel-item);
+            border: 1px solid var(--batch-panel-border);
+        }
+
+        .batch-student-item:hover {
+            background: var(--batch-panel-item-hover);
+        }
+
+        .batch-student-item input {
+            width: 16px;
+            height: 16px;
+            accent-color: #2563eb;
+            flex-shrink: 0;
+        }
+
+        .batch-student-name {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--batch-panel-strong);
+        }
+
+        .batch-student-meta {
+            margin-left: auto;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--batch-panel-muted);
+            text-align: right;
+        }
+
+        .batch-empty-state {
+            text-align: center;
+            padding: 28px 12px;
+            color: var(--batch-panel-muted);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .batch-qr-preview {
+            margin-top: 22px;
+            border: 1px solid var(--batch-panel-border);
+            background: var(--batch-panel-surface);
+            border-radius: 12px;
+            padding: 14px;
+            min-height: 220px;
+        }
+
+        .batch-qr-preview canvas {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+            border-radius: 12px;
+            background: var(--batch-panel-preview);
+        }
+
+        @media (max-width: 992px) {
+            .batch-filter-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 640px) {
+            .batch-qr-body {
+                padding: 16px;
+            }
+
+            .batch-filter-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .batch-action-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .batch-action-btn,
+            .batch-export-btn {
+                min-width: 0;
+                width: 100%;
+            }
+
+            .batch-summary-row {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+    </style>
     <!-- Offline Support: Local Libraries -->
     <script src="../../assets/lib/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="../../assets/lib/selfie_segmentation.js"></script>
     <link rel="stylesheet" href="../../assets/lib/cropper.min.css">
     <script src="../../assets/lib/cropper.min.js"></script>
@@ -449,6 +773,65 @@
         </div>
     </main>
 
+    <section class="batch-qr-panel" aria-label="Batch QR export panel">
+        <div class="batch-qr-header">
+            <h3>Batch QR Export</h3>
+        </div>
+        <div class="batch-qr-body">
+            <div class="batch-filter-grid">
+                <div class="batch-filter-wrapper">
+                    <label for="batch-grade-filter">Grade Level</label>
+                    <select id="batch-grade-filter">
+                        <option value="all">All Grades</option>
+                        <option value="7">Grade 7</option>
+                        <option value="8">Grade 8</option>
+                        <option value="9">Grade 9</option>
+                        <option value="10">Grade 10</option>
+                        <option value="11">Grade 11</option>
+                        <option value="12">Grade 12</option>
+                    </select>
+                </div>
+
+                <div class="batch-filter-wrapper">
+                    <label for="batch-section-filter">Section</label>
+                    <select id="batch-section-filter">
+                        <option value="all">All Sections</option>
+                    </select>
+                </div>
+
+                <div class="batch-filter-wrapper" style="grid-column: span 1;">
+                    <label for="batch-name-filter">Name Search</label>
+                    <input id="batch-name-filter" type="text" placeholder="Search by student name..." autocomplete="off">
+                </div>
+
+                <div class="batch-action-row">
+                    <button type="button" id="batch-load-btn" class="batch-action-btn primary">Load Students</button>
+                    <button type="button" id="batch-clear-filters-btn" class="batch-action-btn secondary">Clear Filters</button>
+                    <button type="button" id="batch-select-visible-btn" class="batch-action-btn warn">Select Visible</button>
+                    <button type="button" id="batch-deselect-visible-btn" class="batch-action-btn danger">Deselect Visible</button>
+                    <button type="button" id="batch-pdf-btn" class="batch-export-btn pdf" disabled>Download PDF</button>
+                    <button type="button" id="batch-jpg-btn" class="batch-export-btn jpg" disabled>Download JPGs</button>
+                </div>
+            </div>
+
+            <div class="batch-summary-row">
+                <p id="batch-student-count">0 STUDENTS</p>
+                <div class="batch-badges">
+                    <span id="batch-selection-badge" class="batch-badge primary">0 SELECTED</span>
+                    <span id="batch-visible-selected-badge" class="batch-badge secondary">0 VISIBLE</span>
+                </div>
+            </div>
+
+            <div id="batch-students-checklist" class="batch-checklist">
+                <div class="batch-empty-state">Loading students...</div>
+            </div>
+
+            <div id="batch-qr-preview" class="batch-qr-preview">
+                <div class="batch-empty-state">Select students to preview QR codes.</div>
+            </div>
+        </div>
+    </section>
+
     <!-- Data Privacy Notice (DPA 2012 Compliance) - Cultural Style -->
     <footer style="margin-top: 80px; padding: 40px 20px; max-width: 900px; margin-left: auto; margin-right: auto;">
         <div style="background: var(--soft-abaca); border: 2px solid var(--accent-gold); border-radius: 20px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
@@ -526,5 +909,380 @@
     </div>
 
     <script src="../../assets/js/main.js"></script>
+    <script>
+        (() => {
+            const batchState = {
+                allStudents: [],
+                selectedLrns: new Set()
+            };
+
+            function batchNormalizeValue(value) {
+                return String(value ?? '').trim().toLowerCase();
+            }
+
+            function batchGetFilteredStudents() {
+                const grade = document.getElementById('batch-grade-filter').value;
+                const section = document.getElementById('batch-section-filter').value;
+                const nameQuery = batchNormalizeValue(document.getElementById('batch-name-filter').value);
+
+                let filtered = [...batchState.allStudents];
+
+                if (grade !== 'all') {
+                    filtered = filtered.filter(student => String(student.grade_level) === String(grade));
+                }
+
+                if (section !== 'all') {
+                    filtered = filtered.filter(student => batchNormalizeValue(student.section) === batchNormalizeValue(section));
+                }
+
+                if (nameQuery) {
+                    filtered = filtered.filter(student => batchNormalizeValue(student.full_name).includes(nameQuery));
+                }
+
+                return filtered;
+            }
+
+            function batchUpdateSectionFilter() {
+                const gradeFilter = document.getElementById('batch-grade-filter');
+                const sectionFilter = document.getElementById('batch-section-filter');
+                const selectedGrade = gradeFilter.value;
+                const currentValue = sectionFilter.value;
+
+                sectionFilter.innerHTML = '<option value="all">All Sections</option>';
+
+                const sections = [...new Set(
+                    batchState.allStudents
+                        .filter(student => selectedGrade === 'all' || String(student.grade_level) === String(selectedGrade))
+                        .map(student => student.section)
+                        .filter(Boolean)
+                        .map(section => String(section).trim())
+                )].sort((a, b) => a.localeCompare(b));
+
+                sections.forEach(section => {
+                    const option = document.createElement('option');
+                    option.value = section;
+                    option.textContent = section;
+                    sectionFilter.appendChild(option);
+                });
+
+                if (currentValue && (sections.includes(currentValue) || currentValue === 'all')) {
+                    sectionFilter.value = currentValue;
+                } else {
+                    sectionFilter.value = 'all';
+                }
+            }
+
+            function batchUpdateSummary(filtered) {
+                const visibleSelected = filtered.filter(student => batchState.selectedLrns.has(String(student.lrn))).length;
+                document.getElementById('batch-student-count').textContent = `${filtered.length} STUDENT${filtered.length !== 1 ? 'S' : ''}`;
+                document.getElementById('batch-selection-badge').textContent = `${batchState.selectedLrns.size} SELECTED`;
+                document.getElementById('batch-visible-selected-badge').textContent = `${visibleSelected} VISIBLE`;
+            }
+
+            function batchSelectVisibleStudents() {
+                const filtered = batchGetFilteredStudents();
+                filtered.forEach(student => batchState.selectedLrns.add(String(student.lrn)));
+                batchRenderChecklist();
+            }
+
+            function batchDeselectVisibleStudents() {
+                const filtered = batchGetFilteredStudents();
+                filtered.forEach(student => batchState.selectedLrns.delete(String(student.lrn)));
+                batchRenderChecklist();
+            }
+
+            function batchClearFilters() {
+                document.getElementById('batch-grade-filter').value = 'all';
+                document.getElementById('batch-section-filter').value = 'all';
+                document.getElementById('batch-name-filter').value = '';
+                batchUpdateSectionFilter();
+                batchRenderChecklist();
+            }
+
+            function batchGetSelectionForExport() {
+                const selected = batchState.allStudents.filter(student => batchState.selectedLrns.has(String(student.lrn)));
+                const exportable = selected.filter(student => String(student.public_token || '').trim());
+                const missing = selected.filter(student => !String(student.public_token || '').trim());
+                return { selected, exportable, missing };
+            }
+
+            function batchConfirmExport(label, exportList, missingList) {
+                if (exportList.length === 0) {
+                    alert('No valid students are available for export. Each selected student must have a public token.');
+                    return false;
+                }
+
+                if (missingList.length > 0) {
+                    const previewNames = missingList.slice(0, 5).map(student => student.full_name).join(', ');
+                    const detailText = missingList.length > 5 ? `${previewNames}, and ${missingList.length - 5} more` : previewNames;
+                    return window.confirm(`Warning: ${missingList.length} selected student(s) are missing a public token (${detailText}). They will be excluded from this ${label.toLowerCase()} export. Continue with ${exportList.length} valid student(s)?`);
+                }
+
+                return window.confirm(`Generate ${label} for ${exportList.length} selected student(s)?`);
+            }
+
+            async function batchGenerateSingleQR(student) {
+                const qrData = `NAME: ${student.full_name}\nTOKEN: ${student.public_token || 'TBD'}`;
+                try {
+                    const qrUrl = await QRCode.toDataURL(qrData, { margin: 1, width: 400, errorCorrectionLevel: 'H' });
+                    return new Promise((resolve, reject) => {
+                        const qrImg = new Image();
+                        qrImg.onload = () => resolve(qrImg);
+                        qrImg.onerror = reject;
+                        qrImg.src = qrUrl;
+                    });
+                } catch (err) {
+                    console.error('Batch QR generation error:', err);
+                    throw err;
+                }
+            }
+
+            async function batchDrawQRWithName(student, ctx, x, y, width, height) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(x, y, width, height);
+                ctx.strokeStyle = '#e5e7eb';
+                ctx.strokeRect(x, y, width, height);
+
+                try {
+                    const qrImg = await batchGenerateSingleQR(student);
+                    const qrSize = height * 0.8;
+                    const qrX = x + (width - qrSize) / 2;
+                    const qrY = y + 5;
+                    ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+                    const logoImg = new Image();
+                    await new Promise(resolveLogo => {
+                        logoImg.onload = () => {
+                            const logoSize = qrSize * 0.30;
+                            const logoX = qrX + (qrSize - logoSize) / 2;
+                            const logoY = qrY + (qrSize - logoSize) / 2;
+                            const bgPadding = logoSize * 0.15;
+                            ctx.fillStyle = '#FFFFFF';
+                            ctx.beginPath();
+                            ctx.arc(qrX + qrSize / 2, qrY + qrSize / 2, (logoSize + bgPadding) / 2, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+                            resolveLogo();
+                        };
+                        logoImg.onerror = () => resolveLogo();
+                        logoImg.src = '../../assets/images/school-logo.webp';
+                    });
+
+                    const studentName = String(student.full_name || 'Unnamed Student');
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#111827';
+                    let fontSize = 18;
+                    ctx.font = `bold ${fontSize}px Roboto, Arial, sans-serif`;
+                    while (ctx.measureText(studentName).width > width - 20 && fontSize > 10) {
+                        fontSize--;
+                        ctx.font = `bold ${fontSize}px Roboto, Arial, sans-serif`;
+                    }
+                    ctx.fillText(studentName, x + width / 2, y + qrSize + 20);
+                } catch (err) {
+                    console.error('Error drawing batch QR:', err);
+                    ctx.fillStyle = '#ef4444';
+                    ctx.font = 'bold 14px Roboto, Arial, sans-serif';
+                    ctx.fillText('QR Failed', x + width / 2, y + height / 2);
+                }
+            }
+
+            async function batchRenderQRPreview() {
+                const container = document.getElementById('batch-qr-preview');
+                const selectedStudents = batchState.allStudents.filter(student => batchState.selectedLrns.has(String(student.lrn)));
+
+                if (selectedStudents.length === 0) {
+                    container.innerHTML = '<div class="batch-empty-state">Select students to preview QR codes.</div>';
+                    return;
+                }
+
+                const previewCanvas = document.createElement('canvas');
+                previewCanvas.id = 'batch-preview-canvas';
+                const cols = 3;
+                const qrWidth = 220;
+                const qrHeight = 280;
+                const padding = 20;
+                const rows = Math.ceil(selectedStudents.length / cols);
+                previewCanvas.width = cols * qrWidth + (cols + 1) * padding;
+                previewCanvas.height = rows * qrHeight + (rows + 1) * padding;
+                const ctx = previewCanvas.getContext('2d');
+                ctx.fillStyle = '#f9fafb';
+                ctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+                for (let i = 0; i < selectedStudents.length; i++) {
+                    const col = i % cols;
+                    const row = Math.floor(i / cols);
+                    const x = padding + col * (qrWidth + padding);
+                    const y = padding + row * (qrHeight + padding);
+                    await batchDrawQRWithName(selectedStudents[i], ctx, x, y, qrWidth, qrHeight);
+                }
+
+                container.innerHTML = '';
+                container.appendChild(previewCanvas);
+            }
+
+            function batchRenderChecklist() {
+                const checklistEl = document.getElementById('batch-students-checklist');
+                const filtered = batchGetFilteredStudents();
+                batchUpdateSummary(filtered);
+
+                if (filtered.length === 0) {
+                    checklistEl.innerHTML = '<div class="batch-empty-state">No students match your filters.</div>';
+                    return;
+                }
+
+                checklistEl.innerHTML = filtered.map(student => {
+                    const isChecked = batchState.selectedLrns.has(String(student.lrn));
+                    return `
+                        <label class="batch-student-item">
+                            <input type="checkbox" value="${String(student.lrn)}" ${isChecked ? 'checked' : ''} data-batch-lrn="${student.lrn}">
+                            <span class="batch-student-name">${String(student.full_name || 'Unnamed Student')}</span>
+                            <span class="batch-student-meta">Grade ${student.grade_level} - ${student.section || 'Unassigned'}</span>
+                        </label>
+                    `;
+                }).join('');
+
+                checklistEl.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.addEventListener('change', event => {
+                        const lrn = String(event.target.value);
+                        if (event.target.checked) {
+                            batchState.selectedLrns.add(lrn);
+                        } else {
+                            batchState.selectedLrns.delete(lrn);
+                        }
+                        batchRenderQRPreview();
+                        batchUpdateSummary(batchGetFilteredStudents());
+                    });
+                });
+
+                batchRenderQRPreview();
+            }
+
+            async function batchLoadStudents() {
+                const listEl = document.getElementById('batch-students-checklist');
+                try {
+                    if (!window.supabaseClient) {
+                        throw new Error('Supabase client is unavailable.');
+                    }
+
+                    const { data: students, error } = await window.supabaseClient
+                        .from('students')
+                        .select('lrn, full_name, grade_level, section, public_token')
+                        .order('grade_level')
+                        .order('section')
+                        .order('full_name');
+
+                    if (error) throw error;
+                    batchState.allStudents = Array.isArray(students) ? students : [];
+                    batchUpdateSectionFilter();
+                    batchRenderChecklist();
+                    document.getElementById('batch-pdf-btn').disabled = false;
+                    document.getElementById('batch-jpg-btn').disabled = false;
+                } catch (err) {
+                    console.error('Batch student load error:', err);
+                    listEl.innerHTML = '<div class="batch-empty-state" style="color: var(--madder-red);">Failed to load students: ' + (err.message || 'Unknown error') + '</div>';
+                }
+            }
+
+            async function batchDownloadPDF() {
+                const { selected, exportable, missing } = batchGetSelectionForExport();
+                if (selected.length === 0) {
+                    alert('Please select at least one student!');
+                    return;
+                }
+
+                if (!batchConfirmExport('PDF', exportable, missing)) {
+                    return;
+                }
+
+                const canvas = document.getElementById('batch-preview-canvas');
+                if (!canvas) {
+                    alert('Please generate a QR preview first.');
+                    return;
+                }
+
+                try {
+                    const jsPdfCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+                    if (!jsPdfCtor) {
+                        throw new Error('jsPDF library is not available in this browser.');
+                    }
+
+                    const pdf = new jsPdfCtor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                    const imgData = canvas.toDataURL('image/png');
+                    const pageWidth = pdf.internal.pageSize.getWidth();
+                    const pageHeight = pdf.internal.pageSize.getHeight();
+                    const margin = 10;
+                    const imgProps = pdf.getImageProperties(imgData);
+                    const imgWidth = pageWidth - (margin * 2);
+                    const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+                    const finalHeight = Math.min(imgHeight, pageHeight - (margin * 2));
+                    pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, finalHeight, undefined, 'FAST');
+                    pdf.save('student-qr-codes.pdf');
+                } catch (err) {
+                    console.error('Batch PDF export error:', err);
+                    alert('Failed to download PDF: ' + err.message);
+                }
+            }
+
+            async function batchDownloadJPGs() {
+                const { selected, exportable, missing } = batchGetSelectionForExport();
+                if (selected.length === 0) {
+                    alert('Please select at least one student!');
+                    return;
+                }
+
+                if (!batchConfirmExport('JPG files', exportable, missing)) {
+                    return;
+                }
+
+                const qrWidth = 400;
+                const qrHeight = 500;
+
+                for (const student of exportable) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = qrWidth;
+                    canvas.height = qrHeight;
+                    const ctx = canvas.getContext('2d');
+                    await batchDrawQRWithName(student, ctx, 0, 0, qrWidth, qrHeight);
+                    const link = document.createElement('a');
+                    link.download = `qr-${student.full_name.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`;
+                    link.href = canvas.toDataURL('image/jpeg', 0.95);
+                    link.click();
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
+            }
+
+            function initBatchQRGenerator() {
+                const batchGradeFilter = document.getElementById('batch-grade-filter');
+                const batchSectionFilter = document.getElementById('batch-section-filter');
+                const batchNameFilter = document.getElementById('batch-name-filter');
+
+                if (!batchGradeFilter || !batchSectionFilter || !batchNameFilter) return;
+
+                batchGradeFilter.addEventListener('change', () => {
+                    batchUpdateSectionFilter();
+                    batchRenderChecklist();
+                });
+
+                batchSectionFilter.addEventListener('change', batchRenderChecklist);
+                batchNameFilter.addEventListener('input', batchRenderChecklist);
+                document.getElementById('batch-load-btn').addEventListener('click', batchLoadStudents);
+                document.getElementById('batch-clear-filters-btn').addEventListener('click', batchClearFilters);
+                document.getElementById('batch-select-visible-btn').addEventListener('click', batchSelectVisibleStudents);
+                document.getElementById('batch-deselect-visible-btn').addEventListener('click', batchDeselectVisibleStudents);
+                document.getElementById('batch-pdf-btn').addEventListener('click', batchDownloadPDF);
+                document.getElementById('batch-jpg-btn').addEventListener('click', batchDownloadJPGs);
+
+                batchUpdateSectionFilter();
+                batchLoadStudents();
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initBatchQRGenerator);
+            } else {
+                initBatchQRGenerator();
+            }
+        })();
+    </script>
 </body>
 </html>
