@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="../../assets/css/typography.css">
     <link rel="stylesheet" href="../../assets/css/style.css">
     <link rel="stylesheet" href="../../assets/css/admin-portal.css?v=20260905-admin-theme">
+    <script src="../../assets/admin/attendance/js/attendance-aggregator.js"></script>
     <script src="../../assets/js/admin-nav.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
@@ -275,7 +276,7 @@
                                 <p id="total-students" class="text-2xl font-black text-blue-800">0</p>
                             </div>
                             <div class="bg-green-50 p-4 rounded-xl border border-green-100">
-                                <p class="text-[10px] font-bold text-green-600 uppercase tracking-widest">Days Present</p>
+                                <p class="text-[10px] font-bold text-green-600 uppercase tracking-widest">Attendance Days</p>
                                 <p id="total-present" class="text-2xl font-black text-green-800">0</p>
                             </div>
                             <div class="bg-red-50 p-4 rounded-xl border border-red-100">
@@ -296,28 +297,36 @@
                             </button>
                         </div>
 
+                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3" role="note">
+                            Valid Days = Weekdays - Suspended - Holidays. Overlapping dates are deducted once.
+                        </p>
+
                         <!-- Summary Table -->
                         <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
                             <div class="p-4 bg-gray-50 border-b">
                                 <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Student Attendance Summary</h3>
                             </div>
                             <div class="overflow-x-auto">
-                                <table class="w-full text-left text-sm">
+                                <table class="w-full text-left text-sm" aria-describedby="summary-table-title">
+                                    <caption id="summary-table-title" class="sr-only">Student attendance summary for the selected month and filters</caption>
                                     <thead>
                                         <tr class="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest text-left">
-                                            <th class="px-4 py-3">LRN</th>
-                                            <th class="px-4 py-3">Student Name</th>
-                                            <th class="px-4 py-3">Grade</th>
-                                            <th class="px-4 py-3">Section</th>
-                                            <th class="px-4 py-3 text-center">Total Days</th>
-                                            <th class="px-4 py-3 text-center">Present</th>
-                                            <th class="px-4 py-3 text-center">Absent</th>
-                                            <th class="px-4 py-3 text-center">Tardy</th>
+                                            <th scope="col" class="px-4 py-3">LRN</th>
+                                            <th scope="col" class="px-4 py-3">Student Name</th>
+                                            <th scope="col" class="px-4 py-3">Grade</th>
+                                            <th scope="col" class="px-4 py-3">Section</th>
+                                            <th scope="col" class="px-4 py-3 text-center">Suspended</th>
+                                            <th scope="col" class="px-4 py-3 text-center">Holidays</th>
+                                            <th scope="col" class="px-4 py-3 text-center">Valid Days</th>
+                                            <th scope="col" class="px-4 py-3 text-center">Attended</th>
+                                            <th scope="col" class="px-4 py-3 text-center">Absent</th>
+                                            <th scope="col" class="px-4 py-3 text-center">Tardy</th>
+                                            <th scope="col" class="px-4 py-3 text-center">Attendance</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="summary-table-body" class="divide-y divide-gray-100">
+                                    <tbody id="summary-table-body" class="divide-y divide-gray-100" aria-live="polite" aria-busy="true">
                                         <tr>
-                                            <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                                            <td colspan="11" class="px-4 py-8 text-center text-gray-500">
                                                 <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
                                                 <p class="text-xs font-bold uppercase tracking-widest">Loading attendance data...</p>
                                             </td>
@@ -360,6 +369,31 @@
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        async function fetchAllRows(buildQuery) {
+            const rows = [];
+            const pageSize = 1000;
+            let page = 0;
+
+            while (true) {
+                const response = await buildQuery().range(page * pageSize, (page + 1) * pageSize - 1);
+                if (response.error) return { data: rows, error: response.error };
+                rows.push(...(response.data || []));
+                if (!response.data || response.data.length < pageSize) {
+                    return { data: rows, error: null };
+                }
+                page++;
+            }
         }
 
         function getAttendanceStatus(percentage) {
@@ -428,9 +462,10 @@
             const yearFilter = parseInt(document.getElementById('year-filter').value);
 
             const tableBody = document.getElementById('summary-table-body');
+            tableBody.setAttribute('aria-busy', 'true');
             tableBody.innerHTML = `
                 <tr>
-                    <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                    <td colspan="11" class="px-4 py-8 text-center text-gray-500">
                         <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
                         <p class="text-xs font-bold uppercase tracking-widest">Loading attendance data...</p>
                     </td>
@@ -442,16 +477,13 @@
                     throw new Error('Supabase client is not available.');
                 }
 
-                let studentsQuery = window.supabaseClient.from('students').select('*');
-
-                if (gradeFilter !== 'all') {
-                    studentsQuery = studentsQuery.eq('grade_level', gradeFilter);
-                }
-                if (sectionFilter !== 'all') {
-                    studentsQuery = studentsQuery.eq('section', sectionFilter);
-                }
-
-                const { data: students, error: studentsError } = await studentsQuery;
+                const studentsResponse = await fetchAllRows(() => {
+                    let query = window.supabaseClient.from('students').select('lrn, full_name, grade_level, section');
+                    if (gradeFilter !== 'all') query = query.eq('grade_level', gradeFilter);
+                    if (sectionFilter !== 'all') query = query.eq('section', sectionFilter);
+                    return query;
+                });
+                const { data: students, error: studentsError } = studentsResponse;
                 if (studentsError) throw studentsError;
 
                 allStudents = students || [];
@@ -482,65 +514,80 @@
                     return;
                 }
 
-                let logsQuery = window.supabaseClient
+                const logsResponse = await fetchAllRows(() => window.supabaseClient
                     .from('attendance_logs')
-                    .select('*')
+                    .select('student_lrn, session, status, local_date, scanned_at, scanned_at_local')
                     .in('student_lrn', studentLrns)
                     .gte('local_date', startDateStr)
-                    .lte('local_date', endDateStr);
+                    .lte('local_date', endDateStr));
 
-                const { data: attendanceLogs, error: logsError } = await logsQuery;
+                const { data: attendanceLogs, error: logsError } = logsResponse;
                 if (logsError) throw logsError;
 
                 const logs = attendanceLogs || [];
-                const totalDays = getDaysInMonth(yearFilter, monthFilter);
+                const [suspendedRes, calendarRes] = await Promise.all([
+                    window.supabaseClient
+                        .from('suspended_days')
+                        .select('date')
+                        .gte('date', startDateStr)
+                        .lte('date', endDateStr),
+                    window.supabaseClient
+                        .from('school_calendar')
+                        .select('calendar_date, is_school_day')
+                        .gte('calendar_date', startDateStr)
+                        .lte('calendar_date', endDateStr)
+                ]);
+
+                const suspendedDates = new Set(
+                    Array.isArray(suspendedRes.data) ? suspendedRes.data.map(row => String(row.date).slice(0, 10)) : []
+                );
+                const calendarByDate = new Map(
+                    Array.isArray(calendarRes.data)
+                        ? calendarRes.data.map(row => [String(row.calendar_date).slice(0, 10), row.is_school_day !== false])
+                        : []
+                );
+                const weekdayDates = [];
+                for (let day = 1; day <= getDaysInMonth(yearFilter, monthFilter); day++) {
+                    const date = new Date(yearFilter, monthFilter, day);
+                    if (date.getDay() >= 1 && date.getDay() <= 5) {
+                        weekdayDates.push(formatLocalDate(date));
+                    }
+                }
+                const suspendedWeekdays = new Set(weekdayDates.filter(date => suspendedDates.has(date)));
+                const holidayWeekdays = new Set(weekdayDates.filter(date => !suspendedWeekdays.has(date) && calendarByDate.get(date) === false));
+                const validSchoolDays = [];
+                weekdayDates.forEach(date => {
+                    if (!suspendedWeekdays.has(date) && !holidayWeekdays.has(date)) validSchoolDays.push(date);
+                });
+
+                if (suspendedRes.error || calendarRes.error) {
+                    console.warn('School calendar data unavailable; using weekdays only.', suspendedRes.error || calendarRes.error);
+                }
 
                 const summaryData = allStudents.map(student => {
                     const studentLogs = logs.filter(log => String(log.student_lrn) === String(student.lrn));
-                    const presentDays = new Set();
-                    const absentDays = new Set();
-                    const tardyDays = new Set();
-
-                    studentLogs.forEach(log => {
-                        const status = String(log.status || '').toUpperCase();
-                        const date = log.local_date || (
-                            log.scanned_at_local ? String(log.scanned_at_local).slice(0, 10) : ''
-                        );
-
-                        if (!date) return;
-
-                        if (status === 'PRESENT') {
-                            presentDays.add(date);
-                        } else if (status === 'ABSENT') {
-                            absentDays.add(date);
-                        } else if (status === 'TARDY') {
-                            tardyDays.add(date);
-                        }
-                    });
-
-                    const presentCount = presentDays.size;
-                    const absentCount = absentDays.size;
-                    const tardyCount = tardyDays.size;
-                    const totalAttended = presentCount + tardyCount;
-                    const attendancePercentage = totalDays > 0 ? Math.round((totalAttended / totalDays) * 100) : 0;
+                    const dailySummary = window.AttendanceAggregator.summarizeStudent(studentLogs, validSchoolDays);
 
                     return {
                         lrn: student.lrn,
                         name: student.full_name,
                         grade: student.grade_level,
                         section: student.section,
-                        totalDays: totalDays,
-                        present: presentCount,
-                        absent: absentCount,
-                        tardy: tardyCount,
-                        attendancePercentage: attendancePercentage
+                        suspendedDays: suspendedWeekdays.size,
+                        holidayDays: holidayWeekdays.size,
+                        totalDays: dailySummary.totalDays,
+                        attended: dailySummary.attended,
+                        present: dailySummary.present,
+                        absent: dailySummary.absent,
+                        tardy: dailySummary.tardy,
+                        attendancePercentage: dailySummary.attendancePercentage
                     };
                 });
 
                 attendanceSummaryData = summaryData;
 
                 const totalStudents = summaryData.length;
-                const totalPresent = summaryData.reduce((sum, s) => sum + s.present, 0);
+                const totalPresent = summaryData.reduce((sum, s) => sum + s.attended, 0);
                 const totalAbsent = summaryData.reduce((sum, s) => sum + s.absent, 0);
                 const avgAttendance = totalStudents > 0
                     ? Math.round(summaryData.reduce((sum, s) => sum + s.attendancePercentage, 0) / totalStudents)
@@ -555,11 +602,12 @@
 
             } catch (error) {
                 console.error('Error loading attendance summary:', error);
+                tableBody.setAttribute('aria-busy', 'false');
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="px-4 py-8 text-center text-red-500">
+                        <td colspan="11" class="px-4 py-8 text-center text-red-500">
                             <i class="fa-solid fa-exclamation-triangle text-2xl mb-2"></i>
-                            <p class="text-xs font-bold uppercase tracking-widest">Error loading data: ${error.message}</p>
+                            <p class="text-xs font-bold uppercase tracking-widest">Error loading data: ${escapeHtml(error.message)}</p>
                         </td>
                     </tr>
                 `;
@@ -568,11 +616,12 @@
 
         function renderSummaryTable(data) {
             const tableBody = document.getElementById('summary-table-body');
+            tableBody.setAttribute('aria-busy', 'false');
             
             if (data.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                        <td colspan="11" class="px-4 py-8 text-center text-gray-500">
                             <i class="fa-solid fa-inbox text-2xl mb-2"></i>
                             <p class="text-xs font-bold uppercase tracking-widest">No attendance data found</p>
                         </td>
@@ -587,14 +636,17 @@
             tableBody.innerHTML = sortedData.map(student => {
                 return `
                     <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 font-mono text-xs">${student.lrn}</td>
-                        <td class="px-4 py-3 font-bold text-xs">${student.name}</td>
-                        <td class="px-4 py-3 text-xs">${student.grade}</td>
-                        <td class="px-4 py-3 text-xs">${student.section}</td>
+                        <td class="px-4 py-3 font-mono text-xs">${escapeHtml(student.lrn)}</td>
+                        <td class="px-4 py-3 font-bold text-xs">${escapeHtml(student.name)}</td>
+                        <td class="px-4 py-3 text-xs">${escapeHtml(student.grade)}</td>
+                        <td class="px-4 py-3 text-xs">${escapeHtml(student.section)}</td>
+                        <td class="px-4 py-3 text-center text-xs font-bold text-orange-600">${student.suspendedDays}</td>
+                        <td class="px-4 py-3 text-center text-xs font-bold text-blue-600">${student.holidayDays}</td>
                         <td class="px-4 py-3 text-center text-xs font-bold">${student.totalDays}</td>
-                        <td class="px-4 py-3 text-center text-xs font-bold text-green-600">${student.present}</td>
+                        <td class="px-4 py-3 text-center text-xs font-bold text-green-600">${student.attended}</td>
                         <td class="px-4 py-3 text-center text-xs font-bold text-red-600">${student.absent}</td>
                         <td class="px-4 py-3 text-center text-xs font-bold text-amber-600">${student.tardy}</td>
+                        <td class="px-4 py-3 text-center text-xs font-bold">${student.attendancePercentage}%</td>
                     </tr>
                 `;
             }).join('');
@@ -621,10 +673,13 @@
                     { header: 'Student Name', key: 'name', width: 30 },
                     { header: 'Grade', key: 'grade', width: 10 },
                     { header: 'Section', key: 'section', width: 15 },
-                    { header: 'Total Days', key: 'totalDays', width: 12 },
-                    { header: 'Days Present', key: 'present', width: 12 },
+                    { header: 'Suspended Days', key: 'suspendedDays', width: 16 },
+                    { header: 'Holiday Days', key: 'holidayDays', width: 14 },
+                    { header: 'Valid Days', key: 'totalDays', width: 12 },
+                    { header: 'Attended Days', key: 'attended', width: 14 },
                     { header: 'Days Absent', key: 'absent', width: 12 },
-                    { header: 'Days Tardy', key: 'tardy', width: 12 }
+                    { header: 'Days Tardy', key: 'tardy', width: 12 },
+                    { header: 'Attendance %', key: 'attendancePercentage', width: 14 }
                 ];
 
                 // Add header styling
@@ -645,10 +700,13 @@
                         name: student.name,
                         grade: student.grade,
                         section: student.section,
+                        suspendedDays: student.suspendedDays,
+                        holidayDays: student.holidayDays,
                         totalDays: student.totalDays,
-                        present: student.present,
+                        attended: student.attended,
                         absent: student.absent,
-                        tardy: student.tardy
+                        tardy: student.tardy,
+                        attendancePercentage: student.attendancePercentage
                     });
                 });
 
@@ -673,7 +731,12 @@
             // Set current month and year
             const now = new Date();
             document.getElementById('month-filter').value = now.getMonth();
-            document.getElementById('year-filter').value = now.getFullYear();
+            const yearFilter = document.getElementById('year-filter');
+            const currentYear = String(now.getFullYear());
+            if (![...yearFilter.options].some(option => option.value === currentYear)) {
+                yearFilter.add(new Option(currentYear, currentYear));
+            }
+            yearFilter.value = currentYear;
 
             // Initialize section filter
             updateSectionFilter();

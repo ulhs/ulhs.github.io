@@ -283,7 +283,7 @@
                             <i class="fa-solid fa-cloud"></i> Offline
                         </span>
                     </div>
-                    <h2 id="live-clock" class="text-5xl sm:text-7xl md:text-8xl font-black text-gray-900 tracking-tight leading-none mb-2 flex items-baseline gap-2 tabular-nums">
+                    <h2 id="live-clock" class="text-[3.75rem] sm:text-[5.625rem] md:text-[9rem] font-black text-gray-900 tracking-tight leading-none mb-2 flex items-baseline gap-2 tabular-nums">
                         <span id="clock-time">00:00</span>
                         <span id="clock-ampm" class="text-xl sm:text-2xl md:text-3xl font-black text-blue-600 uppercase tracking-widest">AM</span>
                     </h2>
@@ -593,7 +593,6 @@
             <div class="lg:col-span-5 space-y-6">
                 <!-- Status Dashboard Card -->
                 <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-                    <div class="p-1 bg-deped-red"></div>
                     <div class="p-6">
                         <div class="flex justify-center min-h-[16px] -mt-3 mb-0">
                             <span id="last-scan-status-badge" class="hidden px-2 py-0.5 bg-green-400 text-green-950 rounded text-[9px] font-black uppercase tracking-widest">SUCCESS</span>
@@ -605,8 +604,8 @@
 
                         <div class="space-y-1">
                             <!-- Last Scanned Card (Prominent & Upgraded) -->
-                            <div id="last-scanned-card" class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl shadow-2xl p-6 text-white transition-all duration-500 transform hover:scale-[1.01] border border-blue-400/30">
-                                <div class="flex flex-col items-center gap-5">
+                            <div id="last-scanned-card" class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl shadow-2xl px-6 pt-1 pb-[0.5rem] text-white transition-all duration-500 transform hover:scale-[1.01] border border-blue-400/30">
+                                <div class="flex flex-col items-center gap-1">
                                     <div class="rounded-3xl bg-white/10 backdrop-blur-md border-2 border-white/20 overflow-hidden flex-shrink-0 relative shadow-2xl w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 lg:w-64 lg:h-64">
                                         <img id="last-student-photo" src="" alt="" class="w-full h-full student-photo-display object-cover" style="display:none">
                                         <div id="last-photo-placeholder" class="w-full h-full flex items-center justify-center text-gray-300 bg-gray-100">
@@ -615,7 +614,7 @@
                                     </div>
                                     <div class="w-full min-w-0 text-center">
                                         <h3 id="last-student-name" class="text-2xl sm:text-3xl font-black leading-tight tracking-tight break-words">Waiting for scan...</h3>
-                                        <div class="flex items-center justify-center mt-1">
+                                        <div class="flex items-center justify-center mt-0">
                                             <span id="last-scan-time" class="text-xs font-bold text-blue-200 tabular-nums">--:--:--</span>
                                         </div>
                                     </div>
@@ -777,6 +776,7 @@
     </footer>
 
     <script src="../../assets/admin/attendance/js/offline-store.js"></script>
+    <script src="../../assets/admin/attendance/js/attendance-aggregator.js"></script>
     <script src="../../assets/admin/attendance/js/script.js"></script>
 </body>
 </html>

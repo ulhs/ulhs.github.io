@@ -3352,12 +3352,13 @@ async function exportAllSF4(levelFilter = null) {
         const monthName = monthNames[targetMonth];
         
         // Parallel fetch for speed
-        const [logsRes, schoolRes, headRes, profilesRes, suspendedRes] = await Promise.all([
+        const [logsRes, schoolRes, headRes, profilesRes, suspendedRes, calendarRes] = await Promise.all([
             fetchAttendanceLogsForMonth(window.supabaseClient, startOfMonth, endOfMonth),
             window.supabaseClient.from('school_info').select('*'), // Fetch all to be safe
             window.supabaseClient.from('profiles').select('full_name').eq('role', 'school_head').maybeSingle(),
             window.supabaseClient.from('profiles').select('full_name, section_assigned'),
-            window.supabaseClient.from('suspended_days').select('date').gte('date', startOfMonth).lte('date', endOfMonth)
+            window.supabaseClient.from('suspended_days').select('date').gte('date', startOfMonth).lte('date', endOfMonth),
+            window.supabaseClient.from('school_calendar').select('calendar_date, is_school_day').gte('calendar_date', startOfMonth).lte('calendar_date', endOfMonth)
         ]);
 
         logAttendanceLogsResponse('SF4 Export logs', logsRes, startOfMonth, endOfMonth);
@@ -3373,6 +3374,12 @@ async function exportAllSF4(levelFilter = null) {
         if (!suspendedRes.error && suspendedRes.data) {
             suspendedRes.data.forEach(row => {
                 suspendedDates.add(String(row.date));
+            });
+        }
+        const nonSchoolDates = new Set();
+        if (!calendarRes.error && calendarRes.data) {
+            calendarRes.data.forEach(row => {
+                if (row.is_school_day === false) nonSchoolDates.add(String(row.calendar_date));
             });
         }
         console.log("📛 Suspended dates for SF4 export:", Array.from(suspendedDates));
@@ -3507,8 +3514,9 @@ async function exportAllSF4(levelFilter = null) {
             for (let d = 1; d <= new Date(targetYear, targetMonth + 1, 0).getDate(); d++) {
                 const date = new Date(targetYear, targetMonth, d);
                 const dayOfWeek = date.getDay();
-                if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-                    schoolDays.push(date.toISOString().split('T')[0]);
+                const dateKey = date.toISOString().split('T')[0];
+                if (dayOfWeek >= 1 && dayOfWeek <= 5 && !suspendedDates.has(dateKey) && !nonSchoolDates.has(dateKey)) {
+                    schoolDays.push(dateKey);
                 }
             }
             
@@ -3552,14 +3560,12 @@ async function exportAllSF4(levelFilter = null) {
                     
                     males.forEach(s => {
                         const allLogs = studentLogMap.get(s.lrn) || [];
-                        const filteredLogs = allLogs.filter(log => !suspendedDates.has(getLogLocalDate(log)));
-                        totalMaleAttendance += filteredLogs.length;
+                        totalMaleAttendance += window.AttendanceAggregator.summarizeStudent(allLogs, schoolDays).attended;
                     });
                     
                     females.forEach(s => {
                         const allLogs = studentLogMap.get(s.lrn) || [];
-                        const filteredLogs = allLogs.filter(log => !suspendedDates.has(getLogLocalDate(log)));
-                        totalFemaleAttendance += filteredLogs.length;
+                        totalFemaleAttendance += window.AttendanceAggregator.summarizeStudent(allLogs, schoolDays).attended;
                     });
                     
                     // Calculate averages and percentages
@@ -3666,14 +3672,12 @@ async function exportAllSF4(levelFilter = null) {
                         
                         males.forEach(s => {
                             const allLogs = studentLogMap.get(s.lrn) || [];
-                            const filteredLogs = allLogs.filter(log => !suspendedDates.has(getLogLocalDate(log)));
-                            totalMaleAttendance += filteredLogs.length;
+                            totalMaleAttendance += window.AttendanceAggregator.summarizeStudent(allLogs, schoolDays).attended;
                         });
                         
                         females.forEach(s => {
                             const allLogs = studentLogMap.get(s.lrn) || [];
-                            const filteredLogs = allLogs.filter(log => !suspendedDates.has(getLogLocalDate(log)));
-                            totalFemaleAttendance += filteredLogs.length;
+                            totalFemaleAttendance += window.AttendanceAggregator.summarizeStudent(allLogs, schoolDays).attended;
                         });
                         
                         const maleDailyAvg = schoolDays.length > 0 ? (totalMaleAttendance / schoolDays.length) : 0;
