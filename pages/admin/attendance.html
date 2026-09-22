@@ -276,7 +276,7 @@
             <!-- Left Column: Controls and Scanner -->
             <div class="lg:col-span-7 space-y-6">
                 <!-- Real-time Clock Card -->
-                <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 p-6 sm:p-8 flex flex-col items-center justify-center text-center relative">
+                <div id="attendance-clock-card" class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 p-6 sm:p-8 flex flex-col items-center justify-center text-center relative">
                     <div class="mb-4 sm:mb-0 sm:absolute sm:top-4 sm:left-6 flex flex-wrap justify-center items-center gap-2">
                         <span id="session-badge" class="px-3 py-1 bg-gray-100 text-gray-500 rounded-full text-[10px] font-black uppercase tracking-widest">Detecting Session...</span>
                         <span id="cloud-sync-badge" class="px-3 py-1 bg-red-100 text-red-500 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
@@ -288,6 +288,30 @@
                         <span id="clock-ampm" class="text-xl sm:text-2xl md:text-3xl font-black text-blue-600 uppercase tracking-widest">AM</span>
                     </h2>
                     <p id="live-date" class="text-xl font-black text-blue-700 uppercase tracking-widest">Loading Date...</p>
+                    <!-- Statistics Grid -->
+                    <div class="mt-6 w-full max-w-4xl grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
+                        <div class="bg-gray-50 p-3 sm:p-4 rounded-2xl border border-gray-100 shadow-sm">
+                            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Population</p>
+                            <p id="total-count" class="text-2xl sm:text-3xl font-black text-gray-900 tracking-tighter">0</p>
+                        </div>
+                        <div class="bg-gray-50 p-3 sm:p-4 rounded-2xl border border-gray-100 shadow-sm">
+                            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Entries</p>
+                            <p id="present-count" class="text-2xl sm:text-3xl font-black text-green-600 tracking-tighter">0</p>
+                        </div>
+                        <div class="bg-gray-50 p-3 sm:p-4 rounded-2xl border border-gray-100 shadow-sm">
+                            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">AM Logs</p>
+                            <p id="am-entry-count" class="text-2xl sm:text-3xl font-black text-amber-600 tracking-tighter">0</p>
+                        </div>
+                        <div class="bg-gray-50 p-3 sm:p-4 rounded-2xl border border-gray-100 shadow-sm">
+                            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">PM Logs</p>
+                            <p id="pm-entry-count" class="text-2xl sm:text-3xl font-black text-orange-600 tracking-tighter">0</p>
+                        </div>
+                        <div class="bg-gray-50 p-3 sm:p-4 rounded-2xl border border-gray-100 shadow-sm">
+                            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Departures</p>
+                            <p id="departure-entry-count" class="text-2xl sm:text-3xl font-black text-red-600 tracking-tighter">0</p>
+                        </div>
+                    </div>
+                    <p id="clock-scan-status" class="mt-4 min-h-[24px] text-xs font-black uppercase tracking-widest text-gray-400" aria-live="polite">Ready for scan</p>
                 </div>
 
                 <!-- Step 1: Cloud Sync Status (DPA Compliant) -->
@@ -571,59 +595,33 @@
                 <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
                     <div class="p-1 bg-deped-red"></div>
                     <div class="p-6">
-                        <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        <div class="flex justify-center min-h-[16px] -mt-3 mb-0">
+                            <span id="last-scan-status-badge" class="hidden px-2 py-0.5 bg-green-400 text-green-950 rounded text-[9px] font-black uppercase tracking-widest">SUCCESS</span>
+                        </div>
+                        <h2 class="text-xl font-bold text-gray-800 mb-1 flex items-center justify-center gap-2">
                             <svg class="w-6 h-6 text-deped-red" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                            Attendance Dashboard
+                            Last Scanned Learner
                         </h2>
 
-                        <div class="space-y-6">
+                        <div class="space-y-1">
                             <!-- Last Scanned Card (Prominent & Upgraded) -->
                             <div id="last-scanned-card" class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl shadow-2xl p-6 text-white transition-all duration-500 transform hover:scale-[1.01] border border-blue-400/30">
-                                <div class="flex flex-col sm:flex-row items-center gap-6">
-                                    <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-white/10 backdrop-blur-md border-2 border-white/20 overflow-hidden flex-shrink-0 relative shadow-inner">
-                                        <img id="last-student-photo" src="" alt="" class="w-full h-full student-photo-display" style="display:none">
-                                        <div id="last-photo-placeholder" class="w-full h-full flex items-center justify-center text-white/30">
-                                            <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                                <div class="flex flex-col items-center gap-5">
+                                    <div class="rounded-3xl bg-white/10 backdrop-blur-md border-2 border-white/20 overflow-hidden flex-shrink-0 relative shadow-2xl w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 lg:w-64 lg:h-64">
+                                        <img id="last-student-photo" src="" alt="" class="w-full h-full student-photo-display object-cover" style="display:none">
+                                        <div id="last-photo-placeholder" class="w-full h-full flex items-center justify-center text-gray-300 bg-gray-100">
+                                            <svg class="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
                                         </div>
                                     </div>
-                                    <div class="flex-1 min-w-0 text-center sm:text-left">
-                                        <div class="flex items-center justify-center sm:justify-start gap-2 mb-2">
-                                            <span class="px-2 py-0.5 bg-blue-400/30 rounded text-[9px] font-black uppercase tracking-widest text-blue-100">Last Scanned Learner</span>
-                                            <span id="last-scan-status-badge" class="hidden px-2 py-0.5 bg-green-400 text-green-950 rounded text-[9px] font-black uppercase tracking-widest">SUCCESS</span>
-                                        </div>
-                                        <h3 id="last-student-name" class="text-2xl sm:text-3xl font-black truncate leading-tight tracking-tighter">Waiting for scan...</h3>
-                                        <div class="flex items-center justify-center sm:justify-start gap-2 mt-2">
-                                            <span id="section-name" class="text-xs font-bold text-blue-200 truncate uppercase tracking-wider">No activity</span>
-                                            <span class="text-blue-400/50">•</span>
+                                    <div class="w-full min-w-0 text-center">
+                                        <h3 id="last-student-name" class="text-2xl sm:text-3xl font-black leading-tight tracking-tight break-words">Waiting for scan...</h3>
+                                        <div class="flex items-center justify-center mt-1">
                                             <span id="last-scan-time" class="text-xs font-bold text-blue-200 tabular-nums">--:--:--</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Statistics Grid -->
-                            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Population</p>
-                                    <p id="total-count" class="text-2xl sm:text-3xl font-black text-gray-900 tracking-tighter">0</p>
-                                </div>
-                                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Entries</p>
-                                    <p id="present-count" class="text-2xl sm:text-3xl font-black text-green-600 tracking-tighter">0</p>
-                                </div>
-                                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">AM Logs</p>
-                                    <p id="am-entry-count" class="text-2xl sm:text-3xl font-black text-amber-600 tracking-tighter">0</p>
-                                </div>
-                                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">PM Logs</p>
-                                    <p id="pm-entry-count" class="text-2xl sm:text-3xl font-black text-orange-600 tracking-tighter">0</p>
-                                </div>
-                                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Departures</p>
-                                    <p id="departure-entry-count" class="text-2xl sm:text-3xl font-black text-red-600 tracking-tighter">0</p>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>

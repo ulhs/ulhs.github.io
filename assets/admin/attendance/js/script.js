@@ -1086,6 +1086,7 @@ const lastPhotoPlaceholder = document.getElementById('last-photo-placeholder');
 const lastScanTime = document.getElementById('last-scan-time');
 const lastScannedCard = document.getElementById('last-scanned-card');
 const scanStatus = document.getElementById('scan-status');
+const clockScanStatus = document.getElementById('clock-scan-status');
 const scannerPlaceholder = document.getElementById('scanner-placeholder');
 const cameraSelectContainer = document.getElementById('camera-select-container');
 const cameraSelect = document.getElementById('camera-select');
@@ -2236,7 +2237,39 @@ async function triggerParentNotification(student, timeData, scanTime, forceType 
 }
 
 // --- SCANNER LOGIC ---
+function updateClockScanStatus(message, className = 'text-gray-400') {
+    if (!clockScanStatus) return;
+    clockScanStatus.textContent = message;
+    clockScanStatus.className = `mt-4 min-h-[24px] text-xs font-black uppercase tracking-widest ${className}`;
+}
+
+function restoreScanViewport() {
+    const clockCard = document.getElementById('attendance-clock-card');
+    if (!clockCard) return;
+
+    const keepClockVisible = () => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    };
+
+    window.requestAnimationFrame(() => {
+        keepClockVisible();
+        window.requestAnimationFrame(keepClockVisible);
+    });
+
+    if (window.scanViewportRestoreTimeout) clearTimeout(window.scanViewportRestoreTimeout);
+    window.scanViewportRestoreTimeout = setTimeout(keepClockVisible, 250);
+}
+
+function focusClockAfterHidScan() {
+    if (!clockScanStatus) return;
+    clockScanStatus.setAttribute('tabindex', '-1');
+    clockScanStatus.focus({ preventScroll: true });
+}
+
 async function onScanSuccess(decodedText, decodedResult) {
+    restoreScanViewport();
+    updateClockScanStatus('Processing scan...', 'text-blue-600');
+
     // Critical: For camera scans, only process if scanner is actively running and NOT switching cameras
     // For physical (HID) scanner scans (no decodedResult), always process
     if (decodedResult) {
@@ -2289,6 +2322,8 @@ async function onScanSuccess(decodedText, decodedResult) {
             scanStatusEl.textContent = `Ignored: Cooldown active for ${cooldownKey}`;
             scanStatusEl.className = 'bg-white rounded-lg p-2 text-xs font-bold border border-yellow-200 min-h-[32px] text-yellow-700';
         }
+        updateClockScanStatus('Scan ignored: cooldown active', 'text-yellow-600');
+        restoreScanViewport();
         return;
     }
     
@@ -2298,6 +2333,8 @@ async function onScanSuccess(decodedText, decodedResult) {
 
     if (!isTestMode && (dayOfWeek === 0 || dayOfWeek === 6)) {
         alert("Attendance cannot be recorded on weekends.");
+        updateClockScanStatus('Attendance unavailable on weekends', 'text-red-600');
+        restoreScanViewport();
         return;
     }
 
@@ -2339,6 +2376,8 @@ async function onScanSuccess(decodedText, decodedResult) {
                 scanStatusEl.textContent = breakMessage;
                 scanStatusEl.className = 'bg-white rounded-lg p-2 text-xs font-bold border border-yellow-200 min-h-[32px] text-yellow-700';
             }
+            updateClockScanStatus('PM session is not open', 'text-yellow-600');
+            restoreScanViewport();
             return;
         }
 
@@ -2357,6 +2396,8 @@ async function onScanSuccess(decodedText, decodedResult) {
                     scanStatusEl.textContent = `Duplicate: ${duplicateMsg}`;
                     scanStatusEl.className = 'bg-white rounded-lg p-2 text-xs font-bold border border-yellow-200 min-h-[32px] text-yellow-700';
                 }
+                updateClockScanStatus(duplicateMsg, 'text-yellow-600');
+                restoreScanViewport();
                 return;
             }
         }
@@ -2400,6 +2441,7 @@ async function onScanSuccess(decodedText, decodedResult) {
             scanStatusEl.textContent = `Success! Recorded ${timeData.session} attendance for ${student.parsedName}`;
             scanStatusEl.className = 'bg-white rounded-lg p-2 text-xs font-bold border border-green-200 min-h-[32px] text-green-700';
         }
+        updateClockScanStatus(`Recorded: ${student.parsedName}`, 'text-green-600');
     } else {
         if (scanStatusEl) {
             scanStatusEl.textContent = `Error: No student found for this scan`;
@@ -2414,7 +2456,10 @@ async function onScanSuccess(decodedText, decodedResult) {
         const dummyStudent = { lrn: '0', student_id_number: 'N/A' };
         showScanOverlay(scannedInput, dummyStudent, 'error', "Unknown Section", {status: 'INVALID', session: 'N/A'});
         playBeep('error');
+        updateClockScanStatus('Student not found', 'text-red-600');
     }
+
+    restoreScanViewport();
 }
 
 function playBeep(type) {
@@ -4200,20 +4245,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Logic for handling the scan
         if (e.key === 'Enter' || e.key === 'Tab') { // Support both Enter and Tab as terminators
+            e.preventDefault();
+            e.stopImmediatePropagation();
             if (scanBuffer.length >= 3) { // Most LRNs/IDs are at least 3+ chars
                 console.log(`[HID Scanner] Detected Scan: ${scanBuffer}`);
+                focusClockAfterHidScan();
                 onScanSuccess(scanBuffer);
             }
             scanBuffer = "";
             if (scannerBufferEl) scannerBufferEl.textContent = '—';
-            e.preventDefault();
         } else {
             // Collect all characters except special keys
             if (e.key.length === 1) {
                 scanBuffer += e.key;
             }
         }
-    });
+    }, true);
 
     // --- Manual Input Handling ---
     const manualScanInput = document.getElementById('manual-scan-input');
