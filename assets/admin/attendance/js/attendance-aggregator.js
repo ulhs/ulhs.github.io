@@ -103,10 +103,47 @@
         };
     }
 
+    function summarizeHistory(logs, studentLrns, validSchoolDays) {
+        const evidence = buildDailyEvidence(logs);
+        const students = [...new Set((studentLrns || []).map(lrn => String(lrn || '').trim()).filter(Boolean))];
+
+        return [...new Set((validSchoolDays || []).map(day => String(day).slice(0, 10)))]
+            .sort()
+            .map((date) => {
+                let attended = 0;
+                let tardy = 0;
+
+                students.forEach((lrn) => {
+                    const am = evidence.get(`${lrn}|${date}|AM`);
+                    const pm = evidence.get(`${lrn}|${date}|PM`);
+                    const dayRecords = [am, pm].filter(Boolean);
+                    const hasAttended = dayRecords.some(record => ['PRESENT', 'TARDY'].includes(record.status));
+                    const hasTardy = dayRecords.some(record => record.status === 'TARDY');
+
+                    if (hasAttended) attended++;
+                    if (hasAttended && hasTardy) tardy++;
+                });
+
+                const absent = Math.max(0, students.length - attended);
+                return {
+                    date,
+                    students: students.length,
+                    attended,
+                    present: Math.max(0, attended - tardy),
+                    tardy,
+                    absent,
+                    attendancePercentage: students.length > 0
+                        ? Math.round((attended / students.length) * 1000) / 10
+                        : 0
+                };
+            });
+    }
+
     window.AttendanceAggregator = {
         normalizeStatus,
         getLocalDate,
         buildDailyEvidence,
-        summarizeStudent
+        summarizeStudent,
+        summarizeHistory
     };
 })(window);

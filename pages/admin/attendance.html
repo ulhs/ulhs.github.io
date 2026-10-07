@@ -658,6 +658,37 @@
                     </div>
                 </div>
 
+                <section class="attendance-history" data-attendance-history data-history-populate-sections="true" data-history-section-filter="#history-section-filter" aria-labelledby="attendance-history-title" aria-busy="true">
+                    <div class="attendance-history__header">
+                        <div>
+                            <h2 id="attendance-history-title" class="attendance-history__title">Attendance History</h2>
+                            <p class="attendance-history__description">Track rates and changes through the last completed school day.</p>
+                            <p class="attendance-history__baseline">Since August 14, 2026</p>
+                        </div>
+                        <div class="attendance-history__controls">
+                            <label class="attendance-history__select-label" for="history-section-filter">Section</label>
+                            <select id="history-section-filter" class="attendance-history__select">
+                                <option value="ALL">All Sections</option>
+                            </select>
+                            <div class="attendance-history__control-group" role="group" aria-label="Attendance history interval">
+                                <button class="attendance-history__control" type="button" data-history-period="daily" aria-pressed="true">Daily</button>
+                                <button class="attendance-history__control" type="button" data-history-period="weekly" aria-pressed="false">Weekly</button>
+                                <button class="attendance-history__control" type="button" data-history-period="monthly" aria-pressed="false">Monthly</button>
+                            </div>
+                            <div class="attendance-history__control-group" role="group" aria-label="Attendance history graph type">
+                                <button class="attendance-history__control" type="button" data-history-type="bar" aria-pressed="true">Bar</button>
+                                <button class="attendance-history__control" type="button" data-history-type="line" aria-pressed="false">Line</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="attendance-history__trend attendance-history__trend--flat" data-history-trend aria-live="polite"></p>
+                    <div class="attendance-history__chart-frame">
+                        <div class="attendance-history__message" data-history-message role="status">Loading attendance history…</div>
+                        <div class="attendance-history__chart-container" data-history-chart></div>
+                    </div>
+                    <ul class="attendance-history__sr-only" data-history-table aria-label="Attendance history data"></ul>
+                </section>
+
                 <!-- Attendance Summary Link -->
                 <div class="bg-gradient-to-br from-green-600 to-green-800 rounded-3xl shadow-xl p-6 border border-green-400/30">
                     <div class="flex items-center justify-between">
@@ -777,6 +808,7 @@
 
     <script src="../../assets/admin/attendance/js/offline-store.js"></script>
     <script src="../../assets/admin/attendance/js/attendance-aggregator.js"></script>
+    <script src="../../assets/admin/attendance/js/attendance-history.js"></script>
     <script src="../../assets/admin/attendance/js/script.js"></script>
 </body>
 </html>
