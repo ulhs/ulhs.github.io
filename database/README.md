@@ -37,3 +37,7 @@
 ## 📝 **Note:**
 - Always test after changing policies!
 - Make sure all functionality still works!
+
+## Attendance duplicate review
+
+Before using the Duplicate Attendance Review page, ensure the attendance duplicate schema from `supabase/migrations/20260903_sardo_process_schema.sql` has been applied. Then run `20261008_attendance_duplicate_review_tracking.sql` in the Supabase SQL Editor. The latter adds role-checked, paginated duplicate detection, duplicate confirmation, and review tracking. Duplicate records are retained; confirming one tags it for exclusion from dashboard counts, and marking it reviewed is a separate action.

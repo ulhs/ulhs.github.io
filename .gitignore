@@ -72,6 +72,7 @@ tmp/
 dist/
 
 *.sql
+!database/20261008_attendance_duplicate_review_tracking.sql
 
 # Ignore QR Batch Generator page
 pages/admin/qr-batch-generator.html

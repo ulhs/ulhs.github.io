@@ -14,60 +14,286 @@
 </head>
 <body class="sardo-page bg-gray-100 min-h-screen font-sans">
     <main class="max-w-6xl mx-auto px-4 py-8">
-        <div class="flex flex-wrap items-center justify-between gap-4 mb-6"><div><p class="text-xs font-black uppercase tracking-widest text-blue-700">Data Quality</p><h1 class="text-2xl font-black text-gray-900">Duplicate Attendance Review</h1><p class="text-sm text-gray-600 mt-1">Historical duplicates are preserved and marked for review.</p></div><a href="sardo-dashboard.html" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-black uppercase">Back to SARDO</a></div>
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm"><div class="sardo-table-wrap"><table class="min-w-full text-sm"><caption class="sr-only">Duplicate attendance records</caption><thead class="bg-gray-50 text-left text-xs uppercase tracking-wider"><tr><th scope="col" class="p-3">LRN</th><th scope="col" class="p-3">Date</th><th scope="col" class="p-3">Session</th><th scope="col" class="p-3">Duplicate</th><th scope="col" class="p-3">Canonical</th><th scope="col" class="p-3">Scanned</th></tr></thead><tbody id="rows"><tr><td colspan="6" class="p-8 text-center text-gray-500">Loading...</td></tr></tbody></table></div></div>
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div>
+                <p class="text-xs font-black uppercase tracking-widest text-blue-700">Data Quality</p>
+                <h1 class="text-2xl font-black text-gray-900">Duplicate Attendance Review</h1>
+                <p class="text-sm text-gray-600 mt-1">Review duplicate AM/PM records across dates. Records are retained; nothing is deleted.</p>
+            </div>
+            <a href="sardo-dashboard.html" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-black uppercase">Back to SARDO</a>
+        </div>
+
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
+            <form id="filters" class="flex flex-wrap items-end gap-3">
+                <div>
+                    <label for="from-date" class="block mb-1 text-xs font-bold text-gray-600 uppercase">From date</label>
+                    <input id="from-date" type="date" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label for="to-date" class="block mb-1 text-xs font-bold text-gray-600 uppercase">To date</label>
+                    <input id="to-date" type="date" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label for="review-session" class="block mb-1 text-xs font-bold text-gray-600 uppercase">Session</label>
+                    <select id="review-session" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option value="ALL">AM and PM</option>
+                        <option value="AM">AM only</option>
+                        <option value="PM">PM only</option>
+                    </select>
+                </div>
+                <label class="flex items-center gap-2 pb-2 text-sm font-semibold text-gray-700">
+                    <input id="unreviewed-only" type="checkbox" checked>
+                    Unreviewed only
+                </label>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-black uppercase">Apply filters</button>
+            </form>
+            <p class="mt-3 text-xs text-gray-500">Leave dates blank to search all available dates. Potential duplicates are detected by student, date, and session. Confirming one only tags it as a duplicate; marking it reviewed is a separate step.</p>
+        </div>
+
+        <div id="page-status" role="status" aria-live="polite" class="hidden mb-4 rounded-lg p-3 text-sm font-semibold"></div>
+        <div id="summary" class="mb-3 text-sm font-bold text-gray-700" aria-live="polite"></div>
+        <div id="groups" class="space-y-4"></div>
+        <button id="load-more" type="button" class="hidden mt-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-xs font-black uppercase">Load more</button>
     </main>
     <script>
-        function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[c]); }
-        async function init() {
-            const rows = document.getElementById('rows');
-            const { data: { session } } = await window.supabaseClient.auth.getSession();
-            const { data: profile } = await window.supabaseClient.from('profiles').select('role').eq('id', session?.user?.id).single();
-            if (!profile || !['admin', 'school_head'].includes(String(profile.role).toLowerCase())) { alert('Administrator or School Head permission is required.'); location.href = './admin-dashboard.html'; return; }
-            // Query attendance_logs directly for duplicate records (view was dropped for security)
-            const { data: duplicates, error: dupError } = await window.supabaseClient
-                .from('attendance_logs')
-                .select(`
-                    id,
-                    student_lrn,
-                    session,
-                    local_date,
-                    status,
-                    scanned_at,
-                    scanned_at_local,
-                    duplicate_of_id
-                `)
-                .not('duplicate_of_id', 'is', null)
-                .order('local_date', { ascending: false, nullsFirst: false })
-                .order('scanned_at', { ascending: false });
-            
-            if (dupError) {
-                rows.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-600">${escapeHtml(dupError.message)}</td></tr>`;
+        const groupsElement = document.getElementById('groups');
+        const pageStatus = document.getElementById('page-status');
+        const summaryElement = document.getElementById('summary');
+        const loadMoreButton = document.getElementById('load-more');
+        const pageSize = 200;
+        let offset = 0;
+        let loadedRecords = [];
+        let activeUserId = null;
+        let requestId = 0;
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, character => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            })[character]);
+        }
+
+        function showStatus(message, isError = false) {
+            pageStatus.textContent = message;
+            pageStatus.className = `mb-4 rounded-lg p-3 text-sm font-semibold ${isError ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`;
+        }
+
+        function currentFilters() {
+            return {
+                fromDate: document.getElementById('from-date').value || null,
+                toDate: document.getElementById('to-date').value || null,
+                session: document.getElementById('review-session').value,
+                unreviewedOnly: document.getElementById('unreviewed-only').checked
+            };
+        }
+
+        async function fetchPage(pageOffset, filters) {
+            const { data, error } = await window.supabaseClient.rpc('get_attendance_duplicate_candidates', {
+                p_from_date: filters.fromDate,
+                p_to_date: filters.toDate,
+                p_session: filters.session === 'ALL' ? null : filters.session,
+                p_unreviewed_only: filters.unreviewedOnly,
+                p_limit: pageSize,
+                p_offset: pageOffset
+            });
+            if (error) throw error;
+            return data || [];
+        }
+
+        function renderGroups(records) {
+            const grouped = new Map();
+            records.forEach(record => {
+                const key = `${record.attendance_date}|${String(record.session).toUpperCase()}`;
+                if (!grouped.has(key)) grouped.set(key, []);
+                grouped.get(key).push(record);
+            });
+
+            const markup = [...grouped.entries()].map(([key, rows]) => {
+                const [date, session] = key.split('|');
+                const body = rows.map(record => {
+                    const reviewed = Boolean(record.duplicate_reviewed_at);
+                    let action = '';
+                    if (!record.duplicate_of_id) {
+                        const canonicalOptions = new Map();
+                        rows.filter(candidate => candidate.student_lrn === record.student_lrn).forEach(candidate => {
+                            if (!candidate.duplicate_of_id) {
+                                canonicalOptions.set(String(candidate.duplicate_id), {
+                                    id: candidate.duplicate_id,
+                                    status: candidate.duplicate_status,
+                                    time: candidate.duplicate_scanned_at_local || candidate.duplicate_scanned_at
+                                });
+                            }
+                            canonicalOptions.set(String(candidate.canonical_id), {
+                                id: candidate.canonical_id,
+                                status: candidate.canonical_status,
+                                time: candidate.canonical_scanned_at_local || candidate.canonical_scanned_at
+                            });
+                        });
+                        canonicalOptions.delete(String(record.duplicate_id));
+                        const options = [...canonicalOptions.values()].map(candidate =>
+                            `<option value="${escapeHtml(candidate.id)}" ${String(candidate.id) === String(record.canonical_id) ? 'selected' : ''}>#${escapeHtml(candidate.id)} · ${escapeHtml(candidate.status)} · ${escapeHtml(candidate.time || '')}</option>`
+                        ).join('');
+                        action = `<label class="block mb-1 text-xs font-bold text-gray-600" for="canonical-${escapeHtml(record.duplicate_id)}">Canonical record</label><select id="canonical-${escapeHtml(record.duplicate_id)}" class="canonical-select mb-2 w-full border border-gray-300 rounded-lg px-2 py-1 text-xs">${options}</select><button type="button" class="confirm-duplicate-btn px-3 py-2 bg-amber-600 text-white rounded-lg text-xs font-black uppercase" data-duplicate-id="${escapeHtml(record.duplicate_id)}">Confirm duplicate</button><p class="mt-1 text-xs text-amber-700">Potential duplicate — verify both records before confirming.</p>`;
+                    } else if (reviewed) {
+                        action = `<span class="font-bold text-green-700">Reviewed</span><p class="text-xs text-gray-500">${escapeHtml(record.duplicate_reviewed_at)}</p>`;
+                    } else {
+                        action = `<button type="button" class="review-btn px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-black uppercase" data-id="${escapeHtml(record.duplicate_id)}">Mark reviewed</button><p class="mt-1 text-xs text-gray-500">Duplicate confirmed; record retained.</p>`;
+                    }
+
+                    return `<tr class="border-t">
+                        <td class="p-3 font-mono">${escapeHtml(record.student_lrn)}</td>
+                        <td class="p-3">#${escapeHtml(record.duplicate_id)} · ${escapeHtml(record.duplicate_status)}<br><span class="text-xs text-gray-500">${escapeHtml(record.duplicate_scanned_at_local || record.duplicate_scanned_at || '')}</span></td>
+                        <td class="p-3">#${escapeHtml(record.canonical_id)} · ${escapeHtml(record.canonical_status)}<br><span class="text-xs text-gray-500">${escapeHtml(record.canonical_scanned_at_local || record.canonical_scanned_at || '')}</span></td>
+                        <td class="p-3">${action}</td>
+                    </tr>`;
+                }).join('');
+
+                return `<section class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    <details open>
+                        <summary class="cursor-pointer bg-gray-50 px-4 py-3 font-black text-gray-800">${escapeHtml(date)} · ${escapeHtml(session)} · ${rows.length} duplicate record(s)</summary>
+                        <div class="sardo-table-wrap">
+                            <table class="min-w-full text-sm">
+                                <thead class="text-left text-xs uppercase tracking-wider"><tr><th class="p-3">LRN</th><th class="p-3">Potential/duplicate record</th><th class="p-3">Canonical record</th><th class="p-3">Action / state</th></tr></thead>
+                                <tbody>${body}</tbody>
+                            </table>
+                        </div>
+                    </details>
+                </section>`;
+            }).join('');
+
+            groupsElement.innerHTML = markup || '<p class="rounded-xl border border-gray-200 bg-white p-8 text-center text-green-700">No duplicate AM/PM records match these filters.</p>';
+        }
+
+        async function loadRecords({ append = false } = {}) {
+            const filters = currentFilters();
+            if (filters.fromDate && filters.toDate && filters.fromDate > filters.toDate) {
+                showStatus('The start date must be on or before the end date.', true);
                 return;
             }
-            
-            // Get canonical records for each duplicate
-            const data = [];
-            for (const dup of duplicates || []) {
-                const { data: canonical, error: canonError } = await window.supabaseClient
-                    .from('attendance_logs')
-                    .select('id, status, scanned_at, scanned_at_local')
-                    .eq('id', dup.duplicate_of_id)
-                    .single();
-                
-                if (!canonError && canonical) {
-                    data.push({
-                        ...dup,
-                        attendance_date: dup.local_date || String(dup.scanned_at_local || '').slice(0, 10),
-                        canonical_status: canonical.status,
-                        canonical_scanned_at: canonical.scanned_at,
-                        canonical_scanned_at_local: canonical.scanned_at_local
-                    });
-                }
+
+            const currentRequest = ++requestId;
+            if (!append) {
+                offset = 0;
+                loadedRecords = [];
+                groupsElement.innerHTML = '';
+                summaryElement.textContent = '';
+                pageStatus.classList.add('hidden');
             }
-            rows.innerHTML = data?.length ? data.map(row => `<tr class="border-t"><td class="p-3 font-mono">${escapeHtml(row.student_lrn)}</td><td class="p-3">${escapeHtml(row.attendance_date)}</td><td class="p-3">${escapeHtml(row.session)}</td><td class="p-3">#${escapeHtml(row.id)} · ${escapeHtml(row.status)}</td><td class="p-3">#${escapeHtml(row.duplicate_of_id)} · ${escapeHtml(row.canonical_status)}</td><td class="p-3">${escapeHtml(row.scanned_at_local || row.scanned_at)}</td></tr>`).join('') : '<tr><td colspan="6" class="p-8 text-center text-green-600">No marked duplicates.</td></tr>';
+            loadMoreButton.disabled = true;
+            loadMoreButton.classList.add('hidden');
+            if (!append) summaryElement.textContent = 'Searching duplicate records…';
+
+            try {
+                const records = await fetchPage(offset, filters);
+                if (currentRequest !== requestId) return;
+                loadedRecords.push(...records);
+                renderGroups(loadedRecords);
+                offset += records.length;
+                summaryElement.textContent = `${offset} duplicate record(s) loaded${records.length === pageSize ? ' (more may be available)' : ''}.`;
+                loadMoreButton.classList.toggle('hidden', records.length < pageSize);
+            } catch (error) {
+                if (currentRequest !== requestId) return;
+                console.error('Duplicate attendance search failed:', error);
+                showStatus(error.message || 'Could not load duplicate records. Apply the duplicate-review SQL migration first.', true);
+                if (!append) groupsElement.innerHTML = '';
+            } finally {
+                loadMoreButton.disabled = false;
+            }
         }
-        window.addEventListener('load', () => window.supabaseClient ? init() : setTimeout(init, 100));
+
+        async function confirmDuplicate(button) {
+            const duplicateId = button.dataset.duplicateId;
+            const canonicalId = button.closest('td').querySelector('.canonical-select')?.value;
+            if (!canonicalId) throw new Error('Select a canonical record before confirming.');
+            const confirmed = window.confirm(`Confirm attendance log #${duplicateId} is a duplicate of log #${canonicalId}? The duplicate record will be retained and excluded from dashboard attendance totals.`);
+            if (!confirmed) return;
+
+            button.disabled = true;
+            const { error } = await window.supabaseClient.rpc('confirm_attendance_duplicate', {
+                p_duplicate_id: duplicateId,
+                p_canonical_id: canonicalId
+            });
+            if (error) throw error;
+
+            if (typeof window.logAdminAction === 'function') {
+                await window.logAdminAction('attendance_duplicate_confirmed', null, {
+                    duplicate_log_id: duplicateId,
+                    canonical_log_id: canonicalId
+                });
+            }
+            showStatus(`Log #${duplicateId} was tagged as a duplicate of #${canonicalId}. The record was retained.`);
+            await loadRecords();
+        }
+
+        async function markReviewed(button) {
+            const duplicateId = button.dataset.id;
+            const confirmed = window.confirm(`Mark duplicate log #${duplicateId} as reviewed? It will remain stored and excluded from dashboard attendance totals.`);
+            if (!confirmed) return;
+
+            button.disabled = true;
+            const { error } = await window.supabaseClient.rpc('mark_attendance_duplicate_reviewed', {
+                p_log_id: duplicateId
+            });
+            if (error) throw error;
+
+            if (typeof window.logAdminAction === 'function') {
+                await window.logAdminAction('attendance_duplicate_reviewed', null, {
+                    attendance_log_id: duplicateId
+                });
+            }
+            showStatus(`Duplicate log #${duplicateId} marked reviewed; the attendance record was retained.`);
+            await loadRecords();
+        }
+
+        document.getElementById('filters').addEventListener('submit', event => {
+            event.preventDefault();
+            loadRecords();
+        });
+        document.getElementById('unreviewed-only').addEventListener('change', () => loadRecords());
+        loadMoreButton.addEventListener('click', () => loadRecords({ append: true }));
+        groupsElement.addEventListener('click', async event => {
+            const confirmButton = event.target.closest('.confirm-duplicate-btn');
+            const reviewButton = event.target.closest('.review-btn');
+            const button = confirmButton || reviewButton;
+            if (!button) return;
+            try {
+                if (confirmButton) await confirmDuplicate(button);
+                else await markReviewed(button);
+            } catch (error) {
+                console.error('Duplicate review action failed:', error);
+                showStatus(error.message || 'Could not update duplicate review state.', true);
+                button.disabled = false;
+            }
+        });
+
+        async function init() {
+            const { data: { session }, error: sessionError } = await window.supabaseClient.auth.getSession();
+            if (sessionError) {
+                showStatus(sessionError.message, true);
+                return;
+            }
+            if (!session) {
+                showStatus('Sign in with an authorized account to review attendance.', true);
+                return;
+            }
+
+            activeUserId = session.user.id;
+            const { data: profile, error: profileError } = await window.supabaseClient
+                .from('profiles')
+                .select('role')
+                .eq('id', activeUserId)
+                .single();
+            if (profileError || !profile || !['admin', 'school_head'].includes(String(profile.role).toLowerCase())) {
+                alert('Administrator or School Head permission is required.');
+                location.href = './admin-dashboard.html';
+                return;
+            }
+            await loadRecords();
+        }
+
+        window.addEventListener('load', () => {
+            if (window.supabaseClient) init();
+            else setTimeout(init, 100);
+        });
     </script>
 </body>
 </html>

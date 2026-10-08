@@ -1220,8 +1220,13 @@ function initCustomDepartureUI() {
     const setBtn = document.getElementById('set-custom-departure-btn');
     const resetBtn = document.getElementById('reset-custom-departure-btn');
     const earlyDismissalBtn = document.getElementById('trigger-early-dismissal-btn');
+    const earlyDismissalDate = document.getElementById('early-dismissal-date');
     if (setBtn) setBtn.addEventListener('click', setCustomDepartureTime);
     if (resetBtn) resetBtn.addEventListener('click', resetCustomDepartureTime);
+    if (earlyDismissalDate) {
+        earlyDismissalDate.max = getLocalDateKey();
+        earlyDismissalDate.value = getLocalDateKey();
+    }
     if (earlyDismissalBtn) earlyDismissalBtn.addEventListener('click', triggerEarlyDismissal);
 }
 
@@ -1256,16 +1261,127 @@ async function studentHasPMLog(studentLrn, todayKey) {
     return false;
 }
 
+async function backfillEarlyDismissal(dateKey, scope, statusDiv) {
+    if (!navigator.onLine || !window.supabaseClient) {
+        throw new Error('Historical PM attendance requires an internet connection.');
+    }
+
+    const session = await getCurrentSupabaseSession();
+    if (!session) {
+        throw new Error('Sign in again before recording historical attendance.');
+    }
+
+    const dateLogs = [];
+    const pageSize = 1000;
+    for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await window.supabaseClient
+            .from('attendance_logs')
+            .select('student_lrn, session')
+            .eq('local_date', dateKey)
+            .in('session', ['AM', 'PM'])
+            .order('student_lrn', { ascending: true })
+            .order('session', { ascending: true })
+            .range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        dateLogs.push(...(data || []));
+        if (!data || data.length < pageSize) break;
+    }
+
+    const amStudentLrns = new Set();
+    const existingPMLrns = new Set();
+    (dateLogs || []).forEach(log => {
+        const lrn = String(log.student_lrn || '').trim();
+        if (!lrn) return;
+        const logSession = String(log.session || '').toUpperCase();
+        if (logSession === 'AM') amStudentLrns.add(lrn);
+        if (logSession === 'PM') existingPMLrns.add(lrn);
+    });
+
+    const students = scope === 'all'
+        ? masterStudentDatabase
+        : masterStudentDatabase.filter(student => amStudentLrns.has(String(student.lrn).trim()));
+    const studentsToMark = students.filter(student => !existingPMLrns.has(String(student.lrn).trim()));
+
+    if (studentsToMark.length === 0) {
+        statusDiv.classList.remove('hidden');
+        statusDiv.textContent = `No missing PM records to add for ${dateKey}.`;
+        return;
+    }
+
+    const scopeDescription = scope === 'all' ? 'all students' : 'students with an AM attendance record';
+    const confirmed = window.confirm(
+        `Backfill PM attendance for ${studentsToMark.length} ${scopeDescription} on ${dateKey}? ` +
+        'Students who already have a PM record will be skipped. No parent notifications will be sent.'
+    );
+    if (!confirmed) return;
+
+    const recordedAt = new Date().toISOString();
+    const records = studentsToMark.map(student => ({
+        student_lrn: String(student.lrn),
+        session: 'PM',
+        status: 'PRESENT',
+        scanned_at: recordedAt,
+        local_date: dateKey,
+        section: student.section,
+        scanned_by: session.user.id
+    }));
+
+    const { error: insertError } = await window.supabaseClient
+        .from('attendance_logs')
+        .insert(records);
+    if (insertError) throw insertError;
+
+    if (typeof window.logAdminAction === 'function') {
+        await window.logAdminAction('attendance_early_dismissal_backfill', null, {
+            attendance_date: dateKey,
+            scope,
+            marked_count: records.length
+        });
+    }
+
+    statusDiv.classList.remove('hidden');
+    statusDiv.textContent = `Backfilled PM attendance for ${records.length} students on ${dateKey}. No parent notifications were sent.`;
+}
+
 // Trigger early dismissal - auto-mark PM attendance
 async function triggerEarlyDismissal() {
     const btn = document.getElementById('trigger-early-dismissal-btn');
     const statusDiv = document.getElementById('early-dismissal-status');
     const scopeSelect = document.getElementById('early-dismissal-scope');
+    const dateInput = document.getElementById('early-dismissal-date');
     
-    if (!btn || !statusDiv || !scopeSelect) return;
+    if (!btn || !statusDiv || !scopeSelect || !dateInput) return;
 
     const scope = scopeSelect.value;
+    const selectedDate = dateInput.value;
     const todayKey = getLocalDateKey();
+    if (!selectedDate || selectedDate > todayKey) {
+        statusDiv.classList.remove('hidden');
+        statusDiv.textContent = 'Choose a valid attendance date that is not in the future.';
+        return;
+    }
+
+    if (selectedDate < todayKey) {
+        btn.disabled = true;
+        btn.classList.remove('bg-orange-600', 'hover:bg-orange-700');
+        btn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing...`;
+        statusDiv.classList.add('hidden');
+        try {
+            await backfillEarlyDismissal(selectedDate, scope, statusDiv);
+        } catch (err) {
+            console.error('Historical early dismissal error:', err);
+            statusDiv.classList.remove('hidden');
+            statusDiv.textContent = `Error: ${err.message}`;
+        } finally {
+            btn.disabled = false;
+            btn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+            btn.classList.add('bg-orange-600', 'hover:bg-orange-700');
+            btn.innerHTML = `<i class="fa-solid fa-sign-out-alt"></i> Mark PM Attendance`;
+        }
+        return;
+    }
+
     let markedCount = 0;
 
     // Disable button during processing
