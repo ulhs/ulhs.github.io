@@ -110,31 +110,38 @@
         return [...new Set((validSchoolDays || []).map(day => String(day).slice(0, 10)))]
             .sort()
             .map((date) => {
-                let attended = 0;
-                let tardy = 0;
+                const summarizeSession = (session) => {
+                    let attended = 0;
+                    let present = 0;
+                    let tardy = 0;
 
-                students.forEach((lrn) => {
-                    const am = evidence.get(`${lrn}|${date}|AM`);
-                    const pm = evidence.get(`${lrn}|${date}|PM`);
-                    const dayRecords = [am, pm].filter(Boolean);
-                    const hasAttended = dayRecords.some(record => ['PRESENT', 'TARDY'].includes(record.status));
-                    const hasTardy = dayRecords.some(record => record.status === 'TARDY');
+                    students.forEach((lrn) => {
+                        const record = evidence.get(`${lrn}|${date}|${session}`);
+                        if (record?.status === 'PRESENT') {
+                            attended++;
+                            present++;
+                        } else if (record?.status === 'TARDY') {
+                            attended++;
+                            tardy++;
+                        }
+                    });
 
-                    if (hasAttended) attended++;
-                    if (hasAttended && hasTardy) tardy++;
-                });
+                    return {
+                        attended,
+                        present,
+                        tardy,
+                        absent: Math.max(0, students.length - attended),
+                        attendancePercentage: students.length > 0
+                            ? Math.round((attended / students.length) * 1000) / 10
+                            : 0
+                    };
+                };
 
-                const absent = Math.max(0, students.length - attended);
                 return {
                     date,
                     students: students.length,
-                    attended,
-                    present: Math.max(0, attended - tardy),
-                    tardy,
-                    absent,
-                    attendancePercentage: students.length > 0
-                        ? Math.round((attended / students.length) * 1000) / 10
-                        : 0
+                    am: summarizeSession('AM'),
+                    pm: summarizeSession('PM')
                 };
             });
     }

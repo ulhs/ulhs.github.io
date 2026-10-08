@@ -662,7 +662,7 @@
                     <div class="attendance-history__header">
                         <div>
                             <h2 id="attendance-history-title" class="attendance-history__title">Attendance History</h2>
-                            <p class="attendance-history__description">Track rates and changes through the last completed school day.</p>
+                            <p class="attendance-history__description">Compare AM and PM attendance rates through the last completed school day.</p>
                             <p class="attendance-history__baseline">Since August 14, 2026</p>
                         </div>
                         <div class="attendance-history__controls">
@@ -679,7 +679,18 @@
                                 <button class="attendance-history__control" type="button" data-history-type="bar" aria-pressed="true">Bar</button>
                                 <button class="attendance-history__control" type="button" data-history-type="line" aria-pressed="false">Line</button>
                             </div>
+                            <label class="attendance-history__select-label" for="history-palette">Color pair</label>
+                            <select id="history-palette" class="attendance-history__select" data-history-palette aria-label="Choose colors for AM and PM attendance">
+                                <option value="teal-vermilion">Teal &amp; Vermilion</option>
+                                <option value="indigo-coral">Indigo &amp; Coral</option>
+                                <option value="cyan-magenta">Cyan &amp; Magenta</option>
+                                <option value="navy-orange">Navy &amp; Orange</option>
+                            </select>
                         </div>
+                    </div>
+                    <div class="attendance-history__legend" role="group" aria-label="Graph series">
+                        <span><i class="attendance-history__legend-marker attendance-history__legend-marker--am" aria-hidden="true"></i>AM Session</span>
+                        <span><i class="attendance-history__legend-marker attendance-history__legend-marker--pm" aria-hidden="true"></i>PM Session</span>
                     </div>
                     <p class="attendance-history__trend attendance-history__trend--flat" data-history-trend aria-live="polite"></p>
                     <div class="attendance-history__chart-frame">

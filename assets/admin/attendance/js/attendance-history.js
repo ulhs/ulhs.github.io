@@ -1,6 +1,8 @@
 (function (window, document) {
     const BASELINE_DATE = '2026-08-14';
     const ROOT_SELECTOR = '[data-attendance-history]';
+    const PALETTE_STORAGE_KEY = 'attendanceHistoryPalette';
+    const PALETTES = ['teal-vermilion', 'indigo-coral', 'cyan-magenta', 'navy-orange'];
     const instances = new WeakMap();
     const tooltipStates = new WeakMap();
 
@@ -85,15 +87,22 @@
     }
 
     function summarizeRows(rows) {
-        const summary = rows.reduce((result, row) => {
-            result.students += row.students;
-            result.attended += row.attended;
-            return result;
-        }, { students: 0, attended: 0 });
-        summary.attendancePercentage = summary.students > 0
-            ? Math.round((summary.attended / summary.students) * 1000) / 10
-            : null;
-        return summary;
+        const result = {
+            am: { students: 0, attended: 0 },
+            pm: { students: 0, attended: 0 }
+        };
+        rows.forEach((row) => {
+            ['am', 'pm'].forEach((session) => {
+                result[session].students += row.students;
+                result[session].attended += row[session].attended;
+            });
+        });
+        ['am', 'pm'].forEach((session) => {
+            result[session].attendancePercentage = result[session].students > 0
+                ? Math.round((result[session].attended / result[session].students) * 1000) / 10
+                : null;
+        });
+        return result;
     }
 
     function getComparablePreviousPoint(points, dailyRows, period) {
@@ -112,7 +121,7 @@
                 row.date >= addDays(current.key, -7) && row.date <= addDays(current.endDate, -7)
             );
             const summary = summarizeRows(matchingRows);
-            return summary.attendancePercentage === null ? null : summary;
+            return summary.am.attendancePercentage === null ? null : summary;
         }
 
         const monthDate = dateFromKey(current.key);
@@ -130,7 +139,7 @@
         const comparisonEnd = `${previousMonthStart.slice(0, 7)}-${String(Math.min(endDay, previousMonthLastDay)).padStart(2, '0')}`;
         const matchingRows = dailyRows.filter(row => row.date >= previousMonthStart && row.date <= comparisonEnd);
         const summary = summarizeRows(matchingRows);
-        return summary.attendancePercentage === null ? null : summary;
+        return summary.am.attendancePercentage === null ? null : summary;
     }
 
     function populateSectionOptions(instance, students) {
@@ -251,31 +260,32 @@
                 key,
                 startDate: row.date,
                 endDate: row.date,
-                students: 0,
-                attended: 0,
-                present: 0,
-                tardy: 0,
-                absent: 0,
+                am: { students: 0, attended: 0, present: 0, tardy: 0, absent: 0 },
+                pm: { students: 0, attended: 0, present: 0, tardy: 0, absent: 0 },
                 schoolDays: 0
             };
 
             bucket.startDate = bucket.startDate < row.date ? bucket.startDate : row.date;
             bucket.endDate = bucket.endDate > row.date ? bucket.endDate : row.date;
-            bucket.students += row.students;
-            bucket.attended += row.attended;
-            bucket.present += row.present;
-            bucket.tardy += row.tardy;
-            bucket.absent += row.absent;
+            ['am', 'pm'].forEach((session) => {
+                bucket[session].students += row.students;
+                bucket[session].attended += row[session].attended;
+                bucket[session].present += row[session].present;
+                bucket[session].tardy += row[session].tardy;
+                bucket[session].absent += row[session].absent;
+            });
             bucket.schoolDays++;
             buckets.set(key, bucket);
         });
 
-        return [...buckets.values()].sort((a, b) => a.key.localeCompare(b.key)).map(bucket => ({
-            ...bucket,
-            attendancePercentage: bucket.students > 0
-                ? Math.round((bucket.attended / bucket.students) * 1000) / 10
-                : 0
-        }));
+        return [...buckets.values()].sort((a, b) => a.key.localeCompare(b.key)).map((bucket) => {
+            ['am', 'pm'].forEach((session) => {
+                bucket[session].attendancePercentage = bucket[session].students > 0
+                    ? Math.round((bucket[session].attended / bucket[session].students) * 1000) / 10
+                    : 0;
+            });
+            return bucket;
+        });
     }
 
     function getPeriodLabel(point, period) {
@@ -295,13 +305,15 @@
         }
 
         const current = points[points.length - 1];
-        const difference = Math.round((current.attendancePercentage - comparison.attendancePercentage) * 10) / 10;
-        const direction = difference > 0 ? 'up' : difference < 0 ? 'down' : 'flat';
-        const prefix = difference > 0 ? '↑' : difference < 0 ? '↓' : '→';
-        const label = period === 'daily' ? 'previous school day' : `equivalent period last ${period === 'weekly' ? 'week' : 'month'}`;
-
-        element.className = `attendance-history__trend attendance-history__trend--${direction}`;
-        element.textContent = `${prefix} ${Math.abs(difference).toFixed(1)} percentage points vs ${label}`;
+        const periodLabel = period === 'daily' ? 'previous school day' : `equivalent period last ${period === 'weekly' ? 'week' : 'month'}`;
+        const trends = ['am', 'pm'].map((session) => {
+            const difference = current[session].attendancePercentage - comparison[session].attendancePercentage;
+            const direction = difference > 0 ? 'up' : difference < 0 ? 'down' : 'flat';
+            const prefix = difference > 0 ? '↑' : difference < 0 ? '↓' : '→';
+            return `<span class="attendance-history__trend-item attendance-history__trend-item--${session}">${session.toUpperCase()} <span class="attendance-history__trend-arrow attendance-history__trend-arrow--${direction}">${prefix}</span> ${Math.abs(difference).toFixed(1)} pp</span>`;
+        });
+        element.className = 'attendance-history__trend attendance-history__trend--flat';
+        element.innerHTML = `${trends.join('<span aria-hidden="true">·</span>')}<span class="attendance-history__trend-period">vs ${escapeHtml(periodLabel)}</span>`;
     }
 
     function renderTable(root, points, period) {
@@ -310,8 +322,45 @@
 
         table.innerHTML = points.map((point) => {
             const label = getPeriodLabel(point, period);
-            return `<li>${escapeHtml(label)}: ${point.attendancePercentage.toFixed(1)}% attendance; ${point.present} present, ${point.tardy} tardy, ${point.absent} absent across ${point.schoolDays} school day${point.schoolDays === 1 ? '' : 's'}.</li>`;
+            return `<li>${escapeHtml(label)}: AM ${point.am.attendancePercentage.toFixed(1)}% (${point.am.present} present, ${point.am.tardy} tardy, ${point.am.absent} absent); PM ${point.pm.attendancePercentage.toFixed(1)}% (${point.pm.present} present, ${point.pm.tardy} tardy, ${point.pm.absent} absent) across ${point.schoolDays} school day${point.schoolDays === 1 ? '' : 's'}.</li>`;
         }).join('');
+    }
+
+    function getPointTooltip(point, period) {
+        const label = getPeriodLabel(point, period);
+        return `${label}: AM ${point.am.attendancePercentage.toFixed(1)}% (${point.am.present} present, ${point.am.tardy} tardy, ${point.am.absent} absent); PM ${point.pm.attendancePercentage.toFixed(1)}% (${point.pm.present} present, ${point.pm.tardy} tardy, ${point.pm.absent} absent).`;
+    }
+
+    function getSelectedPalette() {
+        try {
+            const saved = window.localStorage.getItem(PALETTE_STORAGE_KEY);
+            return PALETTES.includes(saved) ? saved : PALETTES[0];
+        } catch (error) {
+            console.warn('Unable to read saved attendance graph palette:', error);
+            return PALETTES[0];
+        }
+    }
+
+    function setSelectedPalette(palette, persist = true) {
+        if (!PALETTES.includes(palette)) return;
+        document.querySelectorAll(ROOT_SELECTOR).forEach(root => {
+            root.dataset.historyPalette = palette;
+            const selector = root.querySelector('[data-history-palette]');
+            if (selector) selector.value = palette;
+            const instance = instances.get(root);
+            if (instance?.cachedHistory) {
+                const period = root.querySelector('[data-history-period][aria-pressed="true"]')?.dataset.historyPeriod || 'daily';
+                const chartType = root.querySelector('[data-history-type][aria-pressed="true"]')?.dataset.historyType || 'bar';
+                renderHistory(root, instance.cachedHistory.dailyRows, period, chartType);
+            }
+        });
+        if (persist) {
+            try {
+                window.localStorage.setItem(PALETTE_STORAGE_KEY, palette);
+            } catch (error) {
+                console.warn('Unable to save attendance graph palette preference:', error);
+            }
+        }
     }
 
     function positionTooltip(frame, tooltip, clientX, clientY) {
@@ -438,21 +487,39 @@
             <line class="attendance-history__gridline" x1="${left}" y1="${y(value)}" x2="${width - right}" y2="${y(value)}"></line>
             <text class="attendance-history__axis-label" x="${left - 10}" y="${y(value) + 4}" text-anchor="end">${value}%</text>
         `).join('');
+        root.dataset.historyPalette = root.dataset.historyPalette || getSelectedPalette();
 
         let marks = '';
         if (chartType === 'bar') {
             const slotWidth = plotWidth / points.length;
-            const barWidth = Math.max(3, Math.min(36, slotWidth * 0.62));
+            const barWidth = Math.max(2, Math.min(18, slotWidth * 0.32));
             marks = points.map((point, index) => {
-                const barHeight = plotHeight * point.attendancePercentage / 100;
-                const tooltip = `${getPeriodLabel(point, period)}: ${point.attendancePercentage.toFixed(1)}% attendance; ${point.present} present, ${point.tardy} tardy, ${point.absent} absent.`;
-                return `<rect class="attendance-history__bar" x="${x(index) - barWidth / 2}" y="${y(point.attendancePercentage)}" width="${barWidth}" height="${barHeight}" rx="3" tabindex="0" data-tooltip-text="${escapeHtml(tooltip)}" aria-label="${escapeHtml(tooltip)}"></rect>`;
+                const tooltip = escapeHtml(getPointTooltip(point, period));
+                const groupWidth = barWidth * 2 + 2;
+                const groupX = left + index * slotWidth + (slotWidth - groupWidth) / 2;
+                return ['am', 'pm'].map((session, seriesIndex) => {
+                    const rate = point[session].attendancePercentage;
+                    const barHeight = plotHeight * rate / 100;
+                    const barX = groupX + seriesIndex * (barWidth + 2);
+                    const ariaLabel = `${session.toUpperCase()} session. ${tooltip}`;
+                    return `<rect class="attendance-history__bar attendance-history__bar--${session}" x="${barX}" y="${y(rate)}" width="${barWidth}" height="${barHeight}" rx="3" tabindex="0" data-tooltip-text="${tooltip}" aria-label="${escapeHtml(ariaLabel)}"></rect>`;
+                }).join('');
             }).join('');
         } else {
-            const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${y(point.attendancePercentage)}`).join(' ');
-            marks = `<path class="attendance-history__line" d="${path}"></path>` + points.map((point, index) => {
-                const tooltip = `${getPeriodLabel(point, period)}: ${point.attendancePercentage.toFixed(1)}% attendance; ${point.present} present, ${point.tardy} tardy, ${point.absent} absent.`;
-                return `<circle class="attendance-history__point" cx="${x(index)}" cy="${y(point.attendancePercentage)}" r="4" tabindex="0" data-tooltip-text="${escapeHtml(tooltip)}" aria-label="${escapeHtml(tooltip)}"></circle>`;
+            marks = ['am', 'pm'].map((session) => {
+                const path = points.map((point, index) =>
+                    `${index === 0 ? 'M' : 'L'} ${x(index)} ${y(point[session].attendancePercentage)}`
+                ).join(' ');
+                const seriesMarks = points.map((point, index) => {
+                    const pointY = y(point[session].attendancePercentage);
+                    const tooltip = escapeHtml(getPointTooltip(point, period));
+                    const ariaLabel = `${session.toUpperCase()} session. ${tooltip}`;
+                    if (session === 'am') {
+                        return `<circle class="attendance-history__point attendance-history__point--am" cx="${x(index)}" cy="${pointY}" r="4" tabindex="0" data-tooltip-text="${tooltip}" aria-label="${escapeHtml(ariaLabel)}"></circle>`;
+                    }
+                    return `<polygon class="attendance-history__point attendance-history__point--pm" points="${x(index)},${pointY - 5} ${x(index) + 5},${pointY} ${x(index)},${pointY + 5} ${x(index) - 5},${pointY}" tabindex="0" data-tooltip-text="${tooltip}" aria-label="${escapeHtml(ariaLabel)}"></polygon>`;
+                }).join('');
+                return `<path class="attendance-history__line attendance-history__line--${session}" d="${path}"></path>${seriesMarks}`;
             }).join('');
         }
 
@@ -552,6 +619,13 @@
             const sectionFilter = sectionFilterSelector ? document.querySelector(sectionFilterSelector) : null;
             instance = { root, client: window.supabaseClient, sectionFilter, requestId: 0, cachedHistory: null };
             instances.set(root, instance);
+            const palette = getSelectedPalette();
+            root.dataset.historyPalette = palette;
+            const paletteSelect = root.querySelector('[data-history-palette]');
+            if (paletteSelect) {
+                paletteSelect.value = palette;
+                paletteSelect.addEventListener('change', () => setSelectedPalette(paletteSelect.value));
+            }
 
             root.querySelectorAll('[data-history-period]').forEach(button => {
                 button.addEventListener('click', () => {
@@ -580,6 +654,12 @@
     function initialize() {
         document.querySelectorAll(ROOT_SELECTOR).forEach(init);
     }
+
+    window.addEventListener('storage', (event) => {
+        if (event.key === PALETTE_STORAGE_KEY && PALETTES.includes(event.newValue)) {
+            setSelectedPalette(event.newValue, false);
+        }
+    });
 
     window.AttendanceHistory = { initialize };
     if (document.readyState === 'loading') {
