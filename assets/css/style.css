@@ -3845,7 +3845,7 @@ body.dark-mode .early-birds-empty {
     -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
     color: var(--white);
-    padding: 15px 5%;
+    padding: 5px 5%;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -3899,7 +3899,7 @@ body.dark-mode .early-birds-empty {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 20px;
+    gap: 5px;
     text-align: center;
 }
 
@@ -3955,12 +3955,12 @@ body.dark-mode .early-birds-empty {
 @media screen and (max-width: 900px) {
     .announcement-banner {
         flex-direction: column;
-        padding: 20px;
-        gap: 15px;
+        padding: 5px;
+        gap: 5px;
     }
     .announcement-content {
         flex-direction: column;
-        gap: 15px;
+        gap: 5px;
     }
     .announcement-close {
         position: absolute;

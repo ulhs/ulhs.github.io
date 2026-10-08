@@ -20,18 +20,18 @@
         { "text": "Career & College Portal", "url": "pages/career-portal.html" },
         { "text": "Transparency Board", "url": "pages/transparency.html" }
     ],
-    "announcement": [
-        {
-            "enabled": true,
-            "text": "For ULHS personnel, please log your Work-From-Home attendance.",
-            "button_text": "Open Attendance Form",
-            "link": "https://forms.gle/VSEWqBX12aVQPMeS8"
-        },
-        {
-            "enabled": true,
-            "text": "Upper Labay High School's Link Grading Program portal is now active. Click the link to continue.",
-            "button_text": "Open LGP",
-            "link": "https://katangawandistrict.com/ulhs"
-        }
+    "announcement": {
+        "enabled": true,
+        "text": "",
+        "buttons": [
+            {
+                "text": "WFH Attendance Form",
+                "link": "https://forms.gle/VSEWqBX12aVQPMeS8"
+            },
+            {
+                "text": "Link Grading Program",
+                "link": "https://katangawandistrict.com/ulhs"
+            }
         ]
+    }
 }

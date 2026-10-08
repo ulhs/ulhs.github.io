@@ -794,17 +794,41 @@ document.addEventListener('DOMContentLoaded', () => {
         const banner = document.createElement('div');
         banner.id = `site-announcement-${bannerIndex}`;
         banner.className = 'announcement-banner';
-        
-        const linkUrl = data.link && data.link.startsWith('http') ? data.link : root + (data.link || '');
-        const target = data.link && data.link.startsWith('http') ? 'target="_blank"' : '';
-        
-        banner.innerHTML = `
-            <div class="announcement-content">
-                <span class="announcement-text">${data.text}</span>
-                <a href="${linkUrl}" class="announcement-btn" ${target}>${data.button_text || 'Learn More'}</a>
-            </div>
-            <button class="announcement-close" id="close-announcement-${bannerIndex}">&times;</button>
-        `;
+
+        const content = document.createElement('div');
+        content.className = 'announcement-content';
+
+        const text = document.createElement('span');
+        text.className = 'announcement-text';
+        text.textContent = data.text || '';
+        content.appendChild(text);
+
+        const buttons = Array.isArray(data.buttons)
+            ? data.buttons
+            : [{ text: data.button_text || 'Learn More', link: data.link || '' }];
+
+        buttons.forEach((button) => {
+            if (!button || !button.link) return;
+
+            const link = document.createElement('a');
+            link.href = button.link.startsWith('http') ? button.link : root + button.link;
+            link.className = 'announcement-btn';
+            link.textContent = button.text || 'Learn More';
+
+            if (button.link.startsWith('http')) {
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+            }
+
+            content.appendChild(link);
+        });
+
+        const closeButton = document.createElement('button');
+        closeButton.className = 'announcement-close';
+        closeButton.id = `close-announcement-${bannerIndex}`;
+        closeButton.innerHTML = '&times;';
+
+        banner.append(content, closeButton);
 
         if (anchorElement) {
             anchorElement.after(banner);
@@ -812,7 +836,6 @@ document.addEventListener('DOMContentLoaded', () => {
             header.after(banner);
         }
 
-        const closeButton = banner.querySelector('.announcement-close');
         closeButton.addEventListener('click', () => {
             banner.style.display = 'none';
             sessionStorage.setItem('announcementDismissed', 'true');
